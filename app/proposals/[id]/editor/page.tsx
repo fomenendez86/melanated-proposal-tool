@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ProposalSectionView } from "@/components/ProposalRenderer";
 import ProposalEditorShell from "@/components/editor/ProposalEditorShell";
 import { getProposalData } from "@/lib/db/getProposalData";
+import { getProposalDesignContext } from "@/lib/db/getProposalDesignContext";
 import { getProposalEditorData } from "@/lib/db/getProposalEditorData";
 import { getProposalSummary } from "@/lib/db/getProposalSummary";
 import { buildProposalPageMeta } from "@/lib/editor/proposalPageMeta";
@@ -21,6 +22,10 @@ export default async function ProposalEditorPage({ params }: ProposalEditorPageP
   if (!summary) notFound();
 
   const data = await getProposalData(proposalId);
+  const designContext = await getProposalDesignContext(
+    proposalId,
+    data.sections.map((section) => section.type)
+  );
   const pageMeta = buildProposalPageMeta(data.sections);
   const editorPages = await getProposalEditorData(proposalId, pageMeta, data.sections);
   const pages = data.sections.map((section, index) => (
@@ -33,6 +38,7 @@ export default async function ProposalEditorPage({ params }: ProposalEditorPageP
       pageMeta={pageMeta}
       pages={pages}
       editorPages={editorPages}
+      designContext={designContext}
     />
   );
 }

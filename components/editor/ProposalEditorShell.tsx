@@ -20,7 +20,9 @@ import type { FocusEvent, ReactNode, RefObject } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { updateProposalFields } from "@/app/proposals/[id]/editor/actions";
+import { updateProposalDesign } from "@/app/proposals/[id]/editor/designActions";
 import type { ProposalSummary } from "@/lib/db/getProposalSummary";
+import type { DocumentPageGeometry, ProposalDesignContext } from "@/lib/designs/types";
 import type {
   EditorSaveState,
   ProposalEditorFieldName,
@@ -49,6 +51,7 @@ interface ProposalEditorShellProps {
   pageMeta: ProposalPageMeta[];
   pages: ReactNode[];
   editorPages: ProposalEditorPageMap;
+  designContext: ProposalDesignContext;
 }
 
 interface PageNavigatorProps {
@@ -58,6 +61,7 @@ interface PageNavigatorProps {
   filter: string;
   onFilterChange: (value: string) => void;
   onSelect: (page: ProposalPageMeta) => void;
+  pageSize: DocumentPageGeometry;
   onClose?: () => void;
 }
 
@@ -101,9 +105,6 @@ const SAVE_TONE: Record<EditorSaveState, "neutral" | "warning" | "success" | "da
   error: "danger",
 };
 
-const PAGE_WIDTH = 816;
-const PAGE_HEIGHT = 1056;
-const THUMBNAIL_SCALE = 48 / PAGE_WIDTH;
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 0.95;
 const ZOOM_STEP = 0.05;
@@ -114,15 +115,17 @@ function clampZoom(value: number) {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(value.toFixed(3))));
 }
 
-function PageThumbnail({ page }: { page: ReactNode }) {
+function PageThumbnail({ page, pageSize }: { page: ReactNode; pageSize: DocumentPageGeometry }) {
+  const thumbnailScale = 48 / pageSize.widthPx;
+
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden bg-white" aria-hidden="true">
       <div
         className="origin-top-left"
         style={{
-          width: PAGE_WIDTH,
-          height: PAGE_HEIGHT,
-          transform: `scale(${THUMBNAIL_SCALE})`,
+          width: pageSize.widthPx,
+          height: pageSize.heightPx,
+          transform: `scale(${thumbnailScale})`,
         }}
       >
         {page}
@@ -138,6 +141,7 @@ function PageNavigator({
   filter,
   onFilterChange,
   onSelect,
+  pageSize,
   onClose,
 }: PageNavigatorProps) {
   const filteredPages = useMemo(() => {
@@ -184,7 +188,8 @@ function PageNavigator({
               title={page.title}
               description={page.description}
               eyebrow={page.eyebrow}
-              thumbnail={<PageThumbnail page={pages[page.pageNumber - 1]} />}
+              thumbnail={<PageThumbnail page={pages[page.pageNumber - 1]} pageSize={pageSize} />}
+              thumbnailHeight={(48 * pageSize.heightPx) / pageSize.widthPx}
               onSelect={() => onSelect(page)}
             />
           );
@@ -420,7 +425,8 @@ function PropertiesPanel({
 function useFitCanvas(
   viewportRef: RefObject<HTMLDivElement | null>,
   setZoom: (value: number) => void,
-  viewMode: ViewMode
+  viewMode: ViewMode,
+  pageSize: DocumentPageGeometry
 ) {
   const fitCanvas = useCallback(() => {
     const viewport = viewportRef.current;
@@ -428,11 +434,11 @@ function useFitCanvas(
 
     const horizontalPadding = viewport.clientWidth < 640 ? 32 : 72;
     const verticalPadding = viewport.clientHeight < 720 ? 32 : 64;
-    const widthScale = (viewport.clientWidth - horizontalPadding) / PAGE_WIDTH;
-    const heightScale = (viewport.clientHeight - verticalPadding) / PAGE_HEIGHT;
+    const widthScale = (viewport.clientWidth - horizontalPadding) / pageSize.widthPx;
+    const heightScale = (viewport.clientHeight - verticalPadding) / pageSize.heightPx;
     const fittedScale = viewMode === "continuous" ? widthScale : Math.min(widthScale, heightScale);
     setZoom(clampZoom(Math.min(fittedScale, MAX_ZOOM)));
-  }, [setZoom, viewportRef, viewMode]);
+  }, [pageSize.heightPx, pageSize.widthPx, setZoom, viewportRef, viewMode]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -447,7 +453,14 @@ function useFitCanvas(
   return fitCanvas;
 }
 
-export default function ProposalEditorShell({ proposal, pageMeta, pages, editorPages }: ProposalEditorShellProps) {
+export default function ProposalEditorShell({
+  proposal,
+  pageMeta,
+  pages,
+  editorPages,
+  designContext,
+}: ProposalEditorShellProps) {
+  const router = useRouter();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [zoom, setZoom] = useState(0.65);
   const [viewMode, setViewMode] = useState<ViewMode>("continuous");
@@ -455,6 +468,8 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
   const [pagesOpen, setPagesOpen] = useState(false);
   const [propertiesOpen, setPropertiesOpen] = useState(false);
   const [saveState, setSaveState] = useState<EditorSaveState>("loaded");
+  const [designChanging, setDesignChanging] = useState(false);
+  const [designError, setDesignError] = useState("");
   const canvasViewportRef = useRef<HTMLDivElement>(null);
   const pagesDialogRef = useRef<HTMLDivElement>(null);
   const propertiesDialogRef = useRef<HTMLDivElement>(null);
@@ -464,7 +479,9 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
   const effectiveSelectedIndex = Math.min(selectedIndex, Math.max(0, pageMeta.length - 1));
   const selectedPage = pageMeta[effectiveSelectedIndex];
   const editorConfig = editorPages[selectedPage.id];
-  const fitCanvas = useFitCanvas(canvasViewportRef, setZoom, viewMode);
+  const pageSize = designContext.active.page;
+  const activeDesignKey = `${designContext.active.id}@${designContext.active.version}`;
+  const fitCanvas = useFitCanvas(canvasViewportRef, setZoom, viewMode, pageSize);
 
   const confirmDiscardDraft = useCallback(() => {
     if (saveState !== "dirty" && saveState !== "error") return true;
@@ -472,6 +489,41 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
     if (confirmed) setSaveState("loaded");
     return confirmed;
   }, [saveState]);
+
+  const changeDocumentDesign = useCallback(async (designKey: string) => {
+    if (designKey === activeDesignKey || designChanging) return;
+    const choice = designContext.choices.find(
+      ({ design }) => `${design.id}@${design.version}` === designKey
+    );
+    if (!choice) {
+      setDesignError("That document design is no longer available.");
+      return;
+    }
+    if (!choice.compatible) {
+      setDesignError(`This proposal contains unsupported sections: ${choice.unsupportedSectionTypes.join(", ")}.`);
+      return;
+    }
+    if (!confirmDiscardDraft()) return;
+    if (!window.confirm(`Switch this proposal to ${choice.design.name}? Your saved content will be kept.`)) return;
+
+    setDesignChanging(true);
+    setDesignError("");
+    setSaveState("saving");
+    const result = await updateProposalDesign(proposal.id, {
+      designId: choice.design.id,
+      version: choice.design.version,
+    });
+    setDesignChanging(false);
+
+    if (!result.ok) {
+      setDesignError(result.formError ?? "The document design could not be changed.");
+      setSaveState("error");
+      return;
+    }
+
+    setSaveState("saved");
+    router.refresh();
+  }, [activeDesignKey, confirmDiscardDraft, designChanging, designContext.choices, proposal.id, router]);
 
   const navigateToIndex = useCallback((index: number, behavior: ScrollBehavior = "smooth") => {
     const nextIndex = Math.min(pageMeta.length - 1, Math.max(0, index));
@@ -634,6 +686,42 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
         </div>
 
         <div className="flex items-center gap-2">
+          <div className="hidden items-center gap-2 sm:flex">
+            <label htmlFor="document-design" className="hidden text-xs font-semibold text-editor-text-muted lg:block">
+              Design
+            </label>
+            <select
+              id="document-design"
+              value={activeDesignKey}
+              disabled={designChanging}
+              onChange={(event) => void changeDocumentDesign(event.target.value)}
+              aria-describedby={designError ? "document-design-error" : undefined}
+              className={`h-10 max-w-44 rounded-lg border border-editor-border bg-editor-raised px-2.5 text-xs font-semibold text-editor-text outline-none transition hover:border-editor-border-strong disabled:cursor-wait disabled:text-editor-disabled-text ${editorFocusRing}`}
+            >
+              {designContext.choices.map(({ design, compatible }) => (
+                <option
+                  key={`${design.id}@${design.version}`}
+                  value={`${design.id}@${design.version}`}
+                  disabled={!compatible}
+                >
+                  {design.name} · v{design.version}{design.status === "preview" ? " · Preview" : ""}{!compatible ? " · Incompatible" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+          <EditorStatusBadge tone="neutral" className="sm:hidden">
+            {designContext.active.name}
+          </EditorStatusBadge>
+          {designError ? (
+            <EditorStatusBadge
+              tone="danger"
+              live
+              className="hidden lg:inline-flex"
+              icon={<CircleAlert className="size-3.5" />}
+            >
+              <span id="document-design-error" title={designError}>Design change failed</span>
+            </EditorStatusBadge>
+          ) : null}
           <EditorStatusBadge
             tone={SAVE_TONE[saveState]}
             live
@@ -667,6 +755,7 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
             filter={filter}
             onFilterChange={setFilter}
             onSelect={selectPage}
+            pageSize={pageSize}
           />
         </aside>
 
@@ -773,11 +862,11 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
                     className={`relative shrink-0 bg-white shadow-editor-page ring-1 transition-shadow ${
                       effectiveSelectedIndex === index ? "ring-editor-border-strong ring-offset-2 ring-offset-editor-canvas" : "ring-black/5"
                     }`}
-                    style={{ width: PAGE_WIDTH * zoom, height: PAGE_HEIGHT * zoom }}
+                    style={{ width: pageSize.widthPx * zoom, height: pageSize.heightPx * zoom }}
                   >
                     <div
                       className="absolute left-0 top-0 origin-top-left bg-white"
-                      style={{ width: PAGE_WIDTH, height: PAGE_HEIGHT, transform: `scale(${zoom})` }}
+                      style={{ width: pageSize.widthPx, height: pageSize.heightPx, transform: `scale(${zoom})` }}
                     >
                       {page}
                     </div>
@@ -788,11 +877,11 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
               <div className="flex min-h-full min-w-full items-start justify-center p-4 sm:p-8">
                 <div
                   className="relative shrink-0 bg-white shadow-editor-page ring-1 ring-black/5"
-                  style={{ width: PAGE_WIDTH * zoom, height: PAGE_HEIGHT * zoom }}
+                  style={{ width: pageSize.widthPx * zoom, height: pageSize.heightPx * zoom }}
                 >
                   <div
                     className="absolute left-0 top-0 origin-top-left bg-white"
-                    style={{ width: PAGE_WIDTH, height: PAGE_HEIGHT, transform: `scale(${zoom})` }}
+                    style={{ width: pageSize.widthPx, height: pageSize.heightPx, transform: `scale(${zoom})` }}
                   >
                     {pages[effectiveSelectedIndex]}
                   </div>
@@ -819,6 +908,8 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
           <span>{pageMeta.length} pages</span>
           <span className="size-1 rounded-full bg-editor-border" aria-hidden="true" />
           <span>{proposal.travelDates}</span>
+          <span className="size-1 rounded-full bg-editor-border" aria-hidden="true" />
+          <span>{designContext.active.name} · {pageSize.formatLabel}</span>
         </div>
         <EditorStatusBadge
           tone={SAVE_TONE[saveState]}
@@ -844,6 +935,7 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
             filter={filter}
             onFilterChange={setFilter}
             onSelect={selectPage}
+            pageSize={pageSize}
             onClose={() => setPagesOpen(false)}
           />
         </EditorDrawer>

@@ -404,6 +404,8 @@ export const proposalPaymentSchedule = sqliteTable("proposal_payment_schedule", 
 // booking, a city) when there is one to point at. `payload` is a JSON escape
 // hatch for one-off presentational content (divider titles, cover-style
 // copy) that isn't worth its own table because nothing else references it.
+// Proposal-scoped virtual metadata rows such as `documentDesign` also use this
+// table temporarily and are filtered out before document rendering.
 // "cover", "fromOwners" and "details" are NOT stored here — they're derived
 // directly from `proposals`/`company` on every proposal, so there's nothing
 // to order or toggle.

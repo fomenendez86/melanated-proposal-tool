@@ -266,6 +266,7 @@ export function EditorPageCard({
   description,
   eyebrow,
   thumbnail,
+  thumbnailHeight,
   onSelect,
 }: {
   active: boolean;
@@ -274,6 +275,7 @@ export function EditorPageCard({
   description: string;
   eyebrow: string;
   thumbnail: ReactNode;
+  thumbnailHeight?: number;
   onSelect: () => void;
 }) {
   return (
@@ -291,9 +293,10 @@ export function EditorPageCard({
     >
       <div
         className={cn(
-          "relative h-[62px] w-12 shrink-0 overflow-hidden rounded border bg-editor-raised",
+          "relative w-12 shrink-0 overflow-hidden rounded border bg-editor-raised",
           active ? "border-editor-border-strong" : "border-editor-border"
         )}
+        style={{ height: thumbnailHeight ?? 62 }}
       >
         {thumbnail}
         <span className="absolute bottom-0 right-0 grid min-h-4 min-w-4 place-items-center rounded-tl bg-editor-raised/90 px-1 text-[10px] font-bold tabular-nums text-editor-text">

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 408 528" role="img" aria-labelledby="title description">
+  <title id="title">Minimal Grid document design preview</title>
+  <desc id="description">A neutral proposal cover with a strict grid and understated typography.</desc>
+  <rect width="408" height="528" fill="#f7f5f0"/>
+  <rect x="30" y="30" width="348" height="468" fill="none" stroke="#d8c8a8" stroke-width="2"/>
+  <rect x="54" y="58" width="88" height="7" rx="3.5" fill="#68727d"/>
+  <rect x="54" y="191" width="238" height="16" rx="2" fill="#20252b"/>
+  <rect x="54" y="219" width="172" height="16" rx="2" fill="#20252b"/>
+  <rect x="54" y="261" width="112" height="5" rx="2.5" fill="#68727d"/>
+  <rect x="54" y="278" width="150" height="5" rx="2.5" fill="#68727d"/>
+  <line x1="54" y1="438" x2="354" y2="438" stroke="#d8c8a8" stroke-width="2"/>
+  <circle cx="347" cy="466" r="7" fill="#20252b"/>
+</svg>

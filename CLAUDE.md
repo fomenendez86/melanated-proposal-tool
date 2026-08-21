@@ -16,13 +16,18 @@ La especificación UX y auditoría del shell está en
 [`docs/EDITOR_UX_SPEC.md`](docs/EDITOR_UX_SPEC.md).
 Los tokens, componentes y reglas del shell están en
 [`docs/EDITOR_DESIGN_SYSTEM.md`](docs/EDITOR_DESIGN_SYSTEM.md).
+El contrato versionado de diseños, persistencia y cambio seguro está en
+[`docs/DOCUMENT_DESIGN_CONTRACT.md`](docs/DOCUMENT_DESIGN_CONTRACT.md).
 La dirección aprobada es un editor visual multi-diseño inspirado en Proposify,
 con layouts protegidos, editor cronológico de itinerario y catálogo contextual.
 No se construirá un panel administrativo general, un canvas de posicionamiento
 libre ni un editor distinto por cada diseño.
 
-**Prioridad actual:** Fase 3.3 — contrato versionado de diseños de documento.
-La Fase 3.2 está completa: el shell usa tokens semánticos y primitivas comunes
+**Prioridad actual:** Fase 3.4 — implementación y validación visual del editor.
+La Fase 3.3 está completa: el diseño activo es proposal-scoped, el selector
+valida compatibilidad en cliente y servidor, la geometría viene del contrato y
+Safari Editorial/Minimal Grid prueban el registro versionado. La Fase 3.2 está
+completa: el shell usa tokens semánticos y primitivas comunes
 para botones, encabezados, avisos, campos, secciones, controles segmentados,
 page cards, badges, drawers y empty states. La Fase 3.1 de especificación UX
 está completa. La Fase 2 está completa: todas las
@@ -67,6 +72,12 @@ documentarlo acá.
   accesibilidad y estados de guardado pertenecen al Proposal Studio. Tamaño de
   página, marca, bloques soportados, variantes, defaults y renderers pertenecen
   a la definición de cada diseño.
+- **Contrato de diseño (Fase 3.3):** `lib/designs/types.ts` define el descriptor
+  serializable y `lib/designs/registry.ts` registra identidades versionadas.
+  `getProposalDesignContext.ts` resuelve selección/default y compatibilidad. La
+  selección se guarda temporalmente como metadata virtual `documentDesign` en
+  `proposal_sections`, se excluye del render y se cambiará a columnas explícitas
+  cuando existan revisiones. `DOCUMENT_DESIGN_CONTRACT.md` contiene las reglas.
 - Cada bloque: componente en `components/blocks/{Nombre}Block.tsx`, tipo en
   `lib/types.ts`, ruta de preview en `app/preview/{nombre}/page.tsx`, script
   de render standalone en `lib/render/render{Nombre}.ts` + entrada

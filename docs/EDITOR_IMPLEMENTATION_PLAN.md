@@ -367,7 +367,13 @@ segmented controls, page cards, status badges, drawers, and empty states.
 
 ### Phase 3.3 — Document design contract
 
-**Status: Next.**
+**Status: Complete (2026-08-21).** The versioned serializable contract,
+registry, persistence decision, compatibility rules, and rollback behavior are
+documented in [`DOCUMENT_DESIGN_CONTRACT.md`](DOCUMENT_DESIGN_CONTRACT.md).
+The editor now displays and safely changes its proposal-scoped design; page
+geometry comes from the active design rather than shell constants. Safari
+Editorial and Minimal Grid validate the registry boundary, with Minimal Grid
+remaining a preview contract fixture rather than a finished visual template.
 
 - Introduce a versioned design definition containing identity, preview image,
   page dimensions, brand tokens, supported sections, approved variants,

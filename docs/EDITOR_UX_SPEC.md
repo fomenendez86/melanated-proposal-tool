@@ -227,14 +227,14 @@ between content and presentation are not yet visible.
 
 | Finding | Severity | Recommendation |
 | --- | --- | --- |
-| Active document design is not visible | Critical | Add a labeled design control to the proposal bar before supporting a second design |
+| Active document design was not visible | Resolved in 3.3 | The proposal bar now shows a labeled, versioned design control with compatibility and confirmation |
 | Inspector is one long undifferentiated stream | High | Separate Content, Design, and collapsed Page information |
 | Collection fields expose parser syntax | High | Keep as functional fallback, then migrate to repeatable structured groups |
 | Save status appears in header and footer while local forms also carry state | Moderate | Define one global live region plus contextual action state |
 | Technical page information receives persistent vertical space | Moderate | Collapse it below primary editing controls |
 | Proposal output flow has Preview but no visible Review stage | Moderate | Introduce Review before Generate becomes active |
 | Editor styling contains 136 hex usages and 83 unique six-digit colors | High | Replace hardcoded shell colors with semantic editor tokens |
-| Page dimensions are shell constants | High for multi-design | Supply page geometry from the active design definition |
+| Page dimensions were shell constants | Resolved in 3.3 | Canvas, fit behavior, and thumbnails consume active-design geometry |
 | Empty/read-only copy refers to future implementation | Minor | Use user-facing availability and recovery language |
 
 ### What works

@@ -1,0 +1,111 @@
+# Proposal Studio — Document Design Contract
+
+**Status:** Phase 3.3 implemented  
+**Updated:** 2026-08-21
+
+## Purpose
+
+The document design contract lets one Proposal Studio shell work with multiple
+versioned proposal designs. The shell owns navigation and editing behavior; a
+design descriptor owns document presentation capabilities. Saved proposal
+content remains independent from both.
+
+## Runtime boundary
+
+```text
+proposal content ──┐
+                   ├─► server loader ─► registered design + compatibility
+saved design id ───┘                         │
+                                            ├─► server-rendered pages
+                                            └─► serializable design context
+                                                        │
+                                                        ▼
+                                                  editor shell
+                                       page geometry / selector / warnings
+```
+
+- `lib/designs/types.ts` is the serializable contract shared with the client.
+- `lib/designs/registry.ts` is the server-owned registry and default resolver.
+- `lib/db/getProposalDesignContext.ts` combines the saved identity, registry,
+  and section compatibility into the context consumed by the editor.
+- `designActions.ts` validates and commits design changes on the server.
+- The shell does not know design-specific colors, layouts, section order, or
+  Tanzania content. It consumes only page geometry and design metadata.
+
+## Descriptor fields
+
+| Field | Responsibility |
+| --- | --- |
+| `id` + `version` | Stable identity used for persistence and reproducibility |
+| `name`, `description`, `status` | Proposal-workflow presentation |
+| `previewImageUrl` | Design picker preview asset |
+| `page` | Width, height, format label, and orientation |
+| `brand` | Document-only color and typography tokens |
+| `supportedSectionTypes` | Compatibility allowlist |
+| `sectionVariants` | Approved presentation choices per section type |
+| `defaultVariantIds` | Deterministic variant fallback per section type |
+| `rendererId` | Server renderer registration handle |
+| `editorSchemaId` | Structured field-schema registration handle |
+
+All client-facing values are serializable. React components, database clients,
+and mutation functions are deliberately excluded from the descriptor.
+
+## Versioning rules
+
+1. A breaking renderer, schema, default, or geometry change creates a new
+   version; it does not mutate an existing registered version.
+2. A proposal stores both `designId` and `version`.
+3. Missing or retired identities resolve safely to the registered default while
+   leaving proposal content untouched.
+4. Historical proposal revisions must eventually snapshot the same identity so
+   regenerated output stays reproducible.
+
+## Persistence decision
+
+The current single-user database stores the selection in a proposal-scoped
+virtual `proposal_sections` row with `sectionType = "documentDesign"`. This
+avoids a migration while the contract is being proven and reuses the existing
+JSON metadata escape hatch. The row is filtered out before document rendering.
+
+This is an interim storage decision. Before production revisions are added,
+move the identity to explicit proposal/revision columns with a database
+constraint or foreign-key equivalent. The public loader and action contract do
+not need to change when storage moves.
+
+## Safe switching
+
+1. The client shows all registered choices and disables known incompatible
+   options.
+2. The server repeats compatibility validation against canonical saved
+   sections; client checks are never trusted as authorization.
+3. Dirty form data must be resolved before switching.
+4. A compatible switch requires explicit confirmation.
+5. The identity update and proposal timestamp change occur in one transaction.
+6. Failure returns a structured error and leaves the prior identity active.
+7. Saved content is never deleted or rewritten by a design switch.
+
+## Current fixtures
+
+- **Safari Editorial v1** is the active reference design.
+- **Minimal Grid v1** is a preview fixture that proves registration,
+  serialization, compatibility, selection, and persistence. It intentionally
+  reuses the current block renderer and editor schema; it is not yet a complete
+  second visual template.
+
+Both fixtures support all current section types. Compatibility behavior remains
+meaningful for future partial designs and is enforced on both client and server.
+
+## Failure and rollback
+
+- An unknown design, invalid proposal, unsupported section, or transaction
+  failure returns an error without changing content.
+- The default design keeps older proposals renderable when no identity exists.
+- Rollback is selecting the prior registered identity; no content restoration
+  is required because switching does not mutate content.
+
+## Next integration boundary
+
+Phase 3.4 should make renderer and editor-schema registries executable rather
+than identifier-only, add a visual design picker with previews, and test the
+shell at desktop/mobile sizes. A complete Minimal Grid renderer belongs after
+that contract integration, not inside the editor shell.
