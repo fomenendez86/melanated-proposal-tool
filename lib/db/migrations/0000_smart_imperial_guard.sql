@@ -22,14 +22,14 @@ CREATE TABLE `company` (
 	`address` text,
 	`phone` text,
 	`email` text,
-	`website` text
+	`website` text,
+	`about_photo_url` text
 );
 --> statement-breakpoint
 CREATE TABLE `company_about_paragraphs` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`company_id` integer NOT NULL,
 	`body` text NOT NULL,
-	`photo_url` text,
 	`sort_order` integer DEFAULT 0 NOT NULL,
 	FOREIGN KEY (`company_id`) REFERENCES `company`(`id`) ON UPDATE no action ON DELETE cascade
 );
@@ -226,6 +226,7 @@ CREATE TABLE `proposal_sections` (
 	`section_type` text NOT NULL,
 	`sort_order` integer DEFAULT 0 NOT NULL,
 	`ref_id` integer,
+	`payload` text,
 	FOREIGN KEY (`proposal_id`) REFERENCES `proposals`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
@@ -243,6 +244,9 @@ CREATE TABLE `proposals` (
 	`cover_title` text DEFAULT 'Proposal' NOT NULL,
 	`cover_subtitle` text,
 	`cover_image_url` text,
+	`travel_dates_label` text,
+	`package_total_label` text,
+	`passenger_manifest_label` text,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL,
 	FOREIGN KEY (`lead_client_id`) REFERENCES `clients`(`id`) ON UPDATE no action ON DELETE restrict,

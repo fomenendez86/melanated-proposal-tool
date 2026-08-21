@@ -1,10 +1,12 @@
 import ProposalRenderer from "@/components/ProposalRenderer";
-import { sampleProposalData } from "@/lib/sampleProposalData";
+import { getProposalData } from "@/lib/db/getProposalData";
 
-export default function FullProposalPreviewPage() {
+export default async function FullProposalPreviewPage() {
+  const data = await getProposalData(1);
+
   return (
     <div className="flex flex-col items-center bg-neutral-200">
-      <ProposalRenderer data={sampleProposalData} />
+      <ProposalRenderer data={data} />
     </div>
   );
 }

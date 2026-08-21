@@ -16,10 +16,14 @@
       "Bash(rm -f output/pg-*.png *)",
       "Bash(taskkill //PID 20632 //F)",
       "Bash(npm ls *)",
-      "Bash(dir data *)"
+      "Bash(dir data *)",
+      "Bash(npm run dev > /tmp/nextdev.log 2>&1 & *)",
+      "Bash(python3 -c ' *)",
+      "Bash(powershell -NoProfile -Command 'Get-CimInstance Win32_Process -Filter \"Name='\\\\''node.exe'\\\\''\" | Where-Object { $_.CommandLine -like '\\\\''*next*dev*'\\\\'' } | Select-Object ProcessId,CommandLine')"
     ],
     "additionalDirectories": [
-      "C:\\Users\\fomen\\OneDrive\\Development\\melanated-proposal-tool\\output"
+      "C:\\Users\\fomen\\OneDrive\\Development\\melanated-proposal-tool\\output",
+      "\\tmp"
     ]
   }
 }

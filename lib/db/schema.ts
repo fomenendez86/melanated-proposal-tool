@@ -27,6 +27,7 @@ export const company = sqliteTable("company", {
   phone: text("phone"),
   email: text("email"),
   website: text("website"),
+  aboutPhotoUrl: text("about_photo_url"),
 });
 
 export const companyBankAccounts = sqliteTable("company_bank_accounts", {
@@ -59,7 +60,6 @@ export const companyAboutParagraphs = sqliteTable("company_about_paragraphs", {
     .notNull()
     .references(() => company.id, { onDelete: "cascade" }),
   body: text("body").notNull(),
-  photoUrl: text("photo_url"),
   sortOrder: integer("sort_order").notNull().default(0),
 });
 
@@ -249,6 +249,9 @@ export const proposals = sqliteTable(
     coverTitle: text("cover_title").notNull().default("Proposal"),
     coverSubtitle: text("cover_subtitle"),
     coverImageUrl: text("cover_image_url"),
+    travelDatesLabel: text("travel_dates_label"),
+    packageTotalLabel: text("package_total_label"),
+    passengerManifestLabel: text("passenger_manifest_label"),
     ...timestamps,
   },
   (table) => [
@@ -397,6 +400,13 @@ export const proposalPaymentSchedule = sqliteTable("proposal_payment_schedule", 
 
 // Drives which blocks render for a given proposal, and in what order —
 // replaces the hand-assembled `sections[]` array in sampleProposalData.ts.
+// `refId` points at the catalog/proposal row the section is about (a hotel
+// booking, a city) when there is one to point at. `payload` is a JSON escape
+// hatch for one-off presentational content (divider titles, cover-style
+// copy) that isn't worth its own table because nothing else references it.
+// "cover", "fromOwners" and "details" are NOT stored here — they're derived
+// directly from `proposals`/`company` on every proposal, so there's nothing
+// to order or toggle.
 export const proposalSections = sqliteTable("proposal_sections", {
   ...id,
   proposalId: integer("proposal_id")
@@ -405,4 +415,5 @@ export const proposalSections = sqliteTable("proposal_sections", {
   sectionType: text("section_type").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
   refId: integer("ref_id"),
+  payload: text("payload", { mode: "json" }),
 });
