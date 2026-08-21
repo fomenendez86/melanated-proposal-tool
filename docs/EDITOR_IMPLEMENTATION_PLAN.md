@@ -336,6 +336,9 @@ and panel state.
 
 ### Phase 3.1 — Editor UX specification
 
+**Status: Complete (2026-08-21).** The detailed interaction and visual baseline
+is maintained in [`EDITOR_UX_SPEC.md`](EDITOR_UX_SPEC.md).
+
 - Define the primary workflows: choose design, edit content, navigate pages,
   add content, review issues, preview, and generate.
 - Finalize the information hierarchy of toolbar, Pages panel, document canvas,
@@ -348,6 +351,11 @@ and panel state.
 
 ### Phase 3.2 — Reusable editor design system
 
+**Status: Complete (2026-08-21).** Semantic tokens and shared primitives are
+documented in [`EDITOR_DESIGN_SYSTEM.md`](EDITOR_DESIGN_SYSTEM.md). The shell
+uses standardized buttons, fields, notices, headers, inspector sections,
+segmented controls, page cards, status badges, drawers, and empty states.
+
 - Extract editor-only colors, typography, spacing, borders, shadows, focus
   rings, control sizing, and motion into reusable tokens.
 - Standardize toolbar controls, segmented controls, page cards, inspector
@@ -358,6 +366,8 @@ and panel state.
   editor interactions.
 
 ### Phase 3.3 — Document design contract
+
+**Status: Next.**
 
 - Introduce a versioned design definition containing identity, preview image,
   page dimensions, brand tokens, supported sections, approved variants,

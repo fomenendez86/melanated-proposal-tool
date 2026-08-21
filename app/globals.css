@@ -18,6 +18,39 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+  --color-editor-canvas: var(--editor-canvas);
+  --color-editor-shell: var(--editor-shell);
+  --color-editor-panel: var(--editor-panel);
+  --color-editor-panel-muted: var(--editor-panel-muted);
+  --color-editor-raised: var(--editor-raised);
+  --color-editor-toolbar: var(--editor-toolbar);
+  --color-editor-inset: var(--editor-inset);
+  --color-editor-overlay: var(--editor-overlay);
+  --color-editor-text-strong: var(--editor-text-strong);
+  --color-editor-text: var(--editor-text);
+  --color-editor-text-muted: var(--editor-text-muted);
+  --color-editor-text-subtle: var(--editor-text-subtle);
+  --color-editor-brand: var(--editor-brand);
+  --color-editor-brand-hover: var(--editor-brand-hover);
+  --color-editor-accent: var(--editor-accent);
+  --color-editor-border-subtle: var(--editor-border-subtle);
+  --color-editor-border: var(--editor-border);
+  --color-editor-border-strong: var(--editor-border-strong);
+  --color-editor-focus: var(--editor-focus);
+  --color-editor-disabled: var(--editor-disabled);
+  --color-editor-disabled-text: var(--editor-disabled-text);
+  --color-editor-success: var(--editor-success);
+  --color-editor-success-surface: var(--editor-success-surface);
+  --color-editor-warning: var(--editor-warning);
+  --color-editor-warning-surface: var(--editor-warning-surface);
+  --color-editor-warning-border: var(--editor-warning-border);
+  --color-editor-danger: var(--editor-danger);
+  --color-editor-danger-surface: var(--editor-danger-surface);
+  --color-editor-danger-border: var(--editor-danger-border);
+  --shadow-editor-page: 0 18px 55px rgb(32 42 38 / 22%);
+  --shadow-editor-card: 0 5px 18px rgb(29 52 44 / 9%);
+  --shadow-editor-toolbar: 0 1px 0 rgb(23 35 31 / 4%);
+  --ease-editor: cubic-bezier(0.2, 0, 0, 1);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -81,6 +114,35 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --editor-canvas: #e9e8e3;
+  --editor-shell: #edece7;
+  --editor-panel: #fbfbf8;
+  --editor-panel-muted: #f8f8f5;
+  --editor-raised: #ffffff;
+  --editor-toolbar: #f4f4f0;
+  --editor-inset: #edf1ee;
+  --editor-overlay: rgb(16 37 30 / 45%);
+  --editor-text-strong: #17231f;
+  --editor-text: #2d4439;
+  --editor-text-muted: #607168;
+  --editor-text-subtle: #718179;
+  --editor-brand: #173b32;
+  --editor-brand-hover: #204d41;
+  --editor-accent: #f6c85f;
+  --editor-border-subtle: #e0e4e1;
+  --editor-border: #cbd3ce;
+  --editor-border-strong: #789084;
+  --editor-focus: #c99b32;
+  --editor-disabled: #cad2ce;
+  --editor-disabled-text: #68776f;
+  --editor-success: #356d54;
+  --editor-success-surface: #f1f6f2;
+  --editor-warning: #735a20;
+  --editor-warning-surface: #fff9e9;
+  --editor-warning-border: #ead7a6;
+  --editor-danger: #8d342e;
+  --editor-danger-surface: #fff3f1;
+  --editor-danger-border: #e0aaa5;
 }
 
 .dark {
@@ -115,6 +177,17 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proposal-studio *,
+  .proposal-studio *::before,
+  .proposal-studio *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
 @layer base {

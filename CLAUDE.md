@@ -12,13 +12,21 @@ plantilla.
 ## Plan del Proposal Studio
 El plan de implementación del editor visual está en
 [`docs/EDITOR_IMPLEMENTATION_PLAN.md`](docs/EDITOR_IMPLEMENTATION_PLAN.md).
+La especificación UX y auditoría del shell está en
+[`docs/EDITOR_UX_SPEC.md`](docs/EDITOR_UX_SPEC.md).
+Los tokens, componentes y reglas del shell están en
+[`docs/EDITOR_DESIGN_SYSTEM.md`](docs/EDITOR_DESIGN_SYSTEM.md).
 La dirección aprobada es un editor visual multi-diseño inspirado en Proposify,
 con layouts protegidos, editor cronológico de itinerario y catálogo contextual.
 No se construirá un panel administrativo general, un canvas de posicionamiento
 libre ni un editor distinto por cada diseño.
 
-**Prioridad actual:** Fase 3 — diseño del editor y base multi-diseño. La Fase 2
-está completa: todas las páginas con contenido tienen formulario persistente,
+**Prioridad actual:** Fase 3.3 — contrato versionado de diseños de documento.
+La Fase 3.2 está completa: el shell usa tokens semánticos y primitivas comunes
+para botones, encabezados, avisos, campos, secciones, controles segmentados,
+page cards, badges, drawers y empty states. La Fase 3.1 de especificación UX
+está completa. La Fase 2 está completa: todas las
+páginas con contenido tienen formulario persistente,
 incluyendo From Owners, Important Items, overrides visuales de hotel y un único
 editor de itinerario compartido por Overview y Day Itinerary.
 
