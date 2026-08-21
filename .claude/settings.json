@@ -3,7 +3,18 @@
     "allow": [
       "Bash(node -e ' *)",
       "Bash(rm -f output/*-verify.pdf *)",
-      "Bash(taskkill //PID 9412 //F)"
+      "Bash(taskkill //PID 9412 //F)",
+      "Bash(python -c ' *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/preview/cover)",
+      "Bash(rm -f output/*-verify.pdf)",
+      "Bash(taskkill //PID 19700 //F)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/preview/important-items)",
+      "Bash(taskkill //PID 21656 //F)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/preview/full-proposal)",
+      "Bash(rm -f output/full-check-*.png *)",
+      "Bash(taskkill //PID 11476 //F)",
+      "Bash(rm -f output/pg-*.png *)",
+      "Bash(taskkill //PID 20632 //F)"
     ],
     "additionalDirectories": [
       "C:\\Users\\fomen\\OneDrive\\Development\\melanated-proposal-tool\\output"

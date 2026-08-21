@@ -44,7 +44,7 @@ export default function ExcursionListBlock({ data }: ExcursionListBlockProps) {
         ))}
       </div>
 
-      <PageFooter pageNumber={22} />
+      <PageFooter pageNumber={data.pageNumber} />
     </div>
   );
 }

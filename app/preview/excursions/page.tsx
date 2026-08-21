@@ -2,6 +2,7 @@ import ExcursionListBlock from "@/components/blocks/ExcursionListBlock";
 import type { ExcursionListData } from "@/lib/types";
 
 const testData: ExcursionListData = {
+  pageNumber: 22,
   items: [
     {
       title: "Walking Safari at Arusha National Park",

@@ -50,7 +50,7 @@ export default function HotelBlock({ data }: HotelBlockProps) {
         </div>
       </div>
 
-      <PageFooter pageNumber={8} />
+      <PageFooter pageNumber={data.pageNumber} />
     </div>
   );
 }

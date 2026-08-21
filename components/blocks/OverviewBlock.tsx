@@ -42,7 +42,7 @@ export default function OverviewBlock({ data }: OverviewBlockProps) {
         ))}
       </div>
 
-      <PageFooter pageNumber={4} />
+      <PageFooter pageNumber={data.pageNumber} />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import HotelBlock from "@/components/blocks/HotelBlock";
 import type { HotelData } from "@/lib/types";
 
 const testData: HotelData = {
+  pageNumber: 8,
   name: "Under the Shade Safari Lodge",
   roomCategory: "Standard",
   mealPlan: "Half Board",

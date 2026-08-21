@@ -11,6 +11,7 @@ export interface ItineraryDay {
 
 export interface OverviewData {
   days: ItineraryDay[];
+  pageNumber: number;
 }
 
 export interface ExcursionItem {
@@ -22,6 +23,7 @@ export interface ExcursionItem {
 
 export interface ExcursionListData {
   items: ExcursionItem[];
+  pageNumber: number;
 }
 
 export interface SectionDividerData {
@@ -41,6 +43,7 @@ export interface HotelData {
     bottomLeftTop: string;
     bottomLeftBottom: string;
   };
+  pageNumber: number;
 }
 
 export interface FounderSignature {
@@ -101,3 +104,105 @@ export interface TermsConditionsData {
   pageNumber: number;
   showTitle?: boolean;
 }
+
+export interface DayEntry {
+  dayNumber: number;
+  subtitle?: string;
+  highlightLine?: string;
+  paragraphs: string[];
+  imageUrls: string[];
+}
+
+export interface DayItineraryData {
+  days: DayEntry[];
+  pageNumber: number;
+  showWelcomeSidebar?: boolean;
+}
+
+export interface TitleLine {
+  text: string;
+  style: "bold" | "script";
+}
+
+export interface TriangleDividerData {
+  sectionLabel: string;
+  titleLines: TitleLine[];
+  imageUrl: string;
+  pageNumber: number;
+}
+
+export interface CityToursDividerData {
+  city: string;
+  intro: string;
+  priceNote: string;
+  imageUrl: string;
+  pageNumber: number;
+}
+
+export interface ImportantItemRow {
+  icon: string;
+  swatchColor: string;
+  heading: string;
+  bullets: string[];
+  qrCodeUrl?: string;
+}
+
+export interface ImportantItemsData {
+  rows: ImportantItemRow[];
+  pageNumber: number;
+}
+
+export interface SeasonColumn {
+  name: string;
+  icon?: string;
+  months: string;
+  tempF: string;
+  tempC: string;
+}
+
+export interface WeatherTable {
+  title: string;
+  seasons: SeasonColumn[];
+  note: string;
+}
+
+export interface WeatherData {
+  tables: WeatherTable[];
+  pageNumber: number;
+}
+
+export interface ThankYouData {
+  message: string;
+  imageUrl: string;
+  pageNumber: number;
+}
+
+export interface CoverData {
+  title: string;
+  subtitle: string;
+  clientLine: string;
+  imageUrl: string;
+}
+
+export type ProposalSection =
+  | { type: "cover"; data: CoverData }
+  | { type: "fromOwners"; data: FromOwnersData }
+  | { type: "details"; data: DetailsData }
+  | { type: "overview"; data: OverviewData }
+  | { type: "triangleDivider"; data: TriangleDividerData }
+  | { type: "hotel"; data: HotelData }
+  | { type: "dayItinerary"; data: DayItineraryData }
+  | { type: "sectionDivider"; data: SectionDividerData }
+  | { type: "cityToursDivider"; data: CityToursDividerData }
+  | { type: "excursionList"; data: ExcursionListData }
+  | { type: "twoColumnList"; data: TwoColumnListData }
+  | { type: "pricing"; data: PricingData }
+  | { type: "importantItems"; data: ImportantItemsData }
+  | { type: "weather"; data: WeatherData }
+  | { type: "termsConditions"; data: TermsConditionsData }
+  | { type: "thankYou"; data: ThankYouData };
+
+export interface ProposalData {
+  sections: ProposalSection[];
+}
+
