@@ -31,6 +31,7 @@ export interface HotelData {
   description: string;
   images: {
     topRight: string;
-    bottomLeft: string;
+    bottomLeftTop: string;
+    bottomLeftBottom: string;
   };
 }

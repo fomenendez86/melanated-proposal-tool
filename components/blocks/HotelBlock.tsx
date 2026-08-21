@@ -16,11 +16,16 @@ export default function HotelBlock({ data }: HotelBlockProps) {
       </div>
 
       <div className="mt-8 flex gap-6">
-        <div className="w-[45%] shrink-0">
+        <div className="flex w-[45%] shrink-0 flex-col gap-4">
           <img
-            src={data.images.bottomLeft}
+            src={data.images.bottomLeftTop}
+            alt={`${data.name} detail`}
+            className="h-[200px] w-full object-cover"
+          />
+          <img
+            src={data.images.bottomLeftBottom}
             alt={`${data.name} exterior`}
-            className="h-[350px] w-full object-cover"
+            className="h-[600px] w-full object-cover"
           />
         </div>
         <div className="flex flex-1 flex-col">

@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "render:overview": "tsx lib/render/renderOverview.ts",
-    "render:excursions": "tsx lib/render/renderExcursions.ts"
+    "render:excursions": "tsx lib/render/renderExcursions.ts",
+    "render:hotel": "tsx lib/render/renderHotel.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
