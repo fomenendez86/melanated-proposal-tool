@@ -10,7 +10,25 @@ export type ProposalEditorFieldName =
   | "specialOccasion"
   | "arrivalAirport"
   | "departureAirport"
-  | "packageTotalLabel";
+  | "packageTotalLabel"
+  | "roomCategory"
+  | "mealPlan"
+  | "nights"
+  | "pricingIntro"
+  | "invoiceTotal"
+  | "commission"
+  | "amountDue"
+  | "currency"
+  | "sectionLabel"
+  | "titleLine1"
+  | "titleLine2"
+  | "titleLine3"
+  | "dividerTitle"
+  | "dividerSubtitle"
+  | "sectionImageUrl"
+  | "cityIntro"
+  | "priceNote"
+  | "thankYouMessage";
 
 export interface ProposalEditorField {
   name: ProposalEditorFieldName;
@@ -25,7 +43,17 @@ export interface ProposalEditorField {
 
 export interface ProposalEditorPageConfig {
   pageId: string;
-  kind: "cover" | "details";
+  kind:
+    | "cover"
+    | "details"
+    | "hotelBooking"
+    | "pricing"
+    | "triangleDivider"
+    | "sectionDivider"
+    | "cityToursDivider"
+    | "thankYou";
+  sourceSectionId?: number;
+  sourceRefId?: number | null;
   heading: string;
   description: string;
   fields: ProposalEditorField[];
@@ -35,6 +63,8 @@ export type ProposalEditorPageMap = Record<string, ProposalEditorPageConfig>;
 
 export interface UpdateProposalFieldsInput {
   kind: ProposalEditorPageConfig["kind"];
+  sourceSectionId?: number;
+  sourceRefId?: number | null;
   values: Partial<Record<ProposalEditorFieldName, string>>;
 }
 

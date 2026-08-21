@@ -186,7 +186,7 @@ and panel state.
 
 ## Phase 2 — Structured content editing and save
 
-**Status: In progress. Phase 2.1 complete (2026-08-21).**
+**Status: In progress. Phases 2.1 and 2.2 complete (2026-08-21).**
 
 ### Phase 2.1 delivered
 
@@ -200,11 +200,22 @@ and panel state.
   editor and client preview routes.
 - Reload-tested persistence without writing to shared catalog records.
 
-### Phase 2.2 next
+### Phase 2.2 delivered
 
-- Add proposal-specific override storage for hotel, excursion, reusable list,
-  weather, terms, and closing content before enabling those property forms.
-- Never edit shared catalog/template defaults implicitly from a proposal.
+- Stable page-to-source references that survive automatic pagination.
+- Proposal-only forms for hotel booking details and pricing values.
+- Proposal-section payload editing for triangle dividers, image dividers, city
+  tour introductions, and the closing page.
+- Currency-aware pricing rendering with validation for non-negative amounts and
+  three-letter currency codes.
+- Ownership checks for every booking and section mutation; catalog hotel values
+  remain unchanged when proposal booking overrides are edited.
+
+### Phase 2.3 next
+
+- Add proposal-specific snapshot/override storage for excursion copy, reusable
+  lists, weather, terms, and payment-schedule rows before enabling those forms.
+- Never edit shared catalog or template defaults implicitly from a proposal.
 
 ### Scope
 

@@ -243,7 +243,12 @@ function EditableFieldsForm({
     const requestNumber = ++requestNumberRef.current;
     onSaveStateChange("saving");
     setFormError("");
-    const result = await updateProposalFields(proposalId, { kind: config.kind, values: draft });
+    const result = await updateProposalFields(proposalId, {
+      kind: config.kind,
+      sourceSectionId: config.sourceSectionId,
+      sourceRefId: config.sourceRefId,
+      values: draft,
+    });
     if (requestNumber !== requestNumberRef.current) return;
 
     if (!result.ok) {
@@ -257,7 +262,15 @@ function EditableFieldsForm({
     setSavedValues(draft);
     onSaveStateChange("saved");
     router.refresh();
-  }, [config.kind, onSaveStateChange, proposalId, router, savedValues]);
+  }, [
+    config.kind,
+    config.sourceRefId,
+    config.sourceSectionId,
+    onSaveStateChange,
+    proposalId,
+    router,
+    savedValues,
+  ]);
 
   useEffect(() => {
     if (!isDirty) return;

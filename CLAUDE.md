@@ -14,9 +14,9 @@ protegidos, editor cronológico de itinerario y catálogo contextual. No se
 construirá un panel administrativo general ni un canvas de posicionamiento
 libre.
 
-**Fase actual:** Fases 1, 1.1 y 1.2 completadas. Fase 2 en curso: el tramo 2.1
-de edición y persistencia de Portada/Detalles está completo; próximo 2.2 —
-overrides por propuesta para contenido proveniente del catálogo.
+**Fase actual:** Fases 1, 1.1 y 1.2 completadas. Fase 2 en curso: tramos 2.1 y
+2.2 completos; próximo 2.3 — snapshots/overrides para excursiones, listas,
+clima, términos y calendario de pagos.
 
 ## Cómo mantener este archivo (leer antes de trabajar)
 - **Actualizar esta sección de estado en cada paso relevante** — cuando se
@@ -88,6 +88,13 @@ documentarlo acá.
   botón manual, estados Loaded/Unsaved/Saving/Saved/Error y refresca editor y
   preview desde los datos canónicos. No se escriben registros compartidos del
   catálogo desde estos formularios.
+- **Overrides seguros (Fase 2.2)**: cada página derivada de
+  `proposal_sections` conserva `editorSource` (section/ref id) incluso después
+  de paginar. Ya se editan reservas de hotel, importes/moneda/intro de pricing,
+  dividers triangulares y de imagen, introducción de tours y cierre. Las actions
+  verifican que booking/sección pertenecen a la propuesta; los campos visuales
+  se guardan en el payload privado de la sección y nunca pisan el hotel/ciudad
+  del catálogo. El render de pricing respeta el código de moneda guardado.
 - **Paginación automática** (`lib/paginate.ts`): Overview, ExcursionList y
   TermsConditions usan empaquetado por altura estimada (heurística basada en
   cantidad de caracteres por línea, no medición real del DOM — es
@@ -165,8 +172,9 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
   agregar más secciones, solo falta cargarlas.
 
 **Proposal Studio pendiente:**
-- La edición persistente cubre Portada y Detalles. Hoteles, excursiones, listas,
-  clima, términos y cierre siguen read-only hasta agregar overrides por
-  propuesta que eviten mutar defaults compartidos. También faltan catálogo
-  contextual, composición/reordenamiento y generación PDF desde la toolbar. El
-  orden y los criterios están en `docs/EDITOR_IMPLEMENTATION_PLAN.md`.
+- La edición persistente cubre Portada, Detalles, reserva de Hotel, Pricing,
+  dividers, introducción de tours y Cierre. Excursiones, listas, clima, términos
+  y calendario de pagos siguen read-only hasta agregar snapshots/overrides por
+  propuesta. También faltan catálogo contextual, composición/reordenamiento y
+  generación PDF desde la toolbar. El orden y los criterios están en
+  `docs/EDITOR_IMPLEMENTATION_PLAN.md`.

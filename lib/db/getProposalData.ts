@@ -134,6 +134,18 @@ function formatPrice(basePrice: number, priceNote: string | null): string {
   return priceNote ? `${amount} (${priceNote})` : amount;
 }
 
+function formatMoney(amount: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return `${currency} ${amount.toFixed(2)}`;
+  }
+}
+
 export async function getProposalData(proposalId: number): Promise<ProposalData> {
   const [proposal] = await db.select().from(proposals).where(eq(proposals.id, proposalId));
   if (!proposal) throw new Error(`Proposal ${proposalId} not found`);
@@ -210,19 +222,28 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
     .orderBy(asc(proposalSections.sortOrder));
 
   for (const row of skeleton) {
+    const editorSource = { sectionId: row.id, refId: row.refId };
     switch (row.sectionType) {
       case "overview": {
-        sections.push(...paginateOverview({ days: overviewDays, pageNumber: 0 }, 0));
+        sections.push(
+          ...paginateOverview({ days: overviewDays, pageNumber: 0 }, 0).map((section) => ({
+            ...section,
+            editorSource,
+          }))
+        );
         break;
       }
       case "dayItinerary": {
-        sections.push(...paginateDayItinerary(dayEntries, 0));
+        sections.push(
+          ...paginateDayItinerary(dayEntries, 0).map((section) => ({ ...section, editorSource }))
+        );
         break;
       }
       case "triangleDivider": {
         const payload = row.payload as TriangleDividerPayload;
         sections.push({
           type: "triangleDivider",
+          editorSource,
           data: {
             sectionLabel: payload.sectionLabel,
             titleLines: payload.titleLines,
@@ -240,6 +261,7 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
         const bySlot = (slot: string) => images.find((img) => img.slot === slot)?.url ?? "";
         sections.push({
           type: "hotel",
+          editorSource,
           data: {
             name: hotel.name,
             roomCategory: booking.roomCategory,
@@ -259,6 +281,7 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
         const payload = row.payload as SectionDividerPayload;
         sections.push({
           type: "sectionDivider",
+          editorSource,
           data: {
             title: payload.title,
             subtitle: payload.subtitle,
@@ -274,6 +297,7 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
         const [city] = await db.select().from(cities).where(eq(cities.id, row.refId));
         sections.push({
           type: "cityToursDivider",
+          editorSource,
           data: {
             city: city.name,
             intro: payload.intro,
@@ -316,7 +340,12 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
             imageUrl: image?.url ?? "",
           });
         }
-        sections.push(...paginateExcursionList({ items, pageNumber: 0 }, 0));
+        sections.push(
+          ...paginateExcursionList({ items, pageNumber: 0 }, 0).map((section) => ({
+            ...section,
+            editorSource,
+          }))
+        );
         break;
       }
       case "twoColumnList": {
@@ -343,6 +372,7 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
 
         sections.push({
           type: "twoColumnList",
+          editorSource,
           data: {
             title: payload.title,
             leftColumn: await buildColumn("left"),
@@ -378,12 +408,13 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
         }
         sections.push({
           type: "pricing",
+          editorSource,
           data: {
             intro: pricing.introText ?? "",
             packagePricing: [
-              { label: "Invoice Total", value: `$${pricing.invoiceTotal.toFixed(2)}` },
-              { label: "Commission", value: `$${pricing.commission.toFixed(2)}` },
-              { label: "Amount Due", value: `$${pricing.amountDue.toFixed(2)}` },
+              { label: "Invoice Total", value: formatMoney(pricing.invoiceTotal, pricing.currency) },
+              { label: "Commission", value: formatMoney(pricing.commission, pricing.currency) },
+              { label: "Amount Due", value: formatMoney(pricing.amountDue, pricing.currency) },
             ],
             paymentSchedule: schedule.map((s) => ({ label: s.label, value: s.valueText })),
             bankingInfo,
@@ -418,7 +449,7 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
             qrCodeUrl: item.qrCodeUrl ?? undefined,
           });
         }
-        sections.push({ type: "importantItems", data: { rows, pageNumber: 0 } });
+        sections.push({ type: "importantItems", data: { rows, pageNumber: 0 }, editorSource });
         break;
       }
       case "weather": {
@@ -451,7 +482,7 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
             })),
           });
         }
-        sections.push({ type: "weather", data: { tables, pageNumber: 0 } });
+        sections.push({ type: "weather", data: { tables, pageNumber: 0 }, editorSource });
         break;
       }
       case "termsConditions": {
@@ -471,7 +502,9 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
           built.push({ heading: section.heading, paragraphs: paragraphs.map((p) => p.body) });
         }
         sections.push(
-          ...paginateTermsConditions({ sections: built, pageNumber: 0, showTitle: true }, 0)
+          ...paginateTermsConditions({ sections: built, pageNumber: 0, showTitle: true }, 0).map(
+            (section) => ({ ...section, editorSource })
+          )
         );
         break;
       }
@@ -479,6 +512,7 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
         const payload = row.payload as ThankYouPayload;
         sections.push({
           type: "thankYou",
+          editorSource,
           data: { message: payload.message, imageUrl: payload.imageUrl, pageNumber: 0 },
         });
         break;
