@@ -423,7 +423,7 @@ const sections: ProposalSection[] = [
       title: "Proposal",
       subtitle: "An Unforgettable Tanzanian Experience For",
       clientLine: "Replace with Company Name or Clients",
-      imageUrl: "https://picsum.photos/id/1069/700/1100",
+      imageUrl: "/proposal-assets/cover-zebras-v1.png",
     },
   },
   {
@@ -451,15 +451,15 @@ const sections: ProposalSection[] = [
       rows: [
         { label: "Package Booked:", value: "The Mainland Tour" },
         { label: "Selected Tier:", value: "Classic" },
-        { label: "Dates:", value: "???" },
-        { label: "Passenger Manifest:", value: "???" },
+        { label: "Dates:", value: "Dates to be confirmed" },
+        { label: "Passenger Manifest:", value: "Traveler details pending" },
         { label: "Special Occasion:", value: "TBD" },
         {
           label: "Airport Information",
           value: "Arrival(JRO - Mt. Kilimanjaro); Departure(ZNZ - Zanzibar)",
           emphasis: true,
         },
-        { label: "Package Total:", value: "???" },
+        { label: "Package Total:", value: "Pricing to be confirmed" },
       ],
       pageNumber: 3,
     },

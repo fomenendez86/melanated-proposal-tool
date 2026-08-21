@@ -6,6 +6,8 @@ export interface ProposalPageMeta {
   id: string;
   pageNumber: number;
   type: ProposalSection["type"];
+  sourceSectionId?: number;
+  sourceRefId?: number | null;
   eyebrow: string;
   title: string;
   description: string;
@@ -62,6 +64,8 @@ export function buildProposalPageMeta(sections: ProposalSection[]): ProposalPage
     id: `${section.type}-${index + 1}`,
     pageNumber: index + 1,
     type: section.type,
+    sourceSectionId: section.editorSource?.sectionId,
+    sourceRefId: section.editorSource?.refId,
     status: "ready",
     ...pageCopy(section),
   }));

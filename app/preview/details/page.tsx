@@ -5,15 +5,15 @@ const testData: DetailsData = {
   rows: [
     { label: "Package Booked:", value: "The Mainland Tour" },
     { label: "Selected Tier:", value: "Classic" },
-    { label: "Dates:", value: "???" },
-    { label: "Passenger Manifest:", value: "???" },
+    { label: "Dates:", value: "Dates to be confirmed" },
+    { label: "Passenger Manifest:", value: "Traveler details pending" },
     { label: "Special Occasion:", value: "TBD" },
     {
       label: "Airport Information",
       value: "Arrival(JRO - Mt. Kilimanjaro); Departure(ZNZ - Zanzibar)",
       emphasis: true,
     },
-    { label: "Package Total:", value: "???" },
+    { label: "Package Total:", value: "Pricing to be confirmed" },
   ],
   pageNumber: 3,
 };

@@ -109,7 +109,8 @@ The editor will eventually distinguish three layers:
 3. **Proposal revision/snapshot** — immutable data used for sent proposals and
    regenerated PDFs.
 
-Phase 1 only introduces navigation state: selected page, zoom, and panel state.
+Phases 1 and 1.2 introduce navigation state: selected page, zoom, view mode,
+and panel state.
 
 ## 4. Delivery phases
 
@@ -152,7 +153,58 @@ Phase 1 only introduces navigation state: selected page, zoom, and panel state.
 - Drag-and-drop ordering.
 - PDF generation from the toolbar.
 
+## Phase 1.2 — Continuous document navigation
+
+**Status: Complete (2026-08-21).**
+
+### Scope
+
+- Make continuous vertical document scrolling the editor default.
+- Keep native trackpad, mouse-wheel, touch, and scrollbar behavior; do not
+  convert wheel gestures into discrete page jumps.
+- Detect the page nearest the viewport center and synchronize it with the page
+  navigator, toolbar counter, and Properties panel.
+- Scroll the document to the corresponding page when a thumbnail, previous/next
+  control, or PageUp/PageDown shortcut is used.
+- Offer Continuous and Single page viewing modes without changing PDF geometry.
+- Fit continuous mode to the available width and single-page mode to the full
+  available viewport; keep manual zoom available in both modes.
+- Keep page virtualization as a measured performance optimization for larger
+  documents rather than adding its complexity before it is needed.
+
+### Acceptance criteria
+
+- Normal scrolling moves naturally across all pages in document order.
+- The active thumbnail and contextual properties update as the viewport crosses
+  into another page.
+- Selecting a page from the navigator scrolls to it without reloading.
+- Previous/next and PageUp/PageDown navigate consistently in both view modes.
+- Continuous mode works on desktop and touch-sized screens without horizontal
+  overflow at fit width.
+- Single-page mode remains available on screens where the view toggle is shown.
+- Lint and the production build succeed.
+
 ## Phase 2 — Structured content editing and save
+
+**Status: In progress. Phase 2.1 complete (2026-08-21).**
+
+### Phase 2.1 delivered
+
+- Editable Cover and Proposal Details property forms.
+- Proposal-scoped field allowlists and server-side length, required-value, and
+  image URL validation.
+- Debounced autosave, immediate save on leaving the form, and a manual Save now
+  fallback.
+- Distinct Loaded, Unsaved, Saving, Saved, and Error feedback.
+- Database transactions for proposal/client updates and revalidation of both
+  editor and client preview routes.
+- Reload-tested persistence without writing to shared catalog records.
+
+### Phase 2.2 next
+
+- Add proposal-specific override storage for hotel, excursion, reusable list,
+  weather, terms, and closing content before enabling those property forms.
+- Never edit shared catalog/template defaults implicitly from a proposal.
 
 ### Scope
 
@@ -353,6 +405,8 @@ of destructive changes.
 
 - [x] Existing PDF block system and database-backed proposal assembly.
 - [x] Phase 1 — visual editor foundation.
+- [x] Phase 1.1 — responsive and accessibility quality pass.
+- [x] Phase 1.2 — continuous document navigation.
 - [ ] Phase 2 — persistent structured editing.
 - [ ] Phase 3 — itinerary editor.
 - [ ] Phase 4 — contextual catalog.

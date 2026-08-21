@@ -784,10 +784,10 @@ async function main() {
       termsTemplateId: termsTemplate.id,
       coverTitle: "Proposal",
       coverSubtitle: "An Unforgettable Tanzanian Experience For",
-      coverImageUrl: "https://picsum.photos/id/1069/700/1100",
-      travelDatesLabel: "???",
-      packageTotalLabel: "???",
-      passengerManifestLabel: "???",
+      coverImageUrl: "/proposal-assets/cover-zebras-v1.png",
+      travelDatesLabel: "Dates to be confirmed",
+      packageTotalLabel: "Pricing to be confirmed",
+      passengerManifestLabel: "Traveler details pending",
     })
     .returning();
 

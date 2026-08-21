@@ -1,0 +1,48 @@
+export type ProposalEditorFieldName =
+  | "coverTitle"
+  | "coverSubtitle"
+  | "clientName"
+  | "coverImageUrl"
+  | "packageName"
+  | "selectedTier"
+  | "travelDatesLabel"
+  | "passengerManifestLabel"
+  | "specialOccasion"
+  | "arrivalAirport"
+  | "departureAirport"
+  | "packageTotalLabel";
+
+export interface ProposalEditorField {
+  name: ProposalEditorFieldName;
+  label: string;
+  value: string;
+  required?: boolean;
+  multiline?: boolean;
+  maxLength: number;
+  placeholder?: string;
+  helpText?: string;
+}
+
+export interface ProposalEditorPageConfig {
+  pageId: string;
+  kind: "cover" | "details";
+  heading: string;
+  description: string;
+  fields: ProposalEditorField[];
+}
+
+export type ProposalEditorPageMap = Record<string, ProposalEditorPageConfig>;
+
+export interface UpdateProposalFieldsInput {
+  kind: ProposalEditorPageConfig["kind"];
+  values: Partial<Record<ProposalEditorFieldName, string>>;
+}
+
+export interface UpdateProposalFieldsResult {
+  ok: boolean;
+  savedAt?: string;
+  fieldErrors?: Partial<Record<ProposalEditorFieldName, string>>;
+  formError?: string;
+}
+
+export type EditorSaveState = "loaded" | "dirty" | "saving" | "saved" | "error";

@@ -14,8 +14,9 @@ protegidos, editor cronológico de itinerario y catálogo contextual. No se
 construirá un panel administrativo general ni un canvas de posicionamiento
 libre.
 
-**Fase actual:** Fase 1 completada. Próxima: Fase 2 — edición estructurada y
-persistencia.
+**Fase actual:** Fases 1, 1.1 y 1.2 completadas. Fase 2 en curso: el tramo 2.1
+de edición y persistencia de Portada/Detalles está completo; próximo 2.2 —
+overrides por propuesta para contenido proveniente del catálogo.
 
 ## Cómo mantener este archivo (leer antes de trabajar)
 - **Actualizar esta sección de estado en cada paso relevante** — cuando se
@@ -65,6 +66,28 @@ documentarlo acá.
   al preview limpio. La portada `/` redirige temporalmente a la propuesta seed
   `1`. Los botones de editar, catálogo, añadir sección y generar PDF quedan
   visibles pero deshabilitados hasta sus fases correspondientes.
+- **Quality pass (Fase 1.1)**: el canvas calcula “fit to page” con
+  `ResizeObserver`; páginas y propiedades se convierten en drawers en pantallas
+  pequeñas; controles táctiles usan objetivos cercanos a 44px; hay foco visible,
+  navegación con PageUp/PageDown y cierre con Escape. La lista usa miniaturas
+  reales, descripciones para distinguir páginas repetidas y estados neutrales
+  basados en render (“Loaded/Rendered”), sin exponer fases internas al usuario.
+  La portada demo usa `public/proposal-assets/cover-zebras-v1.png`, derivada de
+  la referencia visual de la pág. 1, en lugar del placeholder de Picsum.
+- **Navegación continua (Fase 1.2)**: el editor muestra el documento
+  completo en una columna vertical con scroll nativo. La página visible se
+  sincroniza con miniaturas, contador y propiedades mediante
+  `IntersectionObserver`; miniaturas, anterior/siguiente y PageUp/PageDown
+  desplazan a la página elegida. Se conservan los modos Continuo y Página
+  individual, con ajuste de ancho o página según corresponda.
+- **Edición estructurada (Fase 2.1)**: Portada y Detalles tienen formularios
+  contextuales reales en el panel de propiedades. `getProposalEditorData.ts`
+  construye los campos editables; `app/proposals/[id]/editor/actions.ts` valida
+  una allowlist por tipo y persiste propuesta/cliente dentro de una transacción.
+  El cliente ofrece autosave con debounce, guardado al salir del formulario,
+  botón manual, estados Loaded/Unsaved/Saving/Saved/Error y refresca editor y
+  preview desde los datos canónicos. No se escriben registros compartidos del
+  catálogo desde estos formularios.
 - **Paginación automática** (`lib/paginate.ts`): Overview, ExcursionList y
   TermsConditions usan empaquetado por altura estimada (heurística basada en
   cantidad de caracteres por línea, no medición real del DOM — es
@@ -142,8 +165,8 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
   agregar más secciones, solo falta cargarlas.
 
 **Proposal Studio pendiente:**
-- La Fase 1 es deliberadamente de navegación/preview. Todavía no hay edición
-  persistente desde el panel de propiedades, autosave, catálogo contextual,
-  composición/reordenamiento de secciones ni generación PDF desde la toolbar.
-  El orden y los criterios de aceptación están documentados en
-  `docs/EDITOR_IMPLEMENTATION_PLAN.md`.
+- La edición persistente cubre Portada y Detalles. Hoteles, excursiones, listas,
+  clima, términos y cierre siguen read-only hasta agregar overrides por
+  propuesta que eviten mutar defaults compartidos. También faltan catálogo
+  contextual, composición/reordenamiento y generación PDF desde la toolbar. El
+  orden y los criterios están en `docs/EDITOR_IMPLEMENTATION_PLAN.md`.

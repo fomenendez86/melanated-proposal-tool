@@ -184,7 +184,7 @@ export interface CoverData {
   imageUrl: string;
 }
 
-export type ProposalSection =
+export type ProposalSection = (
   | { type: "cover"; data: CoverData }
   | { type: "fromOwners"; data: FromOwnersData }
   | { type: "details"; data: DetailsData }
@@ -200,9 +200,14 @@ export type ProposalSection =
   | { type: "importantItems"; data: ImportantItemsData }
   | { type: "weather"; data: WeatherData }
   | { type: "termsConditions"; data: TermsConditionsData }
-  | { type: "thankYou"; data: ThankYouData };
+  | { type: "thankYou"; data: ThankYouData }
+) & {
+  editorSource?: {
+    sectionId: number;
+    refId: number | null;
+  };
+};
 
 export interface ProposalData {
   sections: ProposalSection[];
 }
-
