@@ -14,7 +14,9 @@
       "Bash(rm -f output/full-check-*.png *)",
       "Bash(taskkill //PID 11476 //F)",
       "Bash(rm -f output/pg-*.png *)",
-      "Bash(taskkill //PID 20632 //F)"
+      "Bash(taskkill //PID 20632 //F)",
+      "Bash(npm ls *)",
+      "Bash(dir data *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\fomen\\OneDrive\\Development\\melanated-proposal-tool\\output"
