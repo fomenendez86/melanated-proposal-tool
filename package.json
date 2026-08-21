@@ -9,7 +9,14 @@
     "lint": "eslint",
     "render:overview": "tsx lib/render/renderOverview.ts",
     "render:excursions": "tsx lib/render/renderExcursions.ts",
-    "render:hotel": "tsx lib/render/renderHotel.ts"
+    "render:hotel": "tsx lib/render/renderHotel.ts",
+    "render:divider": "tsx lib/render/renderSectionDivider.ts",
+    "render:from-owners": "tsx lib/render/renderFromOwners.ts",
+    "render:details": "tsx lib/render/renderDetails.ts",
+    "render:inclusions": "tsx lib/render/renderInclusions.ts",
+    "render:exclusions": "tsx lib/render/renderExclusions.ts",
+    "render:pricing": "tsx lib/render/renderPricing.ts",
+    "render:terms": "tsx lib/render/renderTerms.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

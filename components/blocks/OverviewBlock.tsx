@@ -1,3 +1,5 @@
+import PageFooter from "@/components/blocks/shared/PageFooter";
+import PageHeader from "@/components/blocks/shared/PageHeader";
 import SectionHeader from "@/components/blocks/shared/SectionHeader";
 import type { OverviewData } from "@/lib/types";
 
@@ -8,10 +10,7 @@ interface OverviewBlockProps {
 export default function OverviewBlock({ data }: OverviewBlockProps) {
   return (
     <div className="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-black">
-      <div className="flex items-center justify-between text-[10px] font-sans uppercase tracking-wide">
-        <div className="text-left font-semibold">Melanated Safaris</div>
-        <div className="text-right">Proposal</div>
-      </div>
+      <PageHeader />
 
       <div className="mt-8">
         <SectionHeader title="Overview" />
@@ -43,9 +42,7 @@ export default function OverviewBlock({ data }: OverviewBlockProps) {
         ))}
       </div>
 
-      <div className="absolute inset-x-0 bottom-8 text-center text-xs text-neutral-600">
-        04
-      </div>
+      <PageFooter pageNumber={4} />
     </div>
   );
 }

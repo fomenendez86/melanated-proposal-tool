@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(rm -f output/*-verify.pdf *)",
+      "Bash(taskkill //PID 9412 //F)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\fomen\\OneDrive\\Development\\melanated-proposal-tool\\output"
+    ]
+  }
+}

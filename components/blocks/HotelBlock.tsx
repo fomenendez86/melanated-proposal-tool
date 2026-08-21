@@ -1,3 +1,5 @@
+import PageFooter from "@/components/blocks/shared/PageFooter";
+import PageHeader from "@/components/blocks/shared/PageHeader";
 import SectionHeader from "@/components/blocks/shared/SectionHeader";
 import type { HotelData } from "@/lib/types";
 
@@ -10,9 +12,8 @@ export default function HotelBlock({ data }: HotelBlockProps) {
     <div className="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-black">
       <SectionHeader title="Accommodations" />
 
-      <div className="mt-2 flex items-center justify-between text-[10px] font-sans uppercase tracking-wide">
-        <div>08</div>
-        <div className="text-right">Proposal</div>
+      <div className="mt-2">
+        <PageHeader variant="proposalOnly" />
       </div>
 
       <div className="mt-8 flex gap-6">
@@ -20,19 +21,19 @@ export default function HotelBlock({ data }: HotelBlockProps) {
           <img
             src={data.images.bottomLeftTop}
             alt={`${data.name} detail`}
-            className="h-[200px] w-full object-cover"
+            className="h-[500px] w-full object-cover"
           />
           <img
             src={data.images.bottomLeftBottom}
             alt={`${data.name} exterior`}
-            className="h-[600px] w-full object-cover"
+            className="h-[280px] w-full object-cover"
           />
         </div>
         <div className="flex flex-1 flex-col">
           <img
             src={data.images.topRight}
             alt={`${data.name} room`}
-            className="aspect-square w-full object-cover"
+            className="aspect-[292/268] w-full object-cover"
           />
           <h3 className="mt-4 text-xl font-bold uppercase">{data.name}</h3>
           <p className="mt-2 text-sm">
@@ -49,9 +50,7 @@ export default function HotelBlock({ data }: HotelBlockProps) {
         </div>
       </div>
 
-      <div className="absolute inset-x-0 bottom-8 text-center text-xs text-neutral-600">
-        08
-      </div>
+      <PageFooter pageNumber={8} />
     </div>
   );
 }
