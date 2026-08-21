@@ -14,6 +14,11 @@ export type ProposalEditorFieldName =
   | "roomCategory"
   | "mealPlan"
   | "nights"
+  | "hotelName"
+  | "hotelDescription"
+  | "hotelImageTopRight"
+  | "hotelImageBottomLeftTop"
+  | "hotelImageBottomLeftBottom"
   | "pricingIntro"
   | "invoiceTotal"
   | "commission"
@@ -28,7 +33,18 @@ export type ProposalEditorFieldName =
   | "sectionImageUrl"
   | "cityIntro"
   | "priceNote"
-  | "thankYouMessage";
+  | "thankYouMessage"
+  | "paymentScheduleText"
+  | "leftListText"
+  | "rightListText"
+  | "excursionSnapshotText"
+  | "weatherSnapshotText"
+  | "termsSnapshotText"
+  | "ownerParagraphsText"
+  | "founderSignaturesText"
+  | "ownerPhotoUrl"
+  | "importantItemsSnapshotText"
+  | "itinerarySnapshotText";
 
 export interface ProposalEditorField {
   name: ProposalEditorFieldName;
@@ -51,7 +67,15 @@ export interface ProposalEditorPageConfig {
     | "triangleDivider"
     | "sectionDivider"
     | "cityToursDivider"
-    | "thankYou";
+    | "thankYou"
+    | "twoColumnList"
+    | "excursionSnapshot"
+    | "weatherSnapshot"
+    | "termsSnapshot"
+    | "fromOwnersSnapshot"
+    | "importantItemsSnapshot"
+    | "itinerary";
+  saveMode?: "auto" | "explicit";
   sourceSectionId?: number;
   sourceRefId?: number | null;
   heading: string;

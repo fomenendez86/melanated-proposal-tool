@@ -273,17 +273,17 @@ function EditableFieldsForm({
   ]);
 
   useEffect(() => {
-    if (!isDirty) return;
+    if (!isDirty || config.saveMode === "explicit") return;
     onSaveStateChange("dirty");
     autosaveTimeoutRef.current = window.setTimeout(() => void saveDraft(values), 800);
     return () => {
       if (autosaveTimeoutRef.current !== null) window.clearTimeout(autosaveTimeoutRef.current);
     };
-  }, [isDirty, onSaveStateChange, saveDraft, values, valuesKey]);
+  }, [config.saveMode, isDirty, onSaveStateChange, saveDraft, values, valuesKey]);
 
   function handleFormBlur(event: FocusEvent<HTMLFormElement>) {
     if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return;
-    if (isDirty) void saveDraft(values);
+    if (isDirty && config.saveMode !== "explicit") void saveDraft(values);
   }
 
   return (
@@ -299,6 +299,12 @@ function EditableFieldsForm({
         <h3 className="text-sm font-semibold text-[#294c3d]">{config.heading}</h3>
         <p className="mt-1 text-xs leading-4 text-[#64766e]">{config.description}</p>
       </div>
+
+      {config.saveMode === "explicit" ? (
+        <p className="rounded-lg border border-[#ead7a6] bg-[#fff9e9] px-3 py-2 text-xs leading-4 text-[#735a20]">
+          Review the full collection, then use Save now. These changes are not autosaved.
+        </p>
+      ) : null}
 
       {config.fields.map((field) => {
         const error = fieldErrors[field.name];
@@ -317,6 +323,7 @@ function EditableFieldsForm({
           onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
             setValues((current) => ({ ...current, [field.name]: event.target.value }));
             setFieldErrors((current) => ({ ...current, [field.name]: undefined }));
+            onSaveStateChange("dirty");
           },
           className: controlClass,
         };
@@ -326,7 +333,11 @@ function EditableFieldsForm({
             <label htmlFor={commonProps.id} className="text-xs font-semibold text-[#435a50]">
               {field.label}{field.required ? <span className="text-[#9b3f38]"> *</span> : null}
             </label>
-            {field.multiline ? <textarea {...commonProps} rows={3} /> : <input {...commonProps} type="text" />}
+            {field.multiline ? (
+              <textarea {...commonProps} rows={config.saveMode === "explicit" ? 10 : 3} />
+            ) : (
+              <input {...commonProps} type="text" />
+            )}
             <div className="mt-1 flex items-start justify-between gap-2 text-[11px]">
               <span id={error ? commonProps["aria-describedby"] : undefined} className={error ? "text-[#a13f38]" : "text-[#718179]"}>
                 {error ?? field.helpText ?? ""}
@@ -488,18 +499,27 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
   const pageRefs = useRef<Array<HTMLDivElement | null>>([]);
   const viewModeTargetRef = useRef(0);
 
-  const selectedPage = pageMeta[selectedIndex];
+  const effectiveSelectedIndex = Math.min(selectedIndex, Math.max(0, pageMeta.length - 1));
+  const selectedPage = pageMeta[effectiveSelectedIndex];
   const editorConfig = editorPages[selectedPage.id];
   const fitCanvas = useFitCanvas(canvasViewportRef, setZoom, viewMode);
 
+  const confirmDiscardDraft = useCallback(() => {
+    if (saveState !== "dirty" && saveState !== "error") return true;
+    const confirmed = window.confirm("Discard the unsaved changes on this page?");
+    if (confirmed) setSaveState("loaded");
+    return confirmed;
+  }, [saveState]);
+
   const navigateToIndex = useCallback((index: number, behavior: ScrollBehavior = "smooth") => {
     const nextIndex = Math.min(pageMeta.length - 1, Math.max(0, index));
+    if (nextIndex !== selectedIndex && !confirmDiscardDraft()) return;
     setSelectedIndex(nextIndex);
 
     if (viewMode === "continuous") {
       pageRefs.current[nextIndex]?.scrollIntoView({ behavior, block: "start" });
     }
-  }, [pageMeta.length, viewMode]);
+  }, [confirmDiscardDraft, pageMeta.length, selectedIndex, viewMode]);
 
   const selectPage = useCallback((page: ProposalPageMeta) => {
     const index = pageMeta.findIndex((candidate) => candidate.id === page.id);
@@ -510,13 +530,13 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
   }, [navigateToIndex, pageMeta]);
 
   const moveSelection = useCallback((direction: -1 | 1) => {
-    navigateToIndex(selectedIndex + direction);
-  }, [navigateToIndex, selectedIndex]);
+    navigateToIndex(effectiveSelectedIndex + direction);
+  }, [effectiveSelectedIndex, navigateToIndex]);
 
   const changeViewMode = useCallback((mode: ViewMode) => {
-    viewModeTargetRef.current = selectedIndex;
+    viewModeTargetRef.current = effectiveSelectedIndex;
     setViewMode(mode);
-  }, [selectedIndex]);
+  }, [effectiveSelectedIndex]);
 
   useEffect(() => {
     if (viewMode !== "continuous") return;
@@ -544,7 +564,9 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
             return aDistance - bDistance;
           })[0];
         const index = Number((visibleEntry?.target as HTMLElement | undefined)?.dataset.pageIndex);
-        if (Number.isInteger(index)) setSelectedIndex(index);
+        if (Number.isInteger(index) && saveState !== "dirty" && saveState !== "error") {
+          setSelectedIndex(index);
+        }
       },
       { root: viewport, rootMargin: "-42% 0px -42% 0px" }
     );
@@ -553,7 +575,11 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
       if (page) observer.observe(page);
     });
     return () => observer.disconnect();
-  }, [pageMeta.length, viewMode]);
+  }, [pageMeta.length, saveState, viewMode]);
+
+  const closeProperties = useCallback(() => {
+    if (confirmDiscardDraft()) setPropertiesOpen(false);
+  }, [confirmDiscardDraft]);
 
   useEffect(() => {
     function handleBeforeUnload(event: BeforeUnloadEvent) {
@@ -600,8 +626,8 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
     function handleDialogKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
-        setPagesOpen(false);
-        setPropertiesOpen(false);
+        if (pagesOpen) setPagesOpen(false);
+        if (propertiesOpen) closeProperties();
         return;
       }
       if (event.key !== "Tab") return;
@@ -625,7 +651,7 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
       document.removeEventListener("keydown", handleDialogKeyDown);
       previousFocus?.focus();
     };
-  }, [pagesOpen, propertiesOpen]);
+  }, [closeProperties, pagesOpen, propertiesOpen]);
 
   return (
     <main className="flex h-dvh min-h-0 flex-col overflow-hidden bg-[#edece7] text-[#17231f]">
@@ -692,7 +718,7 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
               <button
                 type="button"
                 onClick={() => moveSelection(-1)}
-                disabled={selectedIndex === 0}
+                disabled={effectiveSelectedIndex === 0}
                 aria-label="Previous page"
                 className={`grid size-11 place-items-center rounded-lg border border-[#cbd3ce] bg-white text-[#3f574c] disabled:cursor-not-allowed disabled:opacity-35 ${focusRing}`}
               >
@@ -701,7 +727,7 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
               <button
                 type="button"
                 onClick={() => moveSelection(1)}
-                disabled={selectedIndex === pageMeta.length - 1}
+                disabled={effectiveSelectedIndex === pageMeta.length - 1}
                 aria-label="Next page"
                 className={`grid size-11 place-items-center rounded-lg border border-[#cbd3ce] bg-white text-[#3f574c] disabled:cursor-not-allowed disabled:opacity-35 ${focusRing}`}
               >
@@ -795,7 +821,7 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
                     data-page-index={index}
                     aria-label={`Page ${index + 1}: ${pageMeta[index].title}`}
                     className={`relative shrink-0 bg-white shadow-[0_18px_55px_rgba(32,42,38,0.22)] ring-1 transition-shadow ${
-                      selectedIndex === index ? "ring-[#789084] ring-offset-2 ring-offset-[#e9e8e3]" : "ring-black/5"
+                      effectiveSelectedIndex === index ? "ring-[#789084] ring-offset-2 ring-offset-[#e9e8e3]" : "ring-black/5"
                     }`}
                     style={{ width: PAGE_WIDTH * zoom, height: PAGE_HEIGHT * zoom }}
                   >
@@ -818,7 +844,7 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
                     className="absolute left-0 top-0 origin-top-left bg-white"
                     style={{ width: PAGE_WIDTH, height: PAGE_HEIGHT, transform: `scale(${zoom})` }}
                   >
-                    {pages[selectedIndex]}
+                    {pages[effectiveSelectedIndex]}
                   </div>
                 </div>
               </div>
@@ -868,7 +894,7 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
 
       {propertiesOpen ? (
         <div ref={propertiesDialogRef} className="fixed inset-0 z-50 xl:hidden" role="dialog" aria-modal="true" aria-label="Page properties">
-          <button type="button" tabIndex={-1} aria-label="Close properties" onClick={() => setPropertiesOpen(false)} className="absolute inset-0 bg-[#10251e]/45" />
+          <button type="button" tabIndex={-1} aria-label="Close properties" onClick={closeProperties} className="absolute inset-0 bg-[#10251e]/45" />
           <aside className="absolute inset-y-0 right-0 w-[min(90vw,360px)] border-l border-[#cbd3ce] shadow-2xl">
             <PropertiesPanel
               instanceId="drawer"
@@ -877,7 +903,7 @@ export default function ProposalEditorShell({ proposal, pageMeta, pages, editorP
               proposalId={proposal.id}
               editorConfig={editorConfig}
               onSaveStateChange={setSaveState}
-              onClose={() => setPropertiesOpen(false)}
+              onClose={closeProperties}
             />
           </aside>
         </div>

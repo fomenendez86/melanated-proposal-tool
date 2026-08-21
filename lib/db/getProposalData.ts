@@ -83,6 +83,38 @@ type ThankYouPayload = {
   imageUrl: string;
 };
 
+type FromOwnersPayload = {
+  paragraphs?: string[];
+  founders?: Array<{ name: string; title: string }>;
+  photoUrl?: string;
+};
+
+type HotelPayload = {
+  name?: string;
+  description?: string;
+  images?: {
+    topRight?: string;
+    bottomLeftTop?: string;
+    bottomLeftBottom?: string;
+  };
+};
+
+type ImportantItemsPayload = {
+  snapshot?: ImportantItemRow[];
+};
+
+type ExcursionListPayload = {
+  snapshot?: ExcursionItem[];
+};
+
+type WeatherPayload = {
+  snapshot?: WeatherTable[];
+};
+
+type TermsPayload = {
+  snapshot?: TermsSection[];
+};
+
 async function buildOverviewDays(days: (typeof proposalDays.$inferSelect)[]): Promise<ItineraryDay[]> {
   const result: ItineraryDay[] = [];
   for (const day of days) {
@@ -175,6 +207,20 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
   const overviewDays = await buildOverviewDays(days);
   const dayEntries = await buildDayEntries(days);
 
+  const skeleton = await db
+    .select()
+    .from(proposalSections)
+    .where(eq(proposalSections.proposalId, proposalId))
+    .orderBy(asc(proposalSections.sortOrder));
+  const fromOwnersOverride = skeleton.find((row) => row.sectionType === "fromOwnersOverride");
+  const fromOwnersPayload = (fromOwnersOverride?.payload ?? {}) as FromOwnersPayload;
+  const ownerParagraphs = Array.isArray(fromOwnersPayload.paragraphs) && fromOwnersPayload.paragraphs.length > 0
+    ? fromOwnersPayload.paragraphs
+    : aboutParagraphs.map((paragraph) => paragraph.body);
+  const ownerFounders = Array.isArray(fromOwnersPayload.founders) && fromOwnersPayload.founders.length > 0
+    ? fromOwnersPayload.founders
+    : founders.map((founder) => ({ name: founder.name, title: founder.title }));
+
   const sections: ProposalSection[] = [
     {
       type: "cover",
@@ -187,10 +233,13 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
     },
     {
       type: "fromOwners",
+      ...(fromOwnersOverride
+        ? { editorSource: { sectionId: fromOwnersOverride.id, refId: fromOwnersOverride.refId } }
+        : {}),
       data: {
-        paragraphs: aboutParagraphs.map((p) => p.body),
-        founders: founders.map((f) => ({ name: f.name, title: f.title })),
-        photoUrl: companyRow.aboutPhotoUrl ?? "",
+        paragraphs: ownerParagraphs,
+        founders: ownerFounders,
+        photoUrl: fromOwnersPayload.photoUrl ?? companyRow.aboutPhotoUrl ?? "",
         pageNumber: 0,
       },
     },
@@ -214,12 +263,6 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
       },
     },
   ];
-
-  const skeleton = await db
-    .select()
-    .from(proposalSections)
-    .where(eq(proposalSections.proposalId, proposalId))
-    .orderBy(asc(proposalSections.sortOrder));
 
   for (const row of skeleton) {
     const editorSource = { sectionId: row.id, refId: row.refId };
@@ -259,18 +302,19 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
         const [hotel] = await db.select().from(hotels).where(eq(hotels.id, booking.hotelId));
         const images = await db.select().from(hotelImages).where(eq(hotelImages.hotelId, hotel.id));
         const bySlot = (slot: string) => images.find((img) => img.slot === slot)?.url ?? "";
+        const payload = (row.payload ?? {}) as HotelPayload;
         sections.push({
           type: "hotel",
           editorSource,
           data: {
-            name: hotel.name,
+            name: payload.name ?? hotel.name,
             roomCategory: booking.roomCategory,
             mealPlan: booking.mealPlan,
-            description: hotel.description,
+            description: payload.description ?? hotel.description,
             images: {
-              topRight: bySlot("topRight"),
-              bottomLeftTop: bySlot("bottomLeftTop"),
-              bottomLeftBottom: bySlot("bottomLeftBottom"),
+              topRight: payload.images?.topRight ?? bySlot("topRight"),
+              bottomLeftTop: payload.images?.bottomLeftTop ?? bySlot("bottomLeftTop"),
+              bottomLeftBottom: payload.images?.bottomLeftBottom ?? bySlot("bottomLeftBottom"),
             },
             pageNumber: 0,
           },
@@ -310,35 +354,38 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
       }
       case "excursionList": {
         if (row.refId == null) throw new Error(`excursionList section ${row.id} missing refId`);
-        const rows = await db
-          .select({
-            sortOrder: proposalExcursions.sortOrder,
-            priceOverride: proposalExcursions.priceOverride,
-            title: excursions.title,
-            description: excursions.description,
-            basePrice: excursions.basePrice,
-            priceNote: excursions.priceNote,
-            excursionId: excursions.id,
-          })
-          .from(proposalExcursions)
-          .innerJoin(excursions, eq(proposalExcursions.excursionId, excursions.id))
-          .where(eq(excursions.cityId, row.refId))
-          .orderBy(asc(proposalExcursions.sortOrder));
+        const payload = row.payload as ExcursionListPayload | null;
+        const items: ExcursionItem[] = Array.isArray(payload?.snapshot) ? payload.snapshot : [];
+        if (items.length === 0) {
+          const rows = await db
+            .select({
+              sortOrder: proposalExcursions.sortOrder,
+              priceOverride: proposalExcursions.priceOverride,
+              title: excursions.title,
+              description: excursions.description,
+              basePrice: excursions.basePrice,
+              priceNote: excursions.priceNote,
+              excursionId: excursions.id,
+            })
+            .from(proposalExcursions)
+            .innerJoin(excursions, eq(proposalExcursions.excursionId, excursions.id))
+            .where(eq(excursions.cityId, row.refId))
+            .orderBy(asc(proposalExcursions.sortOrder));
 
-        const items: ExcursionItem[] = [];
-        for (const item of rows) {
-          const [image] = await db
-            .select()
-            .from(excursionImages)
-            .where(eq(excursionImages.excursionId, item.excursionId))
-            .orderBy(asc(excursionImages.sortOrder))
-            .limit(1);
-          items.push({
-            title: item.title,
-            description: item.description,
-            price: formatPrice(item.priceOverride ?? item.basePrice, item.priceNote),
-            imageUrl: image?.url ?? "",
-          });
+          for (const item of rows) {
+            const [image] = await db
+              .select()
+              .from(excursionImages)
+              .where(eq(excursionImages.excursionId, item.excursionId))
+              .orderBy(asc(excursionImages.sortOrder))
+              .limit(1);
+            items.push({
+              title: item.title,
+              description: item.description,
+              price: formatPrice(item.priceOverride ?? item.basePrice, item.priceNote),
+              imageUrl: image?.url ?? "",
+            });
+          }
         }
         sections.push(
           ...paginateExcursionList({ items, pageNumber: 0 }, 0).map((section) => ({
@@ -434,72 +481,83 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
               .where(inArray(travelRequirementItems.destinationId, destIds))
               .orderBy(asc(travelRequirementItems.sortOrder))
           : [];
-        const rows: ImportantItemRow[] = [];
-        for (const item of items) {
-          const bullets = await db
-            .select()
-            .from(travelRequirementBullets)
-            .where(eq(travelRequirementBullets.itemId, item.id))
-            .orderBy(asc(travelRequirementBullets.sortOrder));
-          rows.push({
-            icon: item.icon,
-            swatchColor: item.swatchColor,
-            heading: item.heading,
-            bullets: bullets.map((b) => b.text),
-            qrCodeUrl: item.qrCodeUrl ?? undefined,
-          });
+        const payload = (row.payload ?? {}) as ImportantItemsPayload;
+        const rows: ImportantItemRow[] = Array.isArray(payload.snapshot) ? payload.snapshot : [];
+        if (rows.length === 0) {
+          for (const item of items) {
+            const bullets = await db
+              .select()
+              .from(travelRequirementBullets)
+              .where(eq(travelRequirementBullets.itemId, item.id))
+              .orderBy(asc(travelRequirementBullets.sortOrder));
+            rows.push({
+              icon: item.icon,
+              swatchColor: item.swatchColor,
+              heading: item.heading,
+              bullets: bullets.map((b) => b.text),
+              qrCodeUrl: item.qrCodeUrl ?? undefined,
+            });
+          }
         }
         sections.push({ type: "importantItems", data: { rows, pageNumber: 0 }, editorSource });
         break;
       }
+      case "fromOwnersOverride":
+        break;
       case "weather": {
         if (row.refId == null) throw new Error(`weather section ${row.id} missing refId`);
-        const destRows = await db.select().from(destinations).where(eq(destinations.countryId, row.refId));
-        const destIds = destRows.map((d) => d.id);
-        const profiles = destIds.length
-          ? await db
+        const payload = row.payload as WeatherPayload | null;
+        const tables: WeatherTable[] = Array.isArray(payload?.snapshot) ? payload.snapshot : [];
+        if (tables.length === 0) {
+          const destRows = await db.select().from(destinations).where(eq(destinations.countryId, row.refId));
+          const destIds = destRows.map((d) => d.id);
+          const profiles = destIds.length
+            ? await db
+                .select()
+                .from(weatherProfiles)
+                .where(inArray(weatherProfiles.destinationId, destIds))
+                .orderBy(asc(weatherProfiles.id))
+            : [];
+          for (const profile of profiles) {
+            const seasons = await db
               .select()
-              .from(weatherProfiles)
-              .where(inArray(weatherProfiles.destinationId, destIds))
-              .orderBy(asc(weatherProfiles.id))
-          : [];
-        const tables: WeatherTable[] = [];
-        for (const profile of profiles) {
-          const seasons = await db
-            .select()
-            .from(weatherSeasons)
-            .where(eq(weatherSeasons.weatherProfileId, profile.id))
-            .orderBy(asc(weatherSeasons.sortOrder));
-          tables.push({
-            title: profile.title,
-            note: profile.note,
-            seasons: seasons.map((s) => ({
-              name: s.name,
-              icon: s.icon ?? undefined,
-              months: s.months,
-              tempF: s.tempFRange,
-              tempC: s.tempCRange,
-            })),
-          });
+              .from(weatherSeasons)
+              .where(eq(weatherSeasons.weatherProfileId, profile.id))
+              .orderBy(asc(weatherSeasons.sortOrder));
+            tables.push({
+              title: profile.title,
+              note: profile.note,
+              seasons: seasons.map((s) => ({
+                name: s.name,
+                icon: s.icon ?? undefined,
+                months: s.months,
+                tempF: s.tempFRange,
+                tempC: s.tempCRange,
+              })),
+            });
+          }
         }
         sections.push({ type: "weather", data: { tables, pageNumber: 0 }, editorSource });
         break;
       }
       case "termsConditions": {
         if (proposal.termsTemplateId == null) break;
-        const templateSections = await db
-          .select()
-          .from(termsSections)
-          .where(eq(termsSections.templateId, proposal.termsTemplateId))
-          .orderBy(asc(termsSections.sortOrder));
-        const built: TermsSection[] = [];
-        for (const section of templateSections) {
-          const paragraphs = await db
+        const payload = row.payload as TermsPayload | null;
+        const built: TermsSection[] = Array.isArray(payload?.snapshot) ? payload.snapshot : [];
+        if (built.length === 0) {
+          const templateSections = await db
             .select()
-            .from(termsParagraphs)
-            .where(eq(termsParagraphs.sectionId, section.id))
-            .orderBy(asc(termsParagraphs.sortOrder));
-          built.push({ heading: section.heading, paragraphs: paragraphs.map((p) => p.body) });
+            .from(termsSections)
+            .where(eq(termsSections.templateId, proposal.termsTemplateId))
+            .orderBy(asc(termsSections.sortOrder));
+          for (const section of templateSections) {
+            const paragraphs = await db
+              .select()
+              .from(termsParagraphs)
+              .where(eq(termsParagraphs.sectionId, section.id))
+              .orderBy(asc(termsParagraphs.sortOrder));
+            built.push({ heading: section.heading, paragraphs: paragraphs.map((p) => p.body) });
+          }
         }
         sections.push(
           ...paginateTermsConditions({ sections: built, pageNumber: 0, showTitle: true }, 0).map(

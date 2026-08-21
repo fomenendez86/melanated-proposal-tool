@@ -2,28 +2,33 @@
 # Melanated Safaris — Proposal Generator
 
 ## Objetivo
-Sistema que reemplaza proposals hechos a mano en Canva (1 hora por cambio)
-por un motor de bloques HTML/CSS + Playwright que genera PDFs, con
-contenido variable (días, hoteles, excursiones) sin romper el diseño.
+Construir un Proposal Studio visual que permita crear y editar proposals con
+varios diseños de documento desde una sola interfaz consistente. Cada diseño
+aporta sus layouts, variantes y marca; el editor aporta la navegación, canvas,
+inspector, estados y flujos comunes. El sistema reemplaza el trabajo manual en
+Canva sin convertir el producto en un canvas libre ni acoplarlo a una sola
+plantilla.
 
 ## Plan del Proposal Studio
 El plan de implementación del editor visual está en
 [`docs/EDITOR_IMPLEMENTATION_PLAN.md`](docs/EDITOR_IMPLEMENTATION_PLAN.md).
-La dirección aprobada es un editor visual inspirado en Proposify, con layouts
-protegidos, editor cronológico de itinerario y catálogo contextual. No se
-construirá un panel administrativo general ni un canvas de posicionamiento
-libre.
+La dirección aprobada es un editor visual multi-diseño inspirado en Proposify,
+con layouts protegidos, editor cronológico de itinerario y catálogo contextual.
+No se construirá un panel administrativo general, un canvas de posicionamiento
+libre ni un editor distinto por cada diseño.
 
-**Fase actual:** Fases 1, 1.1 y 1.2 completadas. Fase 2 en curso: tramos 2.1 y
-2.2 completos; próximo 2.3 — snapshots/overrides para excursiones, listas,
-clima, términos y calendario de pagos.
+**Prioridad actual:** Fase 3 — diseño del editor y base multi-diseño. La Fase 2
+está completa: todas las páginas con contenido tienen formulario persistente,
+incluyendo From Owners, Important Items, overrides visuales de hotel y un único
+editor de itinerario compartido por Overview y Day Itinerary.
 
 ## Cómo mantener este archivo (leer antes de trabajar)
 - **Actualizar esta sección de estado en cada paso relevante** — cuando se
   construye/corrige un bloque, se cambia una decisión de diseño, o se
   descubre un pendiente nuevo, reflejarlo acá en el mismo turno, no al
-  final de la sesión. Este archivo es la fuente de verdad de "qué está
-  hecho y qué falta", no un resumen retroactivo.
+  final de la sesión. Este archivo registra el estado técnico y las restricciones;
+  `docs/EDITOR_IMPLEMENTATION_PLAN.md` es la fuente de verdad del objetivo y
+  orden del roadmap.
 - **Verificar contra `reference/pdf-pages/page-NN.png` cuando haya duda de
   fidelidad visual** — antes de dar por bueno un bloque nuevo o una
   corrección de layout, comparar el render contra la página de referencia
@@ -36,6 +41,9 @@ clima, términos y calendario de pagos.
 
 ## Referencia visual
 Las páginas del PDF original están en `reference/pdf-pages/page-NN.png`.
+Representan el primer diseño de referencia, no la estructura universal de todos
+los proposals futuros. El editor debe poder alojar otros diseños sin copiar o
+ramificar su interfaz.
 El documento original NO es consistente entre secciones (fue armado a mano
 en Canva) — cuando haya conflicto entre "replicar el original exacto" y
 "mantener consistencia del sistema", priorizar consistencia del sistema y
@@ -43,6 +51,14 @@ documentarlo acá.
 
 ## Arquitectura
 - Next.js 16 (App Router) + TypeScript + Tailwind v4 + Playwright + `qrcode`.
+- **Separación multi-diseño obligatoria:** mantener independientes (1) el shell
+  del editor, (2) la definición versionada del diseño, (3) el contenido de la
+  propuesta y (4) las páginas renderizadas. El shell no debe hardcodear el
+  orden, cantidad de páginas, campos ni estilos propios de Tanzania.
+- **Un editor, varios diseños:** navegación, canvas, inspector, dialogs,
+  accesibilidad y estados de guardado pertenecen al Proposal Studio. Tamaño de
+  página, marca, bloques soportados, variantes, defaults y renderers pertenecen
+  a la definición de cada diseño.
 - Cada bloque: componente en `components/blocks/{Nombre}Block.tsx`, tipo en
   `lib/types.ts`, ruta de preview en `app/preview/{nombre}/page.tsx`, script
   de render standalone en `lib/render/render{Nombre}.ts` + entrada
@@ -95,6 +111,27 @@ documentarlo acá.
   verifican que booking/sección pertenecen a la propuesta; los campos visuales
   se guardan en el payload privado de la sección y nunca pisan el hotel/ciudad
   del catálogo. El render de pricing respeta el código de moneda guardado.
+- **Colecciones proposal-scoped (Fase 2.3A)**: Inclusiones/Exclusiones se editan
+  por columna con formato `[Heading]` + líneas, y el calendario de pagos usa
+  `Label | Value`. Ambos requieren guardado explícito, se validan antes de
+  escribir y reemplazan padres/hijos dentro de una transacción. Si el formulario
+  está dirty, cambiar de página o cerrar el drawer pide confirmación; el scroll
+  continuo no cambia la selección hasta guardar o descartar.
+- **Snapshots privados (Fase 2.3B)**: Excursiones, clima y términos tienen
+  editores de colección con guardado explícito y parsers server-side. El primer
+  guardado copia el contenido renderizado al payload de la sección de la
+  propuesta; desde ese momento no depende de cambios futuros en catálogos o
+  plantillas globales. La recarga reconstruye un solo formulario aunque la
+  colección ocupe varias páginas, y la selección tolera cambios de paginación.
+- **Cobertura estática completa (Fase 2.3C)**: From Owners guarda mensaje,
+  firmas y foto en una sección virtual privada; Important Items guarda un
+  snapshot de requisitos; Hotel combina reserva con nombre, descripción e
+  imágenes proposal-scoped. Ningún formulario modifica company, destination,
+  requirement ni hotel catalog.
+- **Formulario canónico de itinerario (Fase 2.4)**: Overview y Day Itinerary
+  muestran el mismo editor explícito de días, fechas, subtítulos, highlights,
+  actividades, párrafos e imágenes. El guardado reemplaza el grafo relacional
+  completo dentro de una transacción y repagina ambos tipos de bloque.
 - **Paginación automática** (`lib/paginate.ts`): Overview, ExcursionList y
   TermsConditions usan empaquetado por altura estimada (heurística basada en
   cantidad de caracteres por línea, no medición real del DOM — es
@@ -172,9 +209,9 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
   agregar más secciones, solo falta cargarlas.
 
 **Proposal Studio pendiente:**
-- La edición persistente cubre Portada, Detalles, reserva de Hotel, Pricing,
-  dividers, introducción de tours y Cierre. Excursiones, listas, clima, términos
-  y calendario de pagos siguen read-only hasta agregar snapshots/overrides por
-  propuesta. También faltan catálogo contextual, composición/reordenamiento y
-  generación PDF desde la toolbar. El orden y los criterios están en
+- La cobertura de formularios del documento está completa. El siguiente trabajo
+  es la Fase 3: especificación UX, sistema visual reutilizable, estados completos
+  del shell y contrato multi-diseño. El timeline visual avanzado del itinerario,
+  catálogo contextual, composición/reordenamiento y generación PDF permanecen
+  en fases posteriores. El orden y criterios están en
   `docs/EDITOR_IMPLEMENTATION_PLAN.md`.

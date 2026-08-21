@@ -22,7 +22,7 @@ export default async function ProposalEditorPage({ params }: ProposalEditorPageP
 
   const data = await getProposalData(proposalId);
   const pageMeta = buildProposalPageMeta(data.sections);
-  const editorPages = await getProposalEditorData(proposalId, pageMeta);
+  const editorPages = await getProposalEditorData(proposalId, pageMeta, data.sections);
   const pages = data.sections.map((section, index) => (
     <ProposalSectionView key={`${section.type}-${index}`} section={section} />
   ));

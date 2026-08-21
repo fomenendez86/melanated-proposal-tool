@@ -2,18 +2,33 @@
 
 ## 1. Product direction
 
-Build a proposal-first visual editor inspired by Proposify, TravelJoy, Travefy,
-MOGU, and Qwilr. The proposal is the center of the product; catalog management
-is contextual support, not a separate administrative application.
+Build a multi-design, proposal-first visual editor inspired by Proposify,
+TravelJoy, Travefy, MOGU, and Qwilr. The proposal editor is the product. It must
+support multiple document designs without creating a separate editor for every
+design. Catalog management is contextual support, not a separate administrative
+application.
 
-The editor must feel visual while preserving the fixed, validated layouts used
-to generate Letter-size PDFs. Users edit structured content and choose approved
-layout variants. They do not freely position elements by coordinates.
+The existing Melanated Safaris/Tanzania document is the first reference design
+and a test fixture for the platform. It is not the permanent global structure
+for every future proposal.
+
+The editor must feel visual while preserving fixed, validated, print-ready
+layouts. Letter is the current reference size; page dimensions belong to each
+design definition. Users edit structured content and choose approved layout
+variants. They do not freely position elements by coordinates.
 
 ### Primary outcome
 
 An advisor can create, assemble, review, and generate a client-ready travel
-proposal without editing code or manually repairing page layouts.
+proposal in any supported document design without editing code, learning a
+different editor, or manually repairing page layouts.
+
+### Immediate objective
+
+Form coverage for every content-bearing block in the reference document is now
+complete. The immediate objective returns to the editor's information
+architecture, visual hierarchy, interaction model, responsive behavior, and
+multi-design contract.
 
 ### Product principles
 
@@ -26,11 +41,17 @@ proposal without editing code or manually repairing page layouts.
    records change later.
 6. **Progressive complexity:** new users get a guided start; experienced users
    can move directly through the visual editor.
+7. **One editor, many designs:** editor chrome and core interactions stay
+   consistent; document renderers, section variants, and brand tokens are
+   supplied by the selected design.
+8. **No template assumptions in the shell:** the editor must not hardcode page
+   counts, section order, Tanzania-specific fields, or a single visual system.
 
 ### Explicit non-goals
 
 - A general-purpose admin dashboard.
 - A freeform Canva/Figma-style canvas.
+- A separate editor implementation for each proposal design.
 - CRM, accounting, commissions, or operational reporting.
 - Real-time multi-user collaboration in the initial release.
 - Client payments and e-signatures in the initial release.
@@ -40,7 +61,7 @@ proposal without editing code or manually repairing page layouts.
 ```text
 ┌──────────────────────────────────────────────────────────────────────┐
 │ ← Proposals   Tanzania Safari · Draft   Saved ✓                     │
-│ Undo  Redo        Client preview        Share        Generate PDF    │
+│ Design: Safari Editorial   Preview design   Share     Generate PDF   │
 ├───────────────┬──────────────────────────────┬───────────────────────┤
 │ PAGES         │ DOCUMENT                     │ PROPERTIES            │
 │               │                              │                       │
@@ -60,16 +81,37 @@ the main surface.
 
 ## 3. Architecture
 
+### Multi-design boundary
+
+The system must keep these layers separate:
+
+1. **Proposal Studio shell** — toolbar, page navigator, canvas, inspector,
+   dialogs, feedback, keyboard behavior, responsive layout, and accessibility.
+2. **Document design definition** — design identity/version, thumbnail, page
+   size, brand tokens, supported section types, approved variants, defaults,
+   and renderer/editor registrations.
+3. **Proposal content** — client, itinerary, commercial, and proposal-specific
+   override data.
+4. **Rendered document** — paginated pages produced by applying content to the
+   selected design definition.
+
+Changing a design may change page geometry and available variants, but it must
+not change the Proposal Studio navigation model. Compatibility checks must
+identify unsupported sections before a design switch is committed.
+
 ### High-level components
 
 ```text
 SQLite / Drizzle
       │
       ▼
-Server data loaders ──► proposal view model ──► Server-rendered page blocks
+Server data loaders ──► proposal view model ──► selected design definition
       │                                               │
       │                                               ▼
-      └────► Server Actions / validation       Client editor shell
+      └────► Server Actions / validation       Server-rendered page blocks
+                                                      │
+                                                      ▼
+                                               Client editor shell
                                                       │
                                                       ├─ page navigation
                                                       ├─ zoom / selection
@@ -89,6 +131,8 @@ Playwright PDF service ◄── stable proposal preview route
 - Mutations will use Server Actions with schema validation and return structured
   field errors.
 - The preview and PDF routes render saved data, never unsaved client state.
+- The shell receives design-neutral page metadata. Design-specific renderers
+  and property schemas are registered outside the shell.
 
 ### Planned routes
 
@@ -111,6 +155,17 @@ The editor will eventually distinguish three layers:
 
 Phases 1 and 1.2 introduce navigation state: selected page, zoom, view mode,
 and panel state.
+
+### Planned design identity
+
+- Every proposal references a `designId` and version; this identity is saved
+  with revisions so historical output remains reproducible.
+- A design registry resolves that identity to renderers, property schemas,
+  supported section types, variants, defaults, and page geometry.
+- Page metadata includes stable proposal source references and design-neutral
+  labels; it does not import brand-specific UI into the shell.
+- Design switching is a validated proposal operation, not a cosmetic client
+  preference.
 
 ## 4. Delivery phases
 
@@ -186,7 +241,7 @@ and panel state.
 
 ## Phase 2 — Structured content editing and save
 
-**Status: In progress. Phases 2.1 and 2.2 complete (2026-08-21).**
+**Status: Complete (2026-08-21).**
 
 ### Phase 2.1 delivered
 
@@ -211,11 +266,50 @@ and panel state.
 - Ownership checks for every booking and section mutation; catalog hotel values
   remain unchanged when proposal booking overrides are edited.
 
-### Phase 2.3 next
+### Phase 2.3A delivered
 
-- Add proposal-specific snapshot/override storage for excursion copy, reusable
-  lists, weather, terms, and payment-schedule rows before enabling those forms.
-- Never edit shared catalog or template defaults implicitly from a proposal.
+- Explicit-save editors for proposal inclusions and exclusions using a readable
+  `[Heading]` plus list-item format for each printed column.
+- Explicit-save payment schedule editor using one `Label | Value` row per
+  payment.
+- Server-side parsers with field errors that reject malformed collections
+  before any database writes occur.
+- Transactional replacement of parent/child list rows and payment rows.
+- Unsaved-change confirmation when navigating away from an explicit-save form;
+  continuous-scroll selection stays pinned while that form is dirty.
+
+### Phase 2.3B delivered
+
+- Proposal-private JSON snapshots for excursion copy, weather tables, and terms
+  without modifying shared catalog or template defaults.
+- Explicit-save collection editors with strict server-side parsing and
+  field-level format errors.
+- A single aggregated editor value for collections that render across multiple
+  document pages.
+- Automatic repagination after save, with a clamped page selection when the new
+  page count is shorter.
+- Browser-tested validation, SQLite persistence, and reload behavior for all
+  three snapshot types.
+
+### Phase 2.3C delivered
+
+- Proposal-only From Owners message, signatures, and photo editing through a
+  virtual override section with company data as the untouched fallback.
+- Proposal-private Important Items snapshots with icon, color, QR URL, and
+  bullet validation.
+- Hotel name, description, and three image overrides alongside room, meal plan,
+  and nights, without changing hotel catalog records.
+
+### Phase 2.4 delivered
+
+- One explicit-save canonical itinerary editor covering days, dates, subtitles,
+  highlights, activities, paragraphs, and images.
+- The same source editor is exposed from Overview and Day Itinerary pages.
+- The relational day graph is replaced transactionally and both block types
+  repaginate from the saved result.
+- Validation, persistence, reload, and QA restoration were browser-tested.
+- The richer timeline interaction remains a Phase 4 enhancement; data coverage
+  no longer depends on it.
 
 ### Scope
 
@@ -236,7 +330,70 @@ and panel state.
 - The preview refreshes from canonical saved data.
 - Unsaved/failed changes are visibly distinguishable from saved changes.
 
-## Phase 3 — Travel-native itinerary editor
+## Phase 3 — Editor design and multi-design foundation
+
+**Status: Current priority.**
+
+### Phase 3.1 — Editor UX specification
+
+- Define the primary workflows: choose design, edit content, navigate pages,
+  add content, review issues, preview, and generate.
+- Finalize the information hierarchy of toolbar, Pages panel, document canvas,
+  Properties inspector, and contextual catalog entry points.
+- Specify selected, hover, loading, empty, dirty, saving, saved, invalid,
+  incompatible, and disabled states.
+- Define desktop, tablet, and mobile behavior before adding more controls.
+- Distinguish document-level settings, section-level properties, and
+  element/content fields in the inspector.
+
+### Phase 3.2 — Reusable editor design system
+
+- Extract editor-only colors, typography, spacing, borders, shadows, focus
+  rings, control sizing, and motion into reusable tokens.
+- Standardize toolbar controls, segmented controls, page cards, inspector
+  groups, field rows, notices, dialogs, drawers, and empty states.
+- Keep editor branding neutral enough that document designs remain visually
+  distinct inside the canvas.
+- Complete keyboard, focus, contrast, and touch-target behavior for all primary
+  editor interactions.
+
+### Phase 3.3 — Document design contract
+
+- Introduce a versioned design definition containing identity, preview image,
+  page dimensions, brand tokens, supported sections, approved variants,
+  defaults, renderers, and editor schemas.
+- Remove Tanzania-specific assumptions from the editor shell and page metadata.
+- Add a design selector within the proposal workflow, not an admin dashboard.
+- Define compatible design switching, warnings for unsupported content, and a
+  safe rollback path.
+- Validate the contract with the existing reference design and a second minimal
+  design fixture before building another complete proposal template.
+
+### Phase 3.4 — Editor implementation pass
+
+- Implement the approved editor layout and interaction states.
+- Make page navigation, inspector rendering, and canvas behavior consume the
+  design-neutral contracts.
+- Add focused visual and interaction tests for the shell at representative
+  viewport sizes.
+- Review the result as an editor product, independently from the visual quality
+  of the Tanzania document itself.
+
+### Acceptance criteria
+
+- The same editor shell can load two design definitions without conditional
+  template-specific UI branches.
+- Users can identify the active document design and understand where to change
+  it.
+- Pages, canvas, and Properties remain the clear primary hierarchy on desktop
+  and smaller screens.
+- Design-specific controls appear contextually without leaking into global
+  editor navigation.
+- Switching to an incompatible design cannot silently discard content.
+- The editor passes keyboard, responsive, and visual-regression checks for its
+  primary states.
+
+## Phase 4 — Travel-native itinerary editor
 
 ### Scope
 
@@ -254,7 +411,7 @@ and panel state.
 - Day and activity ordering is deterministic after reload.
 - Pagination updates correctly after itinerary changes.
 
-## Phase 4 — Contextual catalog
+## Phase 5 — Contextual catalog
 
 ### Scope
 
@@ -272,7 +429,7 @@ and panel state.
 - Proposal-specific overrides never silently mutate catalog defaults.
 - Duplicate catalog entries are detectable and preventable.
 
-## Phase 5 — Document composition
+## Phase 6 — Document composition
 
 ### Scope
 
@@ -290,7 +447,7 @@ and panel state.
   where practical.
 - Required content is checked before PDF generation.
 
-## Phase 6 — Reliable PDF generation
+## Phase 7 — Reliable PDF generation
 
 ### Scope
 
@@ -310,7 +467,7 @@ and panel state.
 - Concurrent proposals cannot overwrite each other's output.
 - Failed renders give actionable feedback and can be retried safely.
 
-## Phase 7 — Client proposal experience
+## Phase 8 — Client proposal experience
 
 ### Scope
 
@@ -326,7 +483,7 @@ and panel state.
 - Options and approvals are clearly recorded against the correct revision.
 - Private proposals cannot be accessed without their configured protection.
 
-## Phase 8 — Brand fidelity, quality, and deployment
+## Phase 9 — Brand fidelity, quality, and deployment
 
 ### Scope
 
@@ -418,10 +575,11 @@ of destructive changes.
 - [x] Phase 1 — visual editor foundation.
 - [x] Phase 1.1 — responsive and accessibility quality pass.
 - [x] Phase 1.2 — continuous document navigation.
-- [ ] Phase 2 — persistent structured editing.
-- [ ] Phase 3 — itinerary editor.
-- [ ] Phase 4 — contextual catalog.
-- [ ] Phase 5 — document composition.
-- [ ] Phase 6 — PDF generation workflow.
-- [ ] Phase 7 — client proposal experience.
-- [ ] Phase 8 — brand, testing, and deployment readiness.
+- [x] Phase 2 — persistent structured editing and complete form coverage.
+- [ ] Phase 3 — editor design and multi-design foundation (current priority).
+- [ ] Phase 4 — itinerary editor.
+- [ ] Phase 5 — contextual catalog.
+- [ ] Phase 6 — document composition.
+- [ ] Phase 7 — PDF generation workflow.
+- [ ] Phase 8 — client proposal experience.
+- [ ] Phase 9 — brand, testing, and deployment readiness.
