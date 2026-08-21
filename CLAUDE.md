@@ -6,6 +6,17 @@ Sistema que reemplaza proposals hechos a mano en Canva (1 hora por cambio)
 por un motor de bloques HTML/CSS + Playwright que genera PDFs, con
 contenido variable (días, hoteles, excursiones) sin romper el diseño.
 
+## Plan del Proposal Studio
+El plan de implementación del editor visual está en
+[`docs/EDITOR_IMPLEMENTATION_PLAN.md`](docs/EDITOR_IMPLEMENTATION_PLAN.md).
+La dirección aprobada es un editor visual inspirado en Proposify, con layouts
+protegidos, editor cronológico de itinerario y catálogo contextual. No se
+construirá un panel administrativo general ni un canvas de posicionamiento
+libre.
+
+**Fase actual:** Fase 1 completada. Próxima: Fase 2 — edición estructurada y
+persistencia.
+
 ## Cómo mantener este archivo (leer antes de trabajar)
 - **Actualizar esta sección de estado en cada paso relevante** — cuando se
   construye/corrige un bloque, se cambia una decisión de diseño, o se
@@ -40,12 +51,20 @@ documentarlo acá.
   `SectionHeader` (título + línea), `PageHeader` (logo centrado o solo
   "Proposal"), `PageFooter` (número de página abajo-derecha — estándar
   único del sistema, ver más abajo).
-- **Documento completo**: `lib/sampleProposalData.ts` arma el `ProposalData`
-  (unión discriminada `ProposalSection` en `lib/types.ts`) con datos reales
-  extraídos del PDF de referencia. `components/ProposalRenderer.tsx` lo
-  recorre y renderiza cada bloque con `break-after: page` entre secciones.
-  Preview en `/preview/full-proposal`, render con `npm run render:full` →
-  `output/full-proposal.pdf`.
+- **Documento completo**: `lib/db/getProposalData.ts` transforma los registros
+  de SQLite en `ProposalData` (unión discriminada `ProposalSection` en
+  `lib/types.ts`). `components/ProposalRenderer.tsx` lo recorre y renderiza
+  cada bloque con `break-after: page` entre secciones. El preview histórico
+  sigue en `/preview/full-proposal`; el preview dinámico está en
+  `/proposals/[id]/preview`. `lib/sampleProposalData.ts` queda como dataset de
+  referencia/legado para previews aislados.
+- **Proposal Studio (Fase 1)**: `/proposals/[id]/editor` carga datos en el
+  servidor y entrega páginas ya renderizadas al shell interactivo
+  `components/editor/ProposalEditorShell.tsx`. Incluye toolbar, buscador y
+  navegación de páginas, canvas con zoom, panel contextual read-only y enlace
+  al preview limpio. La portada `/` redirige temporalmente a la propuesta seed
+  `1`. Los botones de editar, catálogo, añadir sección y generar PDF quedan
+  visibles pero deshabilitados hasta sus fases correspondientes.
 - **Paginación automática** (`lib/paginate.ts`): Overview, ExcursionList y
   TermsConditions usan empaquetado por altura estimada (heurística basada en
   cantidad de caracteres por línea, no medición real del DOM — es
@@ -122,7 +141,9 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
   Arusha únicamente, falta Karatu) — el mecanismo de ensamblado ya soporta
   agregar más secciones, solo falta cargarlas.
 
-**Fuera de alcance, nunca pedido:**
-- No hay forma de que un usuario real cargue datos de un cliente
-  (formulario/API) — todo sigue siendo data de prueba hardcodeada en
-  `lib/sampleProposalData.ts`.
+**Proposal Studio pendiente:**
+- La Fase 1 es deliberadamente de navegación/preview. Todavía no hay edición
+  persistente desde el panel de propiedades, autosave, catálogo contextual,
+  composición/reordenamiento de secciones ni generación PDF desde la toolbar.
+  El orden y los criterios de aceptación están documentados en
+  `docs/EDITOR_IMPLEMENTATION_PLAN.md`.

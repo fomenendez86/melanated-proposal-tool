@@ -16,7 +16,7 @@ import TwoColumnListBlock from "@/components/blocks/TwoColumnListBlock";
 import WeatherBlock from "@/components/blocks/WeatherBlock";
 import type { ProposalData, ProposalSection } from "@/lib/types";
 
-function renderSection(section: ProposalSection) {
+export function ProposalSectionView({ section }: { section: ProposalSection }) {
   switch (section.type) {
     case "cover":
       return <CoverBlock data={section.data} />;
@@ -67,7 +67,7 @@ export default function ProposalRenderer({ data }: ProposalRendererProps) {
             breakAfter: index < data.sections.length - 1 ? "page" : "auto",
           }}
         >
-          {renderSection(section)}
+          <ProposalSectionView section={section} />
         </div>
       ))}
     </>
