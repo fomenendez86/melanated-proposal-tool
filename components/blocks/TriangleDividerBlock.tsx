@@ -17,8 +17,8 @@ export default function TriangleDividerBlock({
     <div className="relative box-border h-[1056px] w-[816px] overflow-hidden bg-white text-black">
       <div className="px-[82px] pt-12">
         <PageHeader variant="proposalOnly" />
-        <div className="mt-2" {...editableRegion("sectionLabel")}>
-          <SectionHeader title={data.sectionLabel} />
+        <div className="mt-2">
+          <SectionHeader title={data.sectionLabel} titleRegionProps={editableRegion("sectionLabel")} />
         </div>
         <div className="mt-10">
           {data.titleLines.map((line, index) =>

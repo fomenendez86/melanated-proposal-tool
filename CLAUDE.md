@@ -44,16 +44,26 @@ No se construirá un panel administrativo general, un canvas de posicionamiento
 libre ni un editor distinto por cada diseño.
 
 **Prioridad actual:** la Fase 10 del plan de expansión
-(edición directa en el canvas — `docs/STUDIO_EXPANSION_PLAN.md`). La 10.1 y
-la 10.2 están completas: `lib/editor/editableRegions.ts` define regiones
+(edición directa en el canvas — `docs/STUDIO_EXPANSION_PLAN.md`). Las 10.1,
+10.2 y 10.3 están completas: `lib/editor/editableRegions.ts` define regiones
 editables tipadas (`data-edit-field`/`data-edit-kind`) y los 16 bloques del
 diseño de referencia están anotados; click en una región selecciona la
-página, cambia el inspector a Content mode y enfoca el campo (mismo id
-compartido vía `fieldElementId()`); hover/resaltado activo, puente inverso
-inspector→canvas, Tab/Enter/Escape con alcance a la página seleccionada y
-apertura del drawer en móvil están implementados en
-`ProposalEditorShell.tsx`. Cubierto por 5 tests e2e nuevos (14/14 en desktop y
-mobile). Sigue la 10.3 (edición de texto inline). En paralelo
+página y cambia el inspector a Content mode. Para campos simples de
+guardado automático (Cover salvo el título rotado, Details, dividers,
+Thank You — 17 campos) el click abre un editor **inline directamente sobre
+la página** (`InlineRegionEditor`, portado con `createPortal` dentro del
+propio `[data-page-content]`, posicionado y estilizado copiando
+`getBoundingClientRect()`/`getComputedStyle()` del elemento fuente) que
+comparte un solo `usePageFieldDraft` con el inspector — un solo estado, dos
+vistas, un solo autosave. Las colecciones de guardado explícito (Pricing,
+Hotel, itinerario, excursiones, clima, términos, listas) siguen usando el
+salto al inspector de la 10.2 a propósito, porque esas páginas son
+"revisar y luego guardar", no autosave. Hover/resaltado activo, puente
+inverso inspector→canvas, Tab/Enter/Escape con alcance a la página
+seleccionada y apertura del drawer en móvil (solo para campos no-inline)
+están implementados en `ProposalEditorShell.tsx`. Cubierto por 8 tests e2e
+nuevos entre 10.2 y 10.3 (19/19 en desktop y mobile, verificado en corridas
+repetidas). Sigue la 10.4 (interacción de imágenes). En paralelo
 sigue pendiente importar el paquete de marca aprobado para cerrar el último
 criterio de Fase 9. Pruebas, accesibilidad, paginación medida,
 persistencia, backup, recuperación y observabilidad están completos. La Fase 8

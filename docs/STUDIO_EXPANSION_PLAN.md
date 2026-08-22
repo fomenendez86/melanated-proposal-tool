@@ -1,7 +1,8 @@
 # Proposal Studio — Plan de expansión (Fases 10–17)
 
-**Estado:** Plan aprobado; Fases 10.1–10.2 completas (regiones editables +
-selección en canvas/puente con el inspector)
+**Estado:** Plan aprobado; Fases 10.1–10.3 completas (regiones editables,
+selección en canvas/puente con el inspector, edición de texto inline para
+campos simples)
 **Actualizado:** 2026-08-22
 
 Este documento extiende el roadmap de
@@ -141,21 +142,74 @@ interacción.
 
 ### 10.3 — Edición de texto inline
 
-1. Al activar una región `text`/`multiline`, superponer un editor inline
-   (contentEditable plano o textarea posicionado con la misma métrica
-   tipográfica) ligado **al mismo draft state** que alimenta el inspector: un
-   solo estado, dos vistas, un solo autosave.
-2. Texto plano únicamente: sin toolbar de formato, sin cambiar fuente, tamaño
-   ni posición — la geometría pertenece al diseño. Paste se sanitiza a texto.
-3. Guardado: mismo debounce/save-on-blur/estados
-   Loaded/Unsaved/Saving/Saved/Error existentes; los errores de validación del
-   server se muestran en el inspector y la región queda marcada en danger.
-4. Los campos de guardado explícito (colecciones 2.3A/2.3B, itinerario)
-   mantienen su flujo: la edición inline participa del mismo draft y el mismo
-   dirty-guard de confirmación al navegar.
-5. Al persistir, el refresh server-rendered ya existente re-renderiza la
-   página; la repaginación puede mover contenido de página — reutilizar la
-   selección tolerante a repaginación de la Fase 2.3B.
+**Estado: Completa (2026-08-22)** para los campos simples de guardado
+automático (Cover salvo el título rotado, Details, los tres dividers de
+guardado automático, Thank You — 17 campos en 6 tipos de página). Las
+colecciones de guardado explícito (Pricing, Hotel, itinerario, excursiones,
+clima, términos, inclusiones/exclusiones) **permanecen deliberadamente en el
+flujo de la Fase 10.2** (click → salto al inspector) — ver "Alcance decidido"
+abajo. Implementado en `ProposalEditorShell.tsx`
+(`usePageFieldDraft`/`InlineRegionEditor`), `EditorUi.tsx` y
+`ItineraryEditor.tsx`; CSS en `app/globals.css`. Cubierto por 3 tests e2e
+nuevos (edición+persistencia, límites del alcance, móvil sin drawer) — 19/19
+pasan en desktop y mobile, verificado en dos corridas limpias consecutivas.
+
+1. Al activar una región `text`/`multiline` elegible, un `<input>`/`<textarea>`
+   se **porta** (`createPortal`) dentro del mismo `[data-page-content]` que la
+   página, posicionado con `getBoundingClientRect()` del elemento fuente
+   dividido por el zoom real (`content.getBoundingClientRect().width /
+   content.offsetWidth` — no necesita prop de zoom, se autocorrige si el
+   usuario hace zoom mientras edita) y estilizado copiando
+   `getComputedStyle()` (fuente, peso, tracking, `text-transform`,
+   `writing-mode`, color). El elemento fuente recibe la clase
+   `proposal-studio-region-editing` (`color: transparent`, mismo box) para que
+   solo se vea el overlay, sin duplicar texto ni mover la geometría protegida.
+2. **Un solo estado compartido:** `usePageFieldDraft` (antes interno de
+   `EditableFieldsForm`) se llama una sola vez en el shell y su resultado se
+   pasa como prop tanto al inspector como al overlay — escribir en cualquiera
+   de los dos actualiza el mismo `values`, sin duplicar autosave ni arriesgar
+   que diverjan.
+3. Texto plano únicamente, sin toolbar de formato — la geometría es del
+   diseño. Enter cierra en campos `text` de una línea; Escape cierra siempre
+   (multiline incluido) y devuelve el foco al canvas; blur (click fuera,
+   incluida la miniatura/canvas en blanco) también cierra. El cierre dispara
+   guardado vía el cleanup de desmontaje del componente (`saveNow()`), sea
+   cual sea el camino de cierre.
+4. Errores de validación del servidor tiñen el borde del overlay en rojo
+   (`proposal-studio-inline-editor-error`) y el detalle se ve en el inspector,
+   igual que el flujo de la 10.2 — sin duplicar el mensaje en el canvas.
+5. El refresh server-rendered existente re-renderiza la página tras guardar;
+   como el hook vive en el shell (no remonta por `key` de página), el estado
+   solo se reinicia cuando cambia el `pageId` seleccionado (patrón "ajustar
+   estado durante el render" de React, no un `useEffect`, para evitar un
+   frame con datos de la página equivocada).
+
+**Alcance decidido — por qué las colecciones de guardado explícito quedan
+afuera de esta pasada:** esas páginas ya declaran explícitamente "Review the
+full collection, then use Save now. These changes are not autosaved." — la
+edición inline con autosave contradiría ese diseño intencional. Además varias
+de esas regiones son contenedores agregados (todo el itinerario, toda la
+lista de excursiones) sin mapeo 1:1 entre el rect visual y un único campo, lo
+que vuelve inviable la técnica de overlay-por-rect sin antes rediseñar esos
+bloques. Se documenta como límite de fase, no como pendiente accidental.
+
+**Correcciones de precisión de región (parte del mismo trabajo):**
+`DetailsBlock` anotaba la fila completa (etiqueta negra + valor); ahora solo
+el `<li>` de valor. `TriangleDividerBlock`'s `sectionLabel` anotaba todo
+`SectionHeader` (título + línea decorativa que se extiende con `flex-1`);
+`SectionHeader` ahora acepta `titleRegionProps` para anotar solo el `<h2>`.
+Ambos eran imprecisos ya en la Fase 10.1 (el overlay del 10.3 los hizo
+evidentes al depender de un rect exacto), pero también mejoran el punto de
+click de la Fase 10.2.
+
+**Limitaciones conocidas:**
+- `coverTitle` (texto rotado `[writing-mode:vertical-rl]`) queda excluido del
+  overlay a propósito — el soporte de inputs editables en vertical-writing-mode
+  es inconsistente entre navegadores; se edita solo desde el inspector.
+- `dividerSubtitle` en `SectionDividerBlock` no renderiza ningún elemento
+  cuando está vacío (`{data.subtitle && <p>...}`), así que no hay región para
+  click-to-add en ese caso — límite heredado de la Fase 10.1, no introducido
+  acá; corregirlo tocaría la geometría protegida del bloque.
 
 ### 10.4 — Interacción de imágenes
 

@@ -19,13 +19,14 @@ export default function DetailsBlock({ data }: DetailsBlockProps) {
 
       <div className="mt-8 flex flex-col">
         {data.rows.map((row, index) => (
-          <div key={index} {...(row.editField ? editableRegion(row.editField) : {})}>
+          <div key={index}>
             <div className="bg-black px-4 py-2 text-sm font-bold uppercase text-white">
               {row.label}
             </div>
             <div className="bg-neutral-100 px-4 py-3">
               <ul className="list-disc pl-4">
                 <li
+                  {...(row.editField ? editableRegion(row.editField) : {})}
                   className={`text-sm ${
                     row.emphasis ? "font-bold text-[#ff0000]" : ""
                   }`}

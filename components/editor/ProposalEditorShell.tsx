@@ -21,13 +21,15 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type {
+  CSSProperties,
   FocusEvent,
   KeyboardEvent as ReactKeyboardEvent,
   MouseEvent as ReactMouseEvent,
   ReactNode,
   RefObject,
 } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { updateProposalFields } from "@/app/proposals/[id]/editor/actions";
 import { updateProposalDesign } from "@/app/proposals/[id]/editor/designActions";
@@ -38,9 +40,13 @@ import type { ProposalCatalogData } from "@/lib/catalog/types";
 import type { ProposalCompositionData } from "@/lib/composition/types";
 import {
   EDITABLE_REGION_ACTIVE_CLASS,
+  EDITABLE_REGION_EDITING_CLASS,
   EDITABLE_REGION_SELECTOR,
   fieldElementId,
+  isEditableRegionKind,
+  isInlineEditableRegion,
 } from "@/lib/editor/editableRegions";
+import type { EditableRegionKind } from "@/lib/editor/editableRegions";
 import type {
   EditorSaveState,
   ProposalEditorFieldName,
@@ -111,6 +117,8 @@ interface PropertiesPanelProps {
   onClose?: () => void;
   mode: "content" | "design";
   onModeChange: (mode: "content" | "design") => void;
+  /** Shared draft/save state for the selected page's simple field form. */
+  draft: PageFieldDraft;
   /** Set when a canvas click should scroll/focus a field in this panel. */
   focusField?: RegionFocusRequest;
   /** Notifies the canvas bridge that a field gained focus via the inspector. */
@@ -271,36 +279,46 @@ function fieldValues(config: ProposalEditorPageConfig) {
   >;
 }
 
-function EditableFieldsForm({
-  proposalId,
-  config,
-  instanceId,
-  onSaveStateChange,
-  focusField,
-  onFieldFocus,
-  onEscapeToCanvas,
-}: {
-  proposalId: number;
-  config: ProposalEditorPageConfig;
-  instanceId: PropertiesPanelProps["instanceId"];
-  onSaveStateChange: (state: EditorSaveState) => void;
-  focusField?: RegionFocusRequest;
-  onFieldFocus: (field: ProposalEditorFieldName) => void;
-  onEscapeToCanvas: () => void;
-}) {
+/**
+ * Owns the draft/save state for the selected page's simple field form. Called
+ * once in the shell (not inside `EditableFieldsForm`, which is instantiated
+ * twice — desktop and drawer) so the inspector and the Phase 10.3 canvas
+ * overlay read and write the exact same state: one draft, two views, one
+ * autosave. `config` may be undefined (itinerary pages and pages without an
+ * editable form use their own flow) — the hook is inert in that case.
+ */
+function usePageFieldDraft(
+  proposalId: number,
+  config: ProposalEditorPageConfig | undefined,
+  onSaveStateChange: (state: EditorSaveState) => void
+) {
   const router = useRouter();
-  const initialValues = useMemo(() => fieldValues(config), [config]);
+  const initialValues = useMemo(() => (config ? fieldValues(config) : {}), [config]);
+  const [renderedPageId, setRenderedPageId] = useState(config?.pageId);
   const [values, setValues] = useState(initialValues);
   const [savedValues, setSavedValues] = useState(initialValues);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<ProposalEditorFieldName, string>>>({});
   const [formError, setFormError] = useState("");
   const requestNumberRef = useRef(0);
   const autosaveTimeoutRef = useRef<number | null>(null);
+
+  // Reset the draft when the selected page changes, without an effect (which
+  // would render one stale frame first): the standard React pattern for
+  // resetting state derived from a changing identity.
+  if (config?.pageId !== renderedPageId) {
+    setRenderedPageId(config?.pageId);
+    setValues(initialValues);
+    setSavedValues(initialValues);
+    setFieldErrors({});
+    setFormError("");
+  }
+
   const valuesKey = JSON.stringify(values);
   const savedValuesKey = JSON.stringify(savedValues);
   const isDirty = valuesKey !== savedValuesKey;
 
   const saveDraft = useCallback(async (draft: typeof values) => {
+    if (!config) return;
     if (JSON.stringify(draft) === JSON.stringify(savedValues)) return;
     if (autosaveTimeoutRef.current !== null) {
       window.clearTimeout(autosaveTimeoutRef.current);
@@ -329,24 +347,48 @@ function EditableFieldsForm({
     setSavedValues(draft);
     onSaveStateChange("saved");
     router.refresh();
-  }, [
-    config.kind,
-    config.sourceRefId,
-    config.sourceSectionId,
-    onSaveStateChange,
-    proposalId,
-    router,
-    savedValues,
-  ]);
+  }, [config, onSaveStateChange, proposalId, router, savedValues]);
 
   useEffect(() => {
-    if (!isDirty || config.saveMode === "explicit") return;
+    if (!config || !isDirty || config.saveMode === "explicit") return;
     onSaveStateChange("dirty");
     autosaveTimeoutRef.current = window.setTimeout(() => void saveDraft(values), 800);
     return () => {
       if (autosaveTimeoutRef.current !== null) window.clearTimeout(autosaveTimeoutRef.current);
     };
-  }, [config.saveMode, isDirty, onSaveStateChange, saveDraft, values, valuesKey]);
+  }, [config, isDirty, onSaveStateChange, saveDraft, values, valuesKey]);
+
+  const setFieldValue = useCallback((name: ProposalEditorFieldName, value: string) => {
+    setValues((current) => ({ ...current, [name]: value }));
+    setFieldErrors((current) => ({ ...current, [name]: undefined }));
+    onSaveStateChange("dirty");
+  }, [onSaveStateChange]);
+
+  const saveNow = useCallback(() => {
+    if (config && isDirty && config.saveMode !== "explicit") void saveDraft(values);
+  }, [config, isDirty, saveDraft, values]);
+
+  return { values, fieldErrors, formError, isDirty, setFieldValue, saveDraft, saveNow };
+}
+
+type PageFieldDraft = ReturnType<typeof usePageFieldDraft>;
+
+function EditableFieldsForm({
+  config,
+  instanceId,
+  draft,
+  focusField,
+  onFieldFocus,
+  onEscapeToCanvas,
+}: {
+  config: ProposalEditorPageConfig;
+  instanceId: PropertiesPanelProps["instanceId"];
+  draft: PageFieldDraft;
+  focusField?: RegionFocusRequest;
+  onFieldFocus: (field: ProposalEditorFieldName) => void;
+  onEscapeToCanvas: () => void;
+}) {
+  const { values, fieldErrors, formError, isDirty, setFieldValue, saveDraft } = draft;
 
   function handleFormBlur(event: FocusEvent<HTMLFormElement>) {
     if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return;
@@ -395,11 +437,7 @@ function EditableFieldsForm({
             value={values[field.name] ?? ""}
             error={error}
             rows={config.saveMode === "explicit" ? 10 : 3}
-            onChange={(event) => {
-            setValues((current) => ({ ...current, [field.name]: event.target.value }));
-            setFieldErrors((current) => ({ ...current, [field.name]: undefined }));
-            onSaveStateChange("dirty");
-            }}
+            onChange={(event) => setFieldValue(field.name, event.target.value)}
             onFocus={() => onFieldFocus(field.name)}
           />
         );
@@ -423,6 +461,173 @@ function EditableFieldsForm({
   );
 }
 
+const INLINE_EDITED_STYLE_PROPERTIES: Array<keyof CSSProperties> = [
+  "fontFamily",
+  "fontSize",
+  "fontWeight",
+  "fontStyle",
+  "lineHeight",
+  "letterSpacing",
+  "textAlign",
+  "textTransform",
+  "color",
+  "writingMode",
+  "direction",
+  "padding",
+];
+
+/**
+ * Phase 10.3 inline canvas editor. Portals a plain input/textarea over the
+ * clicked region, sized and styled to match it, and reads/writes the exact
+ * same draft as the inspector (`draft` is one shared `usePageFieldDraft`
+ * instance) — typing here and typing in the inspector are the same action.
+ */
+interface InlineEditorGeometry {
+  rect: { left: number; top: number; width: number; height: number };
+  style: CSSProperties;
+  multiline: boolean;
+  ariaLabel: string | null;
+}
+
+function InlineRegionEditor({
+  pageRefs,
+  pageIndex,
+  field,
+  draft,
+  onClose,
+}: {
+  pageRefs: RefObject<Array<HTMLDivElement | null>>;
+  pageIndex: number;
+  field: ProposalEditorFieldName;
+  draft: PageFieldDraft;
+  onClose: () => void;
+}) {
+  const [geometry, setGeometry] = useState<InlineEditorGeometry | null>(null);
+  const [contentElement, setContentElement] = useState<HTMLElement | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const draftRef = useRef(draft);
+
+  // Keep the ref used by the unmount-save cleanup current every render,
+  // without writing to a ref during render itself.
+  useEffect(() => {
+    draftRef.current = draft;
+  });
+
+  // Refs (pageRefs, the resolved DOM nodes) are only ever read here, never
+  // during render, and setting geometry from a real layout measurement is
+  // the documented exception to "don't setState in an effect" — there is no
+  // width/position to compute until after the page has actually painted.
+  useLayoutEffect(() => {
+    const pageElement = pageRefs.current[pageIndex];
+    const content = pageElement?.querySelector<HTMLElement>("[data-page-content]") ?? null;
+    const target = content?.querySelector<HTMLElement>(`[data-edit-field="${field}"]`) ?? null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setContentElement(content);
+    if (!target || !content) return;
+
+    // The content container keeps its unscaled CSS size (offsetWidth) while
+    // `transform: scale(zoom)` changes only its rendered size — dividing the
+    // two derives the current zoom without a prop, and self-corrects if the
+    // user zooms the canvas while this overlay is open.
+    const zoom = content.offsetWidth > 0
+      ? content.getBoundingClientRect().width / content.offsetWidth
+      : 1;
+    const contentRect = content.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const computed = window.getComputedStyle(target);
+    const style: Record<string, string> = {};
+    for (const property of INLINE_EDITED_STYLE_PROPERTIES) {
+      const value = computed[property as unknown as keyof CSSStyleDeclaration];
+      if (typeof value === "string") style[property] = value;
+    }
+
+    setGeometry({
+      rect: {
+        left: (targetRect.left - contentRect.left) / zoom,
+        top: (targetRect.top - contentRect.top) / zoom,
+        width: targetRect.width / zoom,
+        height: targetRect.height / zoom,
+      },
+      style: style as CSSProperties,
+      multiline: target.getAttribute("data-edit-kind") === "multiline",
+      ariaLabel: target.getAttribute("aria-label"),
+    });
+
+    target.classList.add(EDITABLE_REGION_EDITING_CLASS);
+    return () => {
+      target.classList.remove(EDITABLE_REGION_EDITING_CLASS);
+    };
+  }, [pageRefs, pageIndex, field]);
+
+  const isPositioned = geometry !== null;
+  useEffect(() => {
+    // `geometry` starts null (the layout effect above hasn't measured yet),
+    // so this component's very first commit renders nothing and there is no
+    // input/textarea to focus. Depending on `[]` would run only against that
+    // empty first commit and never fire once the control actually mounts —
+    // keying on "geometry just became available" catches the real mount.
+    if (!isPositioned) return;
+    const control = inputRef.current ?? textareaRef.current;
+    control?.focus();
+    control?.select();
+  }, [isPositioned]);
+
+  useEffect(() => () => {
+    draftRef.current.saveNow();
+  }, []);
+
+  if (!geometry || !contentElement) return null;
+
+  const value = draft.values[field] ?? "";
+  const error = draft.fieldErrors[field];
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onClose();
+    } else if (event.key === "Enter" && !geometry.multiline && !event.shiftKey) {
+      event.preventDefault();
+      onClose();
+    }
+  };
+  const style: CSSProperties = {
+    left: geometry.rect.left,
+    top: geometry.rect.top,
+    width: geometry.rect.width,
+    height: geometry.rect.height,
+    ...geometry.style,
+  };
+  const className = `proposal-studio-inline-editor${error ? " proposal-studio-inline-editor-error" : ""}`;
+
+  return createPortal(
+    geometry.multiline ? (
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={(event) => draft.setFieldValue(field, event.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={onClose}
+        aria-label={geometry.ariaLabel ?? undefined}
+        className={className}
+        style={style}
+      />
+    ) : (
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={(event) => draft.setFieldValue(field, event.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={onClose}
+        aria-label={geometry.ariaLabel ?? undefined}
+        className={className}
+        style={style}
+      />
+    ),
+    contentElement
+  );
+}
+
 function PropertiesPanel({
   instanceId,
   selectedPage,
@@ -439,6 +644,7 @@ function PropertiesPanel({
   onClose,
   mode,
   onModeChange,
+  draft,
   focusField,
   onFieldFocus,
   onEscapeToCanvas,
@@ -484,11 +690,9 @@ function PropertiesPanel({
               />
             ) : editorConfig ? (
               <EditableFieldsForm
-                key={editorConfig.pageId}
-                proposalId={proposalId}
                 config={editorConfig}
                 instanceId={instanceId}
-                onSaveStateChange={onSaveStateChange}
+                draft={draft}
                 focusField={focusField}
                 onFieldFocus={onFieldFocus}
                 onEscapeToCanvas={onEscapeToCanvas}
@@ -765,6 +969,7 @@ export default function ProposalEditorShell({
   const [activeRegion, setActiveRegion] = useState<{ pageId: string; field: ProposalEditorFieldName; requestId: number } | null>(null);
   const [highlightedField, setHighlightedField] = useState<ProposalEditorFieldName | null>(null);
   const [regionAnnouncement, setRegionAnnouncement] = useState("");
+  const [activeInlineEdit, setActiveInlineEdit] = useState<{ pageId: string; pageIndex: number; field: ProposalEditorFieldName } | null>(null);
   const canvasViewportRef = useRef<HTMLDivElement>(null);
   const pagesDialogRef = useRef<HTMLDivElement>(null);
   const propertiesDialogRef = useRef<HTMLDivElement>(null);
@@ -785,6 +990,15 @@ export default function ProposalEditorShell({
   const focusField = activeRegion && activeRegion.pageId === selectedPage.id
     ? { field: activeRegion.field, requestId: activeRegion.requestId }
     : undefined;
+  // Itinerary pages manage their own state in ItineraryEditor; every other
+  // editable page shares this one draft between the inspector and the
+  // Phase 10.3 canvas overlay.
+  const pageFieldDraft = usePageFieldDraft(
+    proposal.id,
+    editorConfig?.kind === "itinerary" ? undefined : editorConfig,
+    setSaveState
+  );
+  const inlineEdit = activeInlineEdit && activeInlineEdit.pageId === selectedPage.id ? activeInlineEdit : null;
   const fitCanvas = useFitCanvas(canvasViewportRef, setZoom, viewMode, pageSize);
 
   const confirmDiscardDraft = useCallback(() => {
@@ -863,18 +1077,28 @@ export default function ProposalEditorShell({
     }
   }, [navigateToIndex, pageMeta]);
 
-  const activateRegion = useCallback((pageIndex: number, field: ProposalEditorFieldName) => {
+  const activateRegion = useCallback((pageIndex: number, field: ProposalEditorFieldName, kind: EditableRegionKind) => {
     const targetPage = pageMeta[pageIndex];
     if (!targetPage) return;
     if (pageIndex !== effectiveSelectedIndex && !navigateToIndex(pageIndex)) return;
 
+    const targetConfig = editorPages[targetPage.id];
+    const label = targetConfig?.fields.find((candidate) => candidate.name === field)?.label ?? field;
+
     setInspectorMode("content");
     setHighlightedField(field);
+    setRegionAnnouncement(`Editing ${label}`);
+
+    if (isInlineEditableRegion(field, kind, targetConfig?.saveMode)) {
+      // Phase 10.3: edit directly on the page. The inspector still shows the
+      // same shared draft, so it stays in sync without a second focus jump.
+      setActiveInlineEdit({ pageId: targetPage.id, pageIndex, field });
+      return;
+    }
+
+    setActiveInlineEdit(null);
     regionRequestIdRef.current += 1;
     setActiveRegion({ pageId: targetPage.id, field, requestId: regionRequestIdRef.current });
-
-    const label = editorPages[targetPage.id]?.fields.find((candidate) => candidate.name === field)?.label ?? field;
-    setRegionAnnouncement(`Editing ${label}`);
 
     if (typeof window !== "undefined" && !window.matchMedia("(min-width: 1280px)").matches) {
       setPropertiesOpen(true);
@@ -886,12 +1110,20 @@ export default function ProposalEditorShell({
     if (index >= 0) pageRefs.current[index]?.focus();
   }, [pageMeta]);
 
+  const closeInlineEdit = useCallback(() => {
+    setActiveInlineEdit((current) => {
+      if (current) focusCanvasPage(current.pageId);
+      return null;
+    });
+  }, [focusCanvasPage]);
+
   const activateRegionFromElement = useCallback((element: HTMLElement) => {
     const field = element.getAttribute("data-edit-field") as ProposalEditorFieldName | null;
+    const kind = element.getAttribute("data-edit-kind");
     const pageElement = element.closest<HTMLElement>("[data-page-index]");
     const pageIndex = Number(pageElement?.getAttribute("data-page-index"));
-    if (!field || !Number.isInteger(pageIndex)) return;
-    activateRegion(pageIndex, field);
+    if (!field || !isEditableRegionKind(kind) || !Number.isInteger(pageIndex)) return;
+    activateRegion(pageIndex, field, kind);
   }, [activateRegion]);
 
   const handleCanvasPointerActivate = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
@@ -1393,6 +1625,17 @@ export default function ProposalEditorShell({
               </div>
             )}
           </div>
+
+          {inlineEdit ? (
+            <InlineRegionEditor
+              key={`${inlineEdit.pageId}-${inlineEdit.field}`}
+              pageRefs={pageRefs}
+              pageIndex={inlineEdit.pageIndex}
+              field={inlineEdit.field}
+              draft={pageFieldDraft}
+              onClose={closeInlineEdit}
+            />
+          ) : null}
         </section>
 
         <aside className="hidden min-h-0 border-l border-editor-border-subtle xl:block">
@@ -1411,6 +1654,7 @@ export default function ProposalEditorShell({
             onSaveStateChange={setSaveState}
             mode={inspectorMode}
             onModeChange={setInspectorMode}
+            draft={pageFieldDraft}
             focusField={focusField}
             onFieldFocus={setHighlightedField}
             onEscapeToCanvas={() => focusCanvasPage(selectedPage.id)}
@@ -1480,6 +1724,7 @@ export default function ProposalEditorShell({
             onClose={closeProperties}
             mode={inspectorMode}
             onModeChange={setInspectorMode}
+            draft={pageFieldDraft}
             focusField={focusField}
             onFieldFocus={setHighlightedField}
             onEscapeToCanvas={() => focusCanvasPage(selectedPage.id)}

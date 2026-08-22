@@ -216,6 +216,35 @@
   background-color: color-mix(in srgb, var(--color-editor-focus) 10%, transparent);
 }
 
+/*
+ * Phase 10.3 inline overlay: hides the source region's own glyphs while its
+ * floating input/textarea copy is open, without changing box size (so the
+ * page's protected geometry never shifts) and without touching descendant
+ * decoration such as SectionHeader's rule, which lives outside the region.
+ */
+.proposal-studio [data-page-content] [data-edit-field].proposal-studio-region-editing {
+  color: transparent !important;
+  outline-color: transparent;
+  background-color: transparent;
+  cursor: text;
+}
+
+.proposal-studio-inline-editor {
+  position: absolute;
+  z-index: 10;
+  margin: 0;
+  border: 2px solid var(--color-editor-focus);
+  border-radius: 2px;
+  background-color: color-mix(in srgb, var(--color-editor-focus) 6%, white 94%);
+  outline: none;
+  resize: none;
+  box-sizing: border-box;
+}
+
+.proposal-studio-inline-editor.proposal-studio-inline-editor-error {
+  border-color: var(--color-editor-danger);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

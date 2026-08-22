@@ -83,7 +83,7 @@ test("rendered pages annotate editable regions from the shared field contract", 
 });
 
 test("clicking a canvas region selects its field in the inspector", async ({ page }, testInfo) => {
-  await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
+  await page.goto("/proposals/1/editor", { waitUntil: "networkidle" });
   const canvas = page.getByLabel("Proposal canvas");
   await expect(canvas).toBeVisible();
 
@@ -114,7 +114,7 @@ test("clicking a canvas region selects its field in the inspector", async ({ pag
 });
 
 test("editable regions are keyboard-reachable only on the selected page, and Escape returns to the canvas", async ({ page }) => {
-  await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
+  await page.goto("/proposals/1/editor", { waitUntil: "networkidle" });
   await expect(page.getByLabel("Proposal canvas")).toBeVisible();
 
   const selectedRegions = page.locator('[data-page-index="0"] [data-edit-field]');
@@ -132,9 +132,93 @@ test("editable regions are keyboard-reachable only on the selected page, and Esc
   await expect(page.locator('[data-page-index="0"]')).toBeFocused();
 });
 
+test("inline-eligible canvas regions edit directly on the page, mirror the inspector live, and persist", async ({ page }) => {
+  // networkidle: this test measures real layout (the overlay's position) on
+  // first interaction, so let the 34-page document's images finish settling
+  // first rather than racing them like the simpler dialog-only tests do.
+  await page.goto("/proposals/1/editor", { waitUntil: "networkidle" });
+  const canvas = page.getByLabel("Proposal canvas");
+  await expect(canvas).toBeVisible();
+
+  const subtitleRegion = canvas.locator('[data-page-index="0"] [data-edit-field="coverSubtitle"]');
+
+  await subtitleRegion.click();
+  const overlay = page.locator(".proposal-studio-inline-editor");
+  await expect(overlay).toBeVisible();
+  await expect(overlay).toHaveJSProperty("tagName", "TEXTAREA");
+  await expect(subtitleRegion).toHaveClass(/proposal-studio-region-editing/);
+  // Read the raw value from the overlay, not the region's rendered (CSS
+  // text-transform: uppercase) text, so restoring it later doesn't
+  // permanently uppercase the demo data.
+  const originalText = await overlay.inputValue();
+
+  const draftText = "Inline edit e2e check";
+  await overlay.fill(draftText);
+  // The inspector reads the same shared draft — no separate save, no second
+  // state. On mobile the inspector panel stays CSS-hidden (inline editing
+  // never opens it), so check the value without requiring visibility.
+  await expect(page.locator('textarea[name="coverSubtitle"]')).toHaveValue(draftText);
+
+  // Escape closes the overlay, returns focus to the canvas, and — via the
+  // component's unmount cleanup — saves, without needing a separate blur.
+  await page.keyboard.press("Escape");
+  await expect(overlay).toBeHidden();
+  await expect(page.locator('[data-page-index="0"]')).toBeFocused();
+  await expect(subtitleRegion).not.toHaveClass(/proposal-studio-region-editing/);
+  await expect(page.locator("footer")).toContainText("Saved", { timeout: 20000 });
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator('[data-page-index="0"] [data-edit-field="coverSubtitle"]')).toHaveText(draftText);
+
+  // Restore the seed value via the other close path — blur to blank canvas
+  // space rather than Escape — and confirm the suite stays idempotent.
+  const restoreRegion = page.locator('[data-page-index="0"] [data-edit-field="coverSubtitle"]');
+  await restoreRegion.click();
+  await page.locator(".proposal-studio-inline-editor").fill(originalText);
+  await canvas.click({ position: { x: 10, y: 10 } });
+  await expect(page.locator(".proposal-studio-inline-editor")).toBeHidden();
+  await expect(page.locator("footer")).toContainText("Saved", { timeout: 20000 });
+  await expect(restoreRegion).toHaveText(originalText);
+});
+
+test("fields outside the inline-editing scope keep the Phase 10.2 inspector flow", async ({ page }) => {
+  await page.goto("/proposals/1/editor", { waitUntil: "networkidle" });
+  const canvas = page.getByLabel("Proposal canvas");
+  await expect(canvas).toBeVisible();
+
+  // coverTitle renders in vertical writing-mode; excluded from the overlay.
+  await canvas.locator('[data-page-index="0"] [data-edit-field="coverTitle"]').click();
+  await expect(page.locator(".proposal-studio-inline-editor")).toHaveCount(0);
+  await expect(page.locator('input[name="coverTitle"]:visible')).toBeFocused();
+
+  // On mobile the jump-to-inspector flow opened a modal drawer over the
+  // canvas; close it so the next region is clickable. Harmless no-op on
+  // desktop, where nothing is open and this just returns focus to the page.
+  await page.keyboard.press("Escape");
+
+  // Hotel booking fields are an explicit-save (review-then-save) form.
+  const roomCategoryRegion = canvas.locator('[data-edit-field="roomCategory"]').first();
+  await roomCategoryRegion.scrollIntoViewIfNeeded();
+  await roomCategoryRegion.click();
+  await expect(page.locator(".proposal-studio-inline-editor")).toHaveCount(0);
+  await expect(page.locator('input[name="roomCategory"]:visible')).toBeFocused();
+});
+
+test("mobile: inline-eligible regions edit on the canvas without opening the properties drawer", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "Mobile-only responsive behavior");
+  await page.goto("/proposals/1/editor", { waitUntil: "networkidle" });
+  const canvas = page.getByLabel("Proposal canvas");
+  await expect(canvas).toBeVisible();
+
+  await canvas.locator('[data-page-index="0"] [data-edit-field="coverSubtitle"]').click();
+  await expect(page.locator(".proposal-studio-inline-editor")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole("dialog", { name: "Page properties" })).toBeHidden();
+  await page.keyboard.press("Escape");
+});
+
 test("mobile: clicking a canvas region opens the properties drawer focused on that field", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "Mobile-only responsive behavior");
-  await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
+  await page.goto("/proposals/1/editor", { waitUntil: "networkidle" });
   const canvas = page.getByLabel("Proposal canvas");
   await expect(canvas).toBeVisible();
 

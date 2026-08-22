@@ -34,6 +34,44 @@ export const EDITABLE_REGION_SELECTOR = "[data-edit-field]";
 /** Class toggled on the canvas region that currently mirrors inspector focus. */
 export const EDITABLE_REGION_ACTIVE_CLASS = "proposal-studio-region-active";
 
+/**
+ * Class toggled on the source region while its inline overlay (Phase 10.3) is
+ * open. It hides the region's own glyphs (`color: transparent`, see
+ * app/globals.css) without changing its box, so the overlay's copy of the
+ * text is the only visible layer and the page's protected geometry never
+ * shifts.
+ */
+export const EDITABLE_REGION_EDITING_CLASS = "proposal-studio-region-editing";
+
+/**
+ * Fields excluded from the inline canvas overlay (Phase 10.3) even though
+ * they are plain text/multiline regions on an auto-save page. `coverTitle`
+ * renders in `[writing-mode:vertical-rl]` as a deliberate brand flourish;
+ * editable vertical-writing-mode inputs are unreliable across browsers, so
+ * this field stays on the Phase 10.2 flow (click focuses the inspector
+ * field, which edits it as normal horizontal text).
+ */
+const INLINE_EDIT_EXCLUDED_FIELDS = new Set<ProposalEditorFieldName>(["coverTitle"]);
+
+/**
+ * Whether `field`/`kind` on a page with `saveMode` is eligible for the inline
+ * canvas overlay. Only plain auto-saved text/multiline fields qualify:
+ * - `image` regions are out of scope until Phase 10.4.
+ * - `saveMode: "explicit"` pages (Pricing, Hotel, itinerary, excursions,
+ *   weather, terms, important items, inclusions/exclusions) are deliberately
+ *   review-then-save flows; autosaving them inline would contradict that
+ *   design. They keep the Phase 10.2 jump-to-inspector flow.
+ */
+export function isInlineEditableRegion(
+  field: ProposalEditorFieldName,
+  kind: EditableRegionKind,
+  saveMode: "auto" | "explicit" | undefined
+): boolean {
+  if (kind === "image") return false;
+  if (saveMode === "explicit") return false;
+  return !INLINE_EDIT_EXCLUDED_FIELDS.has(field);
+}
+
 export function isEditableRegionKind(value: string | null): value is EditableRegionKind {
   return value === "text" || value === "multiline" || value === "image";
 }
