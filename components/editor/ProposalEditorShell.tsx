@@ -5,10 +5,14 @@ import {
   CircleAlert,
   ChevronLeft,
   ChevronRight,
+  ClipboardCheck,
   Eye,
   Layers3,
+  LibraryBig,
+  ListTree,
   Maximize2,
   Minus,
+  Palette,
   Plus,
   Search,
   Settings2,
@@ -21,8 +25,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { updateProposalFields } from "@/app/proposals/[id]/editor/actions";
 import { updateProposalDesign } from "@/app/proposals/[id]/editor/designActions";
+import { updateProposalSectionVariant } from "@/app/proposals/[id]/editor/compositionActions";
 import type { ProposalSummary } from "@/lib/db/getProposalSummary";
 import type { DocumentPageGeometry, ProposalDesignContext } from "@/lib/designs/types";
+import type { ProposalCatalogData } from "@/lib/catalog/types";
+import type { ProposalCompositionData } from "@/lib/composition/types";
 import type {
   EditorSaveState,
   ProposalEditorFieldName,
@@ -31,6 +38,11 @@ import type {
 } from "@/lib/editor/proposalEditorTypes";
 import type { ProposalPageMeta } from "@/lib/editor/proposalPageMeta";
 
+import ItineraryEditor from "./ItineraryEditor";
+import CatalogPanel from "./CatalogPanel";
+import CompositionPanel from "./CompositionPanel";
+import PdfGenerateButton from "./PdfGenerateButton";
+import ShareProposalButton from "./ShareProposalButton";
 import {
   EditorButton,
   EditorDrawer,
@@ -52,6 +64,8 @@ interface ProposalEditorShellProps {
   pages: ReactNode[];
   editorPages: ProposalEditorPageMap;
   designContext: ProposalDesignContext;
+  catalog: ProposalCatalogData;
+  composition: ProposalCompositionData;
 }
 
 interface PageNavigatorProps {
@@ -71,8 +85,23 @@ interface PropertiesPanelProps {
   pageCount: number;
   proposalId: number;
   editorConfig?: ProposalEditorPageConfig;
+  designContext: ProposalDesignContext;
+  designChanging: boolean;
+  designError: string;
+  onDesignChange: (designKey: string) => void;
+  activeVariantId?: string;
+  onVariantChange: (variantId: string) => void;
   onSaveStateChange: (state: EditorSaveState) => void;
   onClose?: () => void;
+}
+
+interface ReviewPanelProps {
+  pageMeta: ProposalPageMeta[];
+  overflowPageIndexes: number[];
+  designContext: ProposalDesignContext;
+  saveState: EditorSaveState;
+  designError: string;
+  onClose: () => void;
 }
 
 const STATUS_COPY: Record<ProposalSummary["status"], string> = {
@@ -190,6 +219,7 @@ function PageNavigator({
               eyebrow={page.eyebrow}
               thumbnail={<PageThumbnail page={pages[page.pageNumber - 1]} pageSize={pageSize} />}
               thumbnailHeight={(48 * pageSize.heightPx) / pageSize.widthPx}
+              status={page.status}
               onSelect={() => onSelect(page)}
             />
           );
@@ -356,9 +386,19 @@ function PropertiesPanel({
   pageCount,
   proposalId,
   editorConfig,
+  designContext,
+  designChanging,
+  designError,
+  onDesignChange,
+  activeVariantId,
+  onVariantChange,
   onSaveStateChange,
   onClose,
 }: PropertiesPanelProps) {
+  const [mode, setMode] = useState<"content" | "design">("content");
+  const variants = designContext.active.sectionVariants[selectedPage.type] ?? [];
+  const defaultVariantId = designContext.active.defaultVariantIds[selectedPage.type];
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-editor-panel">
       <EditorPanelHeader
@@ -373,27 +413,124 @@ function PropertiesPanel({
           <p className="text-xs font-bold uppercase tracking-[0.12em] text-editor-text-muted">{selectedPage.eyebrow}</p>
           <h2 className="mt-1.5 text-xl font-semibold tracking-tight text-editor-text-strong">{selectedPage.title}</h2>
           <p className="mt-2 text-sm leading-5 text-editor-text-muted">{selectedPage.description}</p>
+          <EditorSegmentedControl
+            label="Inspector mode"
+            value={mode}
+            options={[
+              { value: "content", label: "Content" },
+              { value: "design", label: "Design" },
+            ]}
+            onChange={setMode}
+            className="mt-4 flex w-full"
+          />
         </div>
 
         <div className="space-y-6 p-5">
-          {editorConfig ? (
-            <EditableFieldsForm
-              key={editorConfig.pageId}
-              proposalId={proposalId}
-              config={editorConfig}
-              instanceId={instanceId}
-              onSaveStateChange={onSaveStateChange}
-            />
-          ) : (
-            <EditorEmptyState
-              title="Preview only"
-              description="This page is available for review but has no editable fields in the active document design."
-              icon={<Eye className="size-5" />}
-            />
-          )}
+          <div hidden={mode !== "content"}>
+            {editorConfig?.kind === "itinerary" ? (
+              <ItineraryEditor
+                key={editorConfig.pageId}
+                proposalId={proposalId}
+                config={editorConfig}
+                onSaveStateChange={onSaveStateChange}
+              />
+            ) : editorConfig ? (
+              <EditableFieldsForm
+                key={editorConfig.pageId}
+                proposalId={proposalId}
+                config={editorConfig}
+                instanceId={instanceId}
+                onSaveStateChange={onSaveStateChange}
+              />
+            ) : (
+              <EditorEmptyState
+                title="Preview only"
+                description="This page is available for review but has no editable fields in the active document design."
+                icon={<Eye className="size-5" />}
+              />
+            )}
+          </div>
 
-          <EditorInspectorSection id={`page-information-heading-${instanceId}`} title="Page information">
-            <dl className="divide-y divide-editor-border-subtle rounded-xl border border-editor-border-subtle bg-editor-raised px-3.5">
+          <div hidden={mode !== "design"} className="space-y-5">
+            <div>
+              <div className="flex items-center gap-2 text-editor-brand">
+                <Palette className="size-4" aria-hidden="true" />
+                <h3 className="text-sm font-semibold">{designContext.active.name}</h3>
+              </div>
+              <p className="mt-1.5 text-xs leading-5 text-editor-text-muted">
+                Design v{designContext.active.version} · {designContext.active.page.formatLabel} · {designContext.active.page.orientation}
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor={`inspector-document-design-${instanceId}`} className="text-xs font-semibold text-editor-text">
+                Document design
+              </label>
+              <select
+                id={`inspector-document-design-${instanceId}`}
+                value={`${designContext.active.id}@${designContext.active.version}`}
+                disabled={designChanging}
+                onChange={(event) => onDesignChange(event.target.value)}
+                className={`mt-1.5 h-11 w-full rounded-lg border border-editor-border bg-editor-raised px-3 text-sm font-semibold text-editor-text outline-none transition hover:border-editor-border-strong disabled:cursor-wait disabled:text-editor-disabled-text ${editorFocusRing}`}
+              >
+                {designContext.choices.map(({ design, compatible }) => (
+                  <option
+                    key={`${design.id}@${design.version}`}
+                    value={`${design.id}@${design.version}`}
+                    disabled={!compatible}
+                  >
+                    {design.name} · v{design.version}{design.status === "preview" ? " · Preview" : ""}{!compatible ? " · Incompatible" : ""}
+                  </option>
+                ))}
+              </select>
+              {designError ? (
+                <p className="mt-1.5 text-xs leading-4 text-editor-danger">{designError}</p>
+              ) : null}
+            </div>
+
+            {variants.length > 0 ? (
+              <EditorInspectorSection id={`layout-variants-heading-${instanceId}`} title="Approved layout">
+                <div className="space-y-2">
+                  {variants.map((variant) => {
+                    const active = variant.id === (activeVariantId ?? defaultVariantId);
+                    return (
+                      <button
+                        type="button"
+                        key={variant.id}
+                        onClick={() => onVariantChange(variant.id)}
+                        aria-pressed={active}
+                        className={`w-full rounded-xl border p-3.5 text-left ${editorFocusRing} ${active ? "border-editor-border-strong bg-editor-inset" : "border-editor-border-subtle bg-editor-raised hover:border-editor-border"}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-editor-text">{variant.label}</p>
+                          {active ? <EditorStatusBadge tone="success">Default</EditorStatusBadge> : null}
+                        </div>
+                        <p className="mt-1 text-xs leading-4 text-editor-text-muted">{variant.description}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </EditorInspectorSection>
+            ) : (
+              <EditorEmptyState
+                compact
+                title="Protected layout"
+                description="This page uses the design's validated default and has no alternate layout variants."
+                icon={<Palette className="size-5" />}
+              />
+            )}
+
+            <EditorNotice tone="info" title="Design-safe editing">
+              Layout geometry and brand styling are supplied by the active document design. Content changes remain proposal-specific.
+            </EditorNotice>
+          </div>
+
+          <details className="group rounded-xl border border-editor-border-subtle bg-editor-raised">
+            <summary className={`flex min-h-11 cursor-pointer list-none items-center justify-between px-3.5 text-xs font-bold uppercase tracking-[0.12em] text-editor-text-muted ${editorFocusRing}`}>
+              Page information
+              <ChevronRight className="size-4 transition-transform group-open:rotate-90" aria-hidden="true" />
+            </summary>
+            <dl className="divide-y divide-editor-border-subtle border-t border-editor-border-subtle px-3.5">
               <div className="flex items-center justify-between py-3 text-sm">
                 <dt className="text-editor-text-muted">Page</dt>
                 <dd className="font-semibold tabular-nums text-editor-text">{selectedPage.pageNumber} of {pageCount}</dd>
@@ -409,7 +546,7 @@ function PropertiesPanel({
                 </dd>
               </div>
             </dl>
-          </EditorInspectorSection>
+          </details>
 
           <EditorNotice tone="success" title="Print-safe layout">
             <p>
@@ -417,6 +554,103 @@ function PropertiesPanel({
             </p>
           </EditorNotice>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ReviewPanel({ pageMeta, overflowPageIndexes, designContext, saveState, designError, onClose }: ReviewPanelProps) {
+  const pageIssues = pageMeta.filter((page) => page.status === "warning" || page.status === "error");
+  const incompatibleDesigns = designContext.choices.filter((choice) => !choice.compatible);
+  const hasUnsavedChanges = saveState === "dirty" || saveState === "saving" || saveState === "error";
+  const issueCount = pageIssues.length + overflowPageIndexes.length + incompatibleDesigns.length + (hasUnsavedChanges ? 1 : 0) + (designError ? 1 : 0);
+
+  return (
+    <div className="flex h-full min-h-0 flex-col bg-editor-panel">
+      <EditorPanelHeader
+        icon={<ClipboardCheck className="size-4" />}
+        label="Proposal review"
+        count={issueCount}
+        onClose={onClose}
+        closeLabel="Close proposal review"
+      />
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-editor-text-muted">Readiness</p>
+          <h2 className="mt-1.5 text-xl font-semibold tracking-tight text-editor-text-strong">
+            {issueCount === 0 ? "Ready to preview" : `${issueCount} item${issueCount === 1 ? "" : "s"} to review`}
+          </h2>
+          <p className="mt-2 text-sm leading-5 text-editor-text-muted">
+            Review checks saved content, document compatibility, and the current editor state.
+          </p>
+        </div>
+
+        {issueCount === 0 ? (
+          <EditorNotice tone="success" title="All current checks passed">
+            Every rendered page is ready and {designContext.active.name} supports the proposal&apos;s saved sections.
+          </EditorNotice>
+        ) : null}
+
+        {hasUnsavedChanges ? (
+          <EditorNotice tone={saveState === "error" ? "danger" : "warning"} title={SAVE_COPY[saveState]}>
+            Save or resolve the current draft before generating final output.
+          </EditorNotice>
+        ) : null}
+
+        {designError ? (
+          <EditorNotice tone="danger" title="Design change failed">{designError}</EditorNotice>
+        ) : null}
+
+        {overflowPageIndexes.length > 0 ? (
+          <EditorNotice tone="danger" title="Measured page overflow">
+            Content exceeds the printable area on page{overflowPageIndexes.length === 1 ? "" : "s"} {overflowPageIndexes.map((index) => index + 1).join(", ")}. Shorten the content or split the affected section before generating the final PDF.
+          </EditorNotice>
+        ) : null}
+
+        {pageIssues.length > 0 ? (
+          <EditorInspectorSection id="review-page-issues-heading" title="Page issues">
+            <div className="space-y-2">
+              {pageIssues.map((page) => (
+                <div key={page.id} className="rounded-xl border border-editor-warning-border bg-editor-warning-surface p-3.5">
+                  <p className="text-sm font-semibold text-editor-warning">Page {page.pageNumber} · {page.title}</p>
+                  <p className="mt-1 text-xs text-editor-warning">Status: {page.status}</p>
+                </div>
+              ))}
+            </div>
+          </EditorInspectorSection>
+        ) : null}
+
+        {incompatibleDesigns.length > 0 ? (
+          <EditorInspectorSection id="review-compatibility-heading" title="Design compatibility">
+            <div className="space-y-2">
+              {incompatibleDesigns.map(({ design, unsupportedSectionTypes }) => (
+                <div key={`${design.id}@${design.version}`} className="rounded-xl border border-editor-border-subtle bg-editor-raised p-3.5">
+                  <p className="text-sm font-semibold text-editor-text">{design.name} v{design.version}</p>
+                  <p className="mt-1 text-xs leading-4 text-editor-text-muted">
+                    Unsupported: {unsupportedSectionTypes.join(", ")}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </EditorInspectorSection>
+        ) : null}
+
+        <EditorInspectorSection id="review-summary-heading" title="Current document">
+          <dl className="divide-y divide-editor-border-subtle rounded-xl border border-editor-border-subtle bg-editor-raised px-3.5">
+            <div className="flex items-center justify-between py-3 text-sm">
+              <dt className="text-editor-text-muted">Design</dt>
+              <dd className="font-semibold text-editor-text">{designContext.active.name} v{designContext.active.version}</dd>
+            </div>
+            <div className="flex items-center justify-between py-3 text-sm">
+              <dt className="text-editor-text-muted">Rendered pages</dt>
+              <dd className="font-semibold tabular-nums text-editor-text">{pageMeta.length}</dd>
+            </div>
+            <div className="flex items-center justify-between py-3 text-sm">
+              <dt className="text-editor-text-muted">Page format</dt>
+              <dd className="font-semibold text-editor-text">{designContext.active.page.formatLabel}</dd>
+            </div>
+          </dl>
+        </EditorInspectorSection>
       </div>
     </div>
   );
@@ -459,6 +693,8 @@ export default function ProposalEditorShell({
   pages,
   editorPages,
   designContext,
+  catalog,
+  composition,
 }: ProposalEditorShellProps) {
   const router = useRouter();
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -467,12 +703,19 @@ export default function ProposalEditorShell({
   const [filter, setFilter] = useState("");
   const [pagesOpen, setPagesOpen] = useState(false);
   const [propertiesOpen, setPropertiesOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const [compositionOpen, setCompositionOpen] = useState(false);
   const [saveState, setSaveState] = useState<EditorSaveState>("loaded");
   const [designChanging, setDesignChanging] = useState(false);
   const [designError, setDesignError] = useState("");
+  const [overflowPageIndexes, setOverflowPageIndexes] = useState<number[]>([]);
   const canvasViewportRef = useRef<HTMLDivElement>(null);
   const pagesDialogRef = useRef<HTMLDivElement>(null);
   const propertiesDialogRef = useRef<HTMLDivElement>(null);
+  const reviewDialogRef = useRef<HTMLDivElement>(null);
+  const catalogDialogRef = useRef<HTMLDivElement>(null);
+  const compositionDialogRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Array<HTMLDivElement | null>>([]);
   const viewModeTargetRef = useRef(0);
 
@@ -481,6 +724,7 @@ export default function ProposalEditorShell({
   const editorConfig = editorPages[selectedPage.id];
   const pageSize = designContext.active.page;
   const activeDesignKey = `${designContext.active.id}@${designContext.active.version}`;
+  const activeVariantId = composition.items.find((item) => item.id === selectedPage.sourceSectionId)?.variantId;
   const fitCanvas = useFitCanvas(canvasViewportRef, setZoom, viewMode, pageSize);
 
   const confirmDiscardDraft = useCallback(() => {
@@ -524,6 +768,21 @@ export default function ProposalEditorShell({
     setSaveState("saved");
     router.refresh();
   }, [activeDesignKey, confirmDiscardDraft, designChanging, designContext.choices, proposal.id, router]);
+
+  const changeSectionVariant = useCallback(async (variantId: string) => {
+    if (!selectedPage.sourceSectionId || variantId === activeVariantId) return;
+    if (!confirmDiscardDraft()) return;
+    setSaveState("saving");
+    setDesignError("");
+    const result = await updateProposalSectionVariant(proposal.id, selectedPage.sourceSectionId, variantId);
+    if (!result.ok) {
+      setDesignError(result.formError ?? "The layout variant could not be saved.");
+      setSaveState("error");
+      return;
+    }
+    setSaveState("saved");
+    router.refresh();
+  }, [activeVariantId, confirmDiscardDraft, proposal.id, router, selectedPage.sourceSectionId]);
 
   const navigateToIndex = useCallback((index: number, behavior: ScrollBehavior = "smooth") => {
     const nextIndex = Math.min(pageMeta.length - 1, Math.max(0, index));
@@ -591,6 +850,24 @@ export default function ProposalEditorShell({
     return () => observer.disconnect();
   }, [pageMeta.length, saveState, viewMode]);
 
+  useEffect(() => {
+    if (viewMode !== "continuous") return;
+    const animationFrame = window.requestAnimationFrame(() => {
+      const measured = pageRefs.current.flatMap((page, index) => {
+        const section = page?.querySelector<HTMLElement>("[data-page-content]")?.firstElementChild;
+        if (!(section instanceof HTMLElement)) return [];
+        const pageBounds = section.getBoundingClientRect();
+        const overflows = Array.from(section.querySelectorAll<HTMLElement>("p, h1, h2, h3, h4, h5, h6, li, table")).some((element) => {
+          const bounds = element.getBoundingClientRect();
+          return bounds.bottom > pageBounds.bottom + 1 || bounds.right > pageBounds.right + 1 || bounds.top < pageBounds.top - 1 || bounds.left < pageBounds.left - 1;
+        });
+        return overflows ? [index] : [];
+      });
+      setOverflowPageIndexes(measured);
+    });
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [pageMeta.length, pages, viewMode]);
+
   const closeProperties = useCallback(() => {
     if (confirmDiscardDraft()) setPropertiesOpen(false);
   }, [confirmDiscardDraft]);
@@ -623,12 +900,22 @@ export default function ProposalEditorShell({
   }, [moveSelection]);
 
   useEffect(() => {
-    const dialog = pagesOpen ? pagesDialogRef.current : propertiesOpen ? propertiesDialogRef.current : null;
+    const dialog = pagesOpen
+      ? pagesDialogRef.current
+      : propertiesOpen
+        ? propertiesDialogRef.current
+        : reviewOpen
+          ? reviewDialogRef.current
+          : catalogOpen
+            ? catalogDialogRef.current
+            : compositionOpen
+              ? compositionDialogRef.current
+              : null;
     if (!dialog) return;
 
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const focusableSelector =
-      'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+      'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
     const getFocusableElements = () =>
       Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector)).filter(
         (element) => !element.hasAttribute("aria-hidden")
@@ -642,6 +929,9 @@ export default function ProposalEditorShell({
         event.preventDefault();
         if (pagesOpen) setPagesOpen(false);
         if (propertiesOpen) closeProperties();
+        if (reviewOpen) setReviewOpen(false);
+        if (catalogOpen) setCatalogOpen(false);
+        if (compositionOpen) setCompositionOpen(false);
         return;
       }
       if (event.key !== "Tab") return;
@@ -665,7 +955,7 @@ export default function ProposalEditorShell({
       document.removeEventListener("keydown", handleDialogKeyDown);
       previousFocus?.focus();
     };
-  }, [closeProperties, pagesOpen, propertiesOpen]);
+  }, [catalogOpen, closeProperties, compositionOpen, pagesOpen, propertiesOpen, reviewOpen]);
 
   return (
     <main className="proposal-studio flex h-dvh min-h-0 flex-col overflow-hidden bg-editor-shell text-editor-text-strong">
@@ -696,7 +986,7 @@ export default function ProposalEditorShell({
               disabled={designChanging}
               onChange={(event) => void changeDocumentDesign(event.target.value)}
               aria-describedby={designError ? "document-design-error" : undefined}
-              className={`h-10 max-w-44 rounded-lg border border-editor-border bg-editor-raised px-2.5 text-xs font-semibold text-editor-text outline-none transition hover:border-editor-border-strong disabled:cursor-wait disabled:text-editor-disabled-text ${editorFocusRing}`}
+              className={`h-11 max-w-44 rounded-lg border border-editor-border bg-editor-raised px-2.5 text-xs font-semibold text-editor-text outline-none transition hover:border-editor-border-strong disabled:cursor-wait disabled:text-editor-disabled-text ${editorFocusRing}`}
             >
               {designContext.choices.map(({ design, compatible }) => (
                 <option
@@ -734,6 +1024,18 @@ export default function ProposalEditorShell({
           >
             {SAVE_COPY[saveState]}
           </EditorStatusBadge>
+          <EditorButton
+            type="button"
+            onClick={() => {
+              setPagesOpen(false);
+              setPropertiesOpen(false);
+              setReviewOpen(true);
+            }}
+            aria-label="Review proposal readiness"
+          >
+            <ClipboardCheck className="size-4" aria-hidden="true" />
+            <span className="hidden xl:inline">Review</span>
+          </EditorButton>
           <Link
             href={`/proposals/${proposal.id}/preview`}
             target="_blank"
@@ -743,6 +1045,14 @@ export default function ProposalEditorShell({
             <span className="hidden sm:inline">Client preview</span>
             <span className="sr-only sm:hidden">Open client preview</span>
           </Link>
+          <ShareProposalButton
+            proposalId={proposal.id}
+            disabled={saveState === "dirty" || saveState === "saving" || saveState === "error"}
+          />
+          <PdfGenerateButton
+            proposalId={proposal.id}
+            disabled={saveState === "dirty" || saveState === "saving" || saveState === "error"}
+          />
         </div>
       </header>
 
@@ -770,6 +1080,37 @@ export default function ProposalEditorShell({
                 className="rounded-lg lg:hidden"
               >
                 <Layers3 className="size-5" aria-hidden="true" />
+              </EditorButton>
+              <EditorButton
+                type="button"
+                size="icon"
+                onClick={() => {
+                  setPagesOpen(false);
+                  setPropertiesOpen(false);
+                  setReviewOpen(false);
+                  setCatalogOpen(true);
+                }}
+                aria-label="Open contextual catalog"
+                title="Catalog"
+                className="rounded-lg"
+              >
+                <LibraryBig className="size-5" aria-hidden="true" />
+              </EditorButton>
+              <EditorButton
+                type="button"
+                size="icon"
+                onClick={() => {
+                  setPagesOpen(false);
+                  setPropertiesOpen(false);
+                  setReviewOpen(false);
+                  setCatalogOpen(false);
+                  setCompositionOpen(true);
+                }}
+                aria-label="Open document structure"
+                title="Document structure"
+                className="rounded-lg"
+              >
+                <ListTree className="size-5" aria-hidden="true" />
               </EditorButton>
               <EditorButton
                 type="button"
@@ -813,7 +1154,7 @@ export default function ProposalEditorShell({
                   type="button"
                   onClick={() => setZoom((value) => clampZoom(value - ZOOM_STEP))}
                   aria-label="Zoom out"
-                  className={`grid size-10 place-items-center rounded-lg text-editor-text hover:bg-editor-inset ${editorFocusRing}`}
+                  className={`grid size-11 place-items-center rounded-lg text-editor-text hover:bg-editor-inset ${editorFocusRing}`}
                 >
                   <Minus className="size-4" aria-hidden="true" />
                 </button>
@@ -824,7 +1165,7 @@ export default function ProposalEditorShell({
                   type="button"
                   onClick={() => setZoom((value) => clampZoom(value + ZOOM_STEP))}
                   aria-label="Zoom in"
-                  className={`grid size-10 place-items-center rounded-lg text-editor-text hover:bg-editor-inset ${editorFocusRing}`}
+                  className={`grid size-11 place-items-center rounded-lg text-editor-text hover:bg-editor-inset ${editorFocusRing}`}
                 >
                   <Plus className="size-4" aria-hidden="true" />
                 </button>
@@ -865,6 +1206,7 @@ export default function ProposalEditorShell({
                     style={{ width: pageSize.widthPx * zoom, height: pageSize.heightPx * zoom }}
                   >
                     <div
+                      data-page-content
                       className="absolute left-0 top-0 origin-top-left bg-white"
                       style={{ width: pageSize.widthPx, height: pageSize.heightPx, transform: `scale(${zoom})` }}
                     >
@@ -898,6 +1240,12 @@ export default function ProposalEditorShell({
             pageCount={pageMeta.length}
             proposalId={proposal.id}
             editorConfig={editorConfig}
+            designContext={designContext}
+            designChanging={designChanging}
+            designError={designError}
+            onDesignChange={(designKey) => void changeDocumentDesign(designKey)}
+            activeVariantId={activeVariantId}
+            onVariantChange={(variantId) => void changeSectionVariant(variantId)}
             onSaveStateChange={setSaveState}
           />
         </aside>
@@ -955,8 +1303,62 @@ export default function ProposalEditorShell({
             pageCount={pageMeta.length}
             proposalId={proposal.id}
             editorConfig={editorConfig}
+            designContext={designContext}
+            designChanging={designChanging}
+            designError={designError}
+            onDesignChange={(designKey) => void changeDocumentDesign(designKey)}
+            activeVariantId={activeVariantId}
+            onVariantChange={(variantId) => void changeSectionVariant(variantId)}
             onSaveStateChange={setSaveState}
             onClose={closeProperties}
+          />
+        </EditorDrawer>
+      ) : null}
+
+      {reviewOpen ? (
+        <EditorDrawer
+          ref={reviewDialogRef}
+          side="right"
+          label="Proposal review"
+          onClose={() => setReviewOpen(false)}
+          panelClassName="w-[min(92vw,400px)]"
+        >
+          <ReviewPanel
+            pageMeta={pageMeta}
+            overflowPageIndexes={overflowPageIndexes}
+            designContext={designContext}
+            saveState={saveState}
+            designError={designError}
+            onClose={() => setReviewOpen(false)}
+          />
+        </EditorDrawer>
+      ) : null}
+
+      {catalogOpen ? (
+        <EditorDrawer
+          ref={catalogDialogRef}
+          side="left"
+          label="Contextual catalog"
+          onClose={() => setCatalogOpen(false)}
+          panelClassName="w-[min(96vw,440px)]"
+        >
+          <CatalogPanel proposalId={proposal.id} catalog={catalog} onClose={() => setCatalogOpen(false)} />
+        </EditorDrawer>
+      ) : null}
+
+      {compositionOpen ? (
+        <EditorDrawer
+          ref={compositionDialogRef}
+          side="left"
+          label="Document structure"
+          onClose={() => setCompositionOpen(false)}
+          panelClassName="w-[min(96vw,420px)]"
+        >
+          <CompositionPanel
+            proposalId={proposal.id}
+            composition={composition}
+            designContext={designContext}
+            onClose={() => setCompositionOpen(false)}
           />
         </EditorDrawer>
       ) : null}

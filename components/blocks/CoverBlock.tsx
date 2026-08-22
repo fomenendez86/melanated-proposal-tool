@@ -31,7 +31,7 @@ export default function CoverBlock({ data }: CoverBlockProps) {
         </div>
 
         <div className="mt-4">
-          <p className="text-sm font-bold uppercase tracking-wide">
+          <p className="text-[12px] font-bold uppercase leading-4 tracking-[0.08em]">
             {data.subtitle}
           </p>
           <p className="mt-3 font-serif text-2xl italic">{data.clientLine}</p>

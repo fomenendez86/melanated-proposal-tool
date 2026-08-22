@@ -387,6 +387,14 @@ remaining a preview contract fixture rather than a finished visual template.
 
 ### Phase 3.4 — Editor implementation pass
 
+**Status: Implementation complete (2026-08-21); rendered visual checkpoint
+pending.** Content/Design inspector modes, contextual registered variants,
+collapsed page information, responsive design selection, and proposal Review
+are implemented. Lint, production build, diff integrity, and live HTTP render
+pass. The structured critique and remaining viewport checks are documented in
+[`EDITOR_DESIGN_CRITIQUE.md`](EDITOR_DESIGN_CRITIQUE.md); no integrated browser
+instance was available to approve screenshots or interaction playback.
+
 - Implement the approved editor layout and interaction states.
 - Make page navigation, inspector rendering, and canvas behavior consume the
   design-neutral contracts.
@@ -411,6 +419,12 @@ remaining a preview contract fixture rather than a finished visual template.
 
 ## Phase 4 — Travel-native itinerary editor
 
+**Status: Complete (2026-08-21).** The raw itinerary textarea has been replaced
+by ordered day cards with expanded/condensed modes, add/duplicate/delete/reorder
+operations, structured activities, narrative and ordered images, explicit
+transactional save, and overflow guidance. The shared codec and behavior are
+documented in [`ITINERARY_EDITOR.md`](ITINERARY_EDITOR.md).
+
 ### Scope
 
 - Add a specialized day timeline rather than forcing itinerary data into
@@ -428,6 +442,13 @@ remaining a preview contract fixture rather than a finished visual template.
 - Pagination updates correctly after itinerary changes.
 
 ## Phase 5 — Contextual catalog
+
+**Status: Complete (2026-08-21).** A proposal-scoped drawer now provides
+searchable Hotels and Excursions with country/destination/city filters, safe
+insertion, duplicate prevention, missing-item creation, explicit catalog-
+default updates, proposal-only override guidance, and a staged media strategy.
+The boundaries are documented in
+[`CONTEXTUAL_CATALOG.md`](CONTEXTUAL_CATALOG.md).
 
 ### Scope
 
@@ -447,6 +468,12 @@ remaining a preview contract fixture rather than a finished visual template.
 
 ## Phase 6 — Document composition
 
+**Status: Complete (2026-08-21).** Document Structure now supports compatible
+section insertion, deterministic reorder, duplication, hide/show, recoverable
+delete/restore, registered variants, page warning/error states, and readiness
+review. The recovery and validation model is documented in
+[`DOCUMENT_COMPOSITION.md`](DOCUMENT_COMPOSITION.md).
+
 ### Scope
 
 - Add section picker with visual block types.
@@ -464,6 +491,12 @@ remaining a preview contract fixture rather than a finished visual template.
 - Required content is checked before PDF generation.
 
 ## Phase 7 — Reliable PDF generation
+
+**Status: Complete (2026-08-21).** The editor now generates proposal-specific
+PDF downloads from saved data with request-local bytes, unique filenames,
+design-owned geometry, visible progress/failure/retry states, and recorded
+generation metadata. The live 32-page smoke test and deployment boundary are
+documented in [`PDF_GENERATION.md`](PDF_GENERATION.md).
 
 ### Scope
 
@@ -484,6 +517,12 @@ remaining a preview contract fixture rather than a finished visual template.
 - Failed renders give actionable feedback and can be retried safely.
 
 ## Phase 8 — Client proposal experience
+
+**Status: Complete (2026-08-21).** Sharing now creates immutable revision-backed
+links with responsive client rendering, optional password protection,
+expiration, lifecycle events, and approval tied to the exact revision. The
+workflow and integration evidence are documented in
+[`CLIENT_PROPOSAL_EXPERIENCE.md`](CLIENT_PROPOSAL_EXPERIENCE.md).
 
 ### Scope
 
@@ -592,10 +631,12 @@ of destructive changes.
 - [x] Phase 1.1 — responsive and accessibility quality pass.
 - [x] Phase 1.2 — continuous document navigation.
 - [x] Phase 2 — persistent structured editing and complete form coverage.
-- [ ] Phase 3 — editor design and multi-design foundation (current priority).
-- [ ] Phase 4 — itinerary editor.
-- [ ] Phase 5 — contextual catalog.
-- [ ] Phase 6 — document composition.
-- [ ] Phase 7 — PDF generation workflow.
-- [ ] Phase 8 — client proposal experience.
-- [ ] Phase 9 — brand, testing, and deployment readiness.
+- [x] Phase 3 — editor design and multi-design foundation.
+- [x] Phase 4 — itinerary editor.
+- [x] Phase 5 — contextual catalog, including Arusha and Karatu hotels.
+- [x] Phase 6 — document composition.
+- [x] Phase 7 — PDF generation workflow.
+- [x] Phase 8 — client proposal experience.
+- [ ] Phase 9 — testing, measured pagination, accessibility, persistence,
+  backup and recovery are complete. Final brand-asset replacement remains
+  gated on an owner-approved source pack; see `PHASE9_QUALITY_DEPLOYMENT.md`.

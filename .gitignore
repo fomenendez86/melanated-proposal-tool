@@ -46,3 +46,9 @@ output/
 # database
 /data/*.db
 /data/*.db-journal
+/data/*.db-shm
+/data/*.db-wal
+/backups/
+/test-results/
+/playwright-report/
+/tmp/

@@ -63,6 +63,9 @@ export default function ProposalRenderer({ data }: ProposalRendererProps) {
       {data.sections.map((section, index) => (
         <div
           key={index}
+          data-proposal-page
+          data-proposal-page-number={index + 1}
+          data-proposal-section-type={section.type}
           style={{
             breakAfter: index < data.sections.length - 1 ? "page" : "auto",
           }}

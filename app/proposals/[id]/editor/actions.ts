@@ -23,6 +23,7 @@ import type {
   UpdateProposalFieldsInput,
   UpdateProposalFieldsResult,
 } from "@/lib/editor/proposalEditorTypes";
+import { parseItineraryEditorText } from "@/lib/editor/itineraryEditorCodec";
 import type { ExcursionItem, ImportantItemRow, TermsSection, WeatherTable } from "@/lib/types";
 
 const LIMITS: Record<ProposalEditorFieldName, number> = {
@@ -367,74 +368,6 @@ function parseImportantItemsSnapshot(text: string): ImportantItemRow[] | null {
   return finish() && rows.length > 0 ? rows : null;
 }
 
-interface ParsedItineraryDay {
-  dayNumber: number;
-  date: string;
-  subtitle: string;
-  highlightLine: string;
-  activities: Array<{ timeRange: string; description: string }>;
-  paragraphs: string[];
-  images: string[];
-}
-
-function parseItinerarySnapshot(text: string): ParsedItineraryDay[] | null {
-  const days: ParsedItineraryDay[] = [];
-  let current: ParsedItineraryDay | null = null;
-
-  const finish = () => {
-    if (!current) return true;
-    if (current.activities.length === 0 || current.paragraphs.length === 0) return false;
-    days.push(current);
-    current = null;
-    return true;
-  };
-
-  for (const rawLine of text.split("\n")) {
-    const line = rawLine.trim();
-    if (!line) continue;
-    const heading = line.match(/^\[Day\s+(\d+)]$/i)?.[1];
-    if (heading) {
-      if (!finish()) return null;
-      current = {
-        dayNumber: Number(heading),
-        date: "",
-        subtitle: "",
-        highlightLine: "",
-        activities: [],
-        paragraphs: [],
-        images: [],
-      };
-      continue;
-    }
-    if (!current) return null;
-    if (line.startsWith("Date:")) current.date = line.slice(5).trim();
-    else if (line.startsWith("Subtitle:")) current.subtitle = line.slice(9).trim();
-    else if (line.startsWith("Highlight:")) current.highlightLine = line.slice(10).trim();
-    else if (line.startsWith("Activity:")) {
-      const activity = line.slice(9).trim();
-      const separator = activity.indexOf("|");
-      if (separator < 0) return null;
-      const timeRange = activity.slice(0, separator).trim();
-      const description = activity.slice(separator + 1).trim();
-      if (!description) return null;
-      current.activities.push({ timeRange, description });
-    } else if (line.startsWith("Paragraph:")) {
-      const paragraph = line.slice(10).trim();
-      if (!paragraph) return null;
-      current.paragraphs.push(paragraph);
-    } else if (line.startsWith("Image:")) {
-      const imageUrl = line.slice(6).trim();
-      if (!imageUrl || !isValidImageUrl(imageUrl)) return null;
-      current.images.push(imageUrl);
-    } else return null;
-  }
-
-  if (!finish() || days.length === 0) return null;
-  const numbers = days.map((day) => day.dayNumber);
-  if (new Set(numbers).size !== numbers.length || numbers.some((number, index) => number !== index + 1)) return null;
-  return days;
-}
-
 function normalizedValues(input: UpdateProposalFieldsInput) {
   const allowed = FIELDS_BY_KIND[input.kind];
   return Object.fromEntries(
@@ -521,7 +454,7 @@ function validateInput(input: UpdateProposalFieldsInput) {
   ) {
     errors.importantItemsSnapshotText = "Each item needs [Heading], Icon:, a six-digit Color:, and at least one bullet.";
   }
-  if (input.kind === "itinerary" && parseItinerarySnapshot(values.itinerarySnapshotText ?? "") === null) {
+  if (input.kind === "itinerary" && parseItineraryEditorText(values.itinerarySnapshotText ?? "") === null) {
     errors.itinerarySnapshotText = "Use sequential [Day N] blocks with at least one Activity and Paragraph per day.";
   }
 
@@ -758,7 +691,7 @@ export async function updateProposalFields(
         }
         transaction.update(proposals).set({ updatedAt: new Date() }).where(eq(proposals.id, proposalId)).run();
       } else if (input.kind === "itinerary") {
-        const itinerary = parseItinerarySnapshot(values.itinerarySnapshotText ?? "") ?? [];
+        const itinerary = parseItineraryEditorText(values.itinerarySnapshotText ?? "") ?? [];
         transaction.delete(proposalDays).where(eq(proposalDays.proposalId, proposalId)).run();
         itinerary.forEach((day, sortOrder) => {
           const insertedDay = transaction

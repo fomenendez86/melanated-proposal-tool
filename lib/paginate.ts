@@ -84,7 +84,9 @@ export function paginateOverview(
 // Excursion list
 // ---------------------------------------------------------------------------
 
-const EXCURSION_PAGE_BUDGET = 880;
+// Leaves room for the header, footer, and real browser font metrics. The
+// former 880px budget clipped the final description in a production render.
+const EXCURSION_PAGE_BUDGET = 680;
 const EXCURSION_ITEM_GAP = 51; // divider (3px) + my-6 (24px top + 24px bottom)
 const EXCURSION_IMAGE_HEIGHT = 140;
 

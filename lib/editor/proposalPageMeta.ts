@@ -14,6 +14,48 @@ export interface ProposalPageMeta {
   status: ProposalPageStatus;
 }
 
+function pageStatus(section: ProposalSection): ProposalPageStatus {
+  switch (section.type) {
+    case "cover":
+      if (!section.data.title.trim()) return "error";
+      return section.data.imageUrl.trim() ? "ready" : "warning";
+    case "fromOwners":
+      return section.data.paragraphs.length > 0 ? "ready" : "error";
+    case "details":
+      return section.data.rows.some((row) => !row.value.trim()) ? "warning" : "ready";
+    case "triangleDivider":
+      if (section.data.titleLines.length === 0) return "error";
+      return section.data.imageUrl.trim() ? "ready" : "warning";
+    case "hotel":
+      if (!section.data.name.trim() || !section.data.description.trim()) return "error";
+      return Object.values(section.data.images).every((image) => image.trim()) ? "ready" : "warning";
+    case "dayItinerary":
+      return section.data.days.length > 0 ? "ready" : "error";
+    case "sectionDivider":
+      if (!section.data.title.trim()) return "error";
+      return section.data.imageUrl.trim() ? "ready" : "warning";
+    case "cityToursDivider":
+      if (!section.data.city.trim() || !section.data.intro.trim()) return "error";
+      return section.data.imageUrl.trim() ? "ready" : "warning";
+    case "excursionList":
+      return section.data.items.length > 0 ? "ready" : "error";
+    case "twoColumnList":
+      return section.data.leftColumn.length + section.data.rightColumn.length > 0 ? "ready" : "error";
+    case "importantItems":
+      return section.data.rows.length > 0 ? "ready" : "error";
+    case "weather":
+      return section.data.tables.length > 0 ? "ready" : "error";
+    case "termsConditions":
+      return section.data.sections.length > 0 ? "ready" : "error";
+    case "thankYou":
+      if (!section.data.message.trim()) return "error";
+      return section.data.imageUrl.trim() ? "ready" : "warning";
+    case "overview":
+    case "pricing":
+      return "ready";
+  }
+}
+
 function pageCopy(
   section: ProposalSection
 ): Omit<ProposalPageMeta, "id" | "pageNumber" | "type" | "status"> {
@@ -66,7 +108,7 @@ export function buildProposalPageMeta(sections: ProposalSection[]): ProposalPage
     type: section.type,
     sourceSectionId: section.editorSource?.sectionId,
     sourceRefId: section.editorSource?.refId,
-    status: "ready",
+    status: pageStatus(section),
     ...pageCopy(section),
   }));
 }

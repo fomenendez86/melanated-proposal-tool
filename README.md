@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Melanated Safaris Proposal Studio
 
-## Getting Started
+A visual, multi-design proposal editor for assembling travel itineraries,
+accommodations, excursions, pricing, terms, client revisions, and print-ready
+PDFs from structured data.
 
-First, run the development server:
+## Local development
 
 ```bash
+npm install
+npm run db:migrate
+npm run db:seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000/proposals/1/editor`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Verification
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm test
+npm run test:integration
+npm run test:e2e
+npm run build
+```
 
-## Learn More
+The integration and E2E suites expect the development server on port 3000;
+Playwright starts one automatically when the port is free.
 
-To learn more about Next.js, take a look at the following resources:
+## Production
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The supported initial topology is a single Node/Docker instance with a durable
+SQLite volume. See `docs/OPERATIONS.md` for deployment, health checks, backups,
+restore, monitoring, and recovery testing.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Roadmap and contracts
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Start with `CLAUDE.md` and `docs/EDITOR_IMPLEMENTATION_PLAN.md`. Phase-specific
+contracts live in `docs/`, including the multi-design, catalog, composition,
+PDF, client sharing, and Phase 9 quality documentation.

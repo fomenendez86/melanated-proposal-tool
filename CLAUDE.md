@@ -16,15 +16,48 @@ La especificación UX y auditoría del shell está en
 [`docs/EDITOR_UX_SPEC.md`](docs/EDITOR_UX_SPEC.md).
 Los tokens, componentes y reglas del shell están en
 [`docs/EDITOR_DESIGN_SYSTEM.md`](docs/EDITOR_DESIGN_SYSTEM.md).
+La crítica de implementación y el checkpoint visual pendiente están en
+[`docs/EDITOR_DESIGN_CRITIQUE.md`](docs/EDITOR_DESIGN_CRITIQUE.md).
 El contrato versionado de diseños, persistencia y cambio seguro está en
 [`docs/DOCUMENT_DESIGN_CONTRACT.md`](docs/DOCUMENT_DESIGN_CONTRACT.md).
+El editor estructurado de itinerario y su codec compartido están en
+[`docs/ITINERARY_EDITOR.md`](docs/ITINERARY_EDITOR.md).
+El catálogo contextual, sus mutaciones seguras y la estrategia de media están
+en [`docs/CONTEXTUAL_CATALOG.md`](docs/CONTEXTUAL_CATALOG.md).
+La composición, borrado recuperable y readiness están en
+[`docs/DOCUMENT_COMPOSITION.md`](docs/DOCUMENT_COMPOSITION.md).
+La generación PDF, metadata y smoke test están en
+[`docs/PDF_GENERATION.md`](docs/PDF_GENERATION.md).
+La experiencia pública, revisiones, password/expiration y aprobación están en
+[`docs/CLIENT_PROPOSAL_EXPERIENCE.md`](docs/CLIENT_PROPOSAL_EXPERIENCE.md).
+La verificación de Fase 9, accesibilidad, paginación medida y el único bloqueo
+de assets están en
+[`docs/PHASE9_QUALITY_DEPLOYMENT.md`](docs/PHASE9_QUALITY_DEPLOYMENT.md).
+Deployment, health checks, backups y recuperación están en
+[`docs/OPERATIONS.md`](docs/OPERATIONS.md).
 La dirección aprobada es un editor visual multi-diseño inspirado en Proposify,
 con layouts protegidos, editor cronológico de itinerario y catálogo contextual.
 No se construirá un panel administrativo general, un canvas de posicionamiento
 libre ni un editor distinto por cada diseño.
 
-**Prioridad actual:** Fase 3.4 — implementación y validación visual del editor.
-La Fase 3.3 está completa: el diseño activo es proposal-scoped, el selector
+**Prioridad actual:** importar el paquete de marca aprobado para cerrar el
+último criterio de Fase 9. Pruebas, accesibilidad, paginación medida,
+persistencia, backup, recuperación y observabilidad están completos. La Fase 8
+está completa con snapshots inmutables, vista responsive, password/expiration,
+eventos y aprobación por revisión. La Fase 7 está completa con generación PDF
+por propuesta, descargas únicas, estados/retry, metadata y
+smoke test real de 34 páginas. La Fase 6 está completa con inserción,
+reordenamiento, duplicación, hide/show, borrado
+recuperable, variantes y readiness review. La Fase 5 está completa con catálogo
+contextual de hoteles/excursiones, filtros geográficos,
+inserción segura, creación ligera, control de duplicados y edición explícita de
+defaults versus overrides de propuesta. La Fase 4 está completa con un editor
+travel-native de días, actividades, narrativa e imágenes, modos
+expandido/condensado, reordenamiento, duplicación y warnings de paginación. La
+implementación de Fase 3.4 está completa con modos Content/Design, variantes
+contextuales, metadata plegable y Review, validada por Playwright en desktop y
+móvil. La Fase 3.3
+está completa: el diseño activo es proposal-scoped, el selector
 valida compatibilidad en cliente y servidor, la geometría viene del contrato y
 Safari Editorial/Minimal Grid prueban el registro versionado. La Fase 3.2 está
 completa: el shell usa tokens semánticos y primitivas comunes
@@ -94,13 +127,12 @@ documentarlo acá.
   sigue en `/preview/full-proposal`; el preview dinámico está en
   `/proposals/[id]/preview`. `lib/sampleProposalData.ts` queda como dataset de
   referencia/legado para previews aislados.
-- **Proposal Studio (Fase 1)**: `/proposals/[id]/editor` carga datos en el
+- **Proposal Studio (Fases 1–9)**: `/proposals/[id]/editor` carga datos en el
   servidor y entrega páginas ya renderizadas al shell interactivo
   `components/editor/ProposalEditorShell.tsx`. Incluye toolbar, buscador y
   navegación de páginas, canvas con zoom, panel contextual read-only y enlace
   al preview limpio. La portada `/` redirige temporalmente a la propuesta seed
-  `1`. Los botones de editar, catálogo, añadir sección y generar PDF quedan
-  visibles pero deshabilitados hasta sus fases correspondientes.
+  `1`. Edición, catálogo, composición, revisión, compartir y PDF están activos.
 - **Quality pass (Fase 1.1)**: el canvas calcula “fit to page” con
   `ResizeObserver`; páginas y propiedades se convierten en drawers en pantallas
   pequeñas; controles táctiles usan objetivos cercanos a 44px; hay foco visible,
@@ -201,6 +233,8 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
 
 ## Pendientes conocidos
 **Fidelidad visual (deferred desde el inicio del proyecto):**
+- La portada deja una `E` sola al envolver el subtítulo estrecho en el PDF
+  dinámico; corregir ancho/copy-fitting durante la Fase 9.
 - Fuentes custom del original (Prata, BankGothicBT, Muli, Gotham-Bold,
   PalmClubScript, Oswald, EBGaramond, etc.) — todo usa la fuente sans por
   defecto + serif/italic genérico como aproximación.
@@ -209,13 +243,10 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
   bandera de Tanzania, triángulo de advertencia) — todo con emoji.
 
 **Estructural:**
-- La paginación de Overview/ExcursionList/TermsConditions es heurística
-  (estimación de altura por caracteres), no medición real del DOM. Se
-  validó visualmente contra los casos de prueba actuales (10 días, 16
-  excursiones, 9 secciones de términos) sin overflow, pero con contenido
-  muy distinto en longitud podría necesitar ajustar las constantes de
-  presupuesto en `lib/paginate.ts` (`OVERVIEW_PAGE_BUDGET`,
-  `EXCURSION_PAGE_BUDGET`, `TERMS_*_BUDGET`).
+- Overview/ExcursionList/TermsConditions se dividen primero con presupuestos
+  heurísticos y después se verifican con medición DOM real en Review, PDF y
+  Playwright. El caso seed de 10 días, 16 excursiones y 9 secciones de términos
+  genera 34 páginas sin texto fuera del área imprimible.
 - `DayItineraryBlock` usa un orden fijo (título→imágenes→texto) para ambas
   columnas cuando hay 2 días por página; el original alterna el orden según
   el espacio disponible por columna — no replicado.

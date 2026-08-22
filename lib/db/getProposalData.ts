@@ -266,6 +266,8 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
 
   for (const row of skeleton) {
     const editorSource = { sectionId: row.id, refId: row.refId };
+    const compositionState = (row.payload ?? {}) as { hidden?: boolean; deleted?: boolean };
+    if (compositionState.hidden === true || compositionState.deleted === true) continue;
     switch (row.sectionType) {
       case "overview": {
         sections.push(
@@ -504,6 +506,11 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
       }
       case "fromOwnersOverride":
       case "documentDesign":
+      case "pdfGeneration":
+      case "proposalRevision":
+      case "shareSettings":
+      case "proposalLifecycleEvent":
+      case "proposalApproval":
         break;
       case "weather": {
         if (row.refId == null) throw new Error(`weather section ${row.id} missing refId`);

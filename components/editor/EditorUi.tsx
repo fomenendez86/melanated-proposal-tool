@@ -25,23 +25,21 @@ export function editorButtonStyles({
     variant === "secondary" &&
       "border border-editor-border bg-editor-raised text-editor-text hover:border-editor-border-strong hover:bg-editor-inset",
     variant === "ghost" && "text-editor-text-muted hover:bg-editor-inset",
-    size === "sm" && "h-10 px-3",
+    size === "sm" && "h-11 px-3",
     size === "md" && "h-11 px-3.5",
     size === "icon" && "size-11 p-0"
   );
 }
 
-export function EditorButton({
-  variant,
-  size,
-  className,
-  ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: EditorButtonVariant;
-  size?: EditorButtonSize;
-}) {
-  return <button className={cn(editorButtonStyles({ variant, size }), className)} {...props} />;
-}
+export const EditorButton = forwardRef<
+  HTMLButtonElement,
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    variant?: EditorButtonVariant;
+    size?: EditorButtonSize;
+  }
+>(function EditorButton({ variant, size, className, ...props }, ref) {
+  return <button ref={ref} className={cn(editorButtonStyles({ variant, size }), className)} {...props} />;
+});
 
 export function EditorPanelHeader({
   icon,
@@ -215,7 +213,7 @@ export function EditorSegmentedControl<T extends string>({
             onClick={() => onChange(option.value)}
             aria-pressed={active}
             className={cn(
-              "h-10 rounded-lg px-3 text-xs font-semibold transition",
+              "h-11 rounded-lg px-3 text-xs font-semibold transition",
               editorFocusRing,
               active ? "bg-editor-brand text-white" : "text-editor-text-muted hover:bg-editor-inset"
             )}
@@ -267,6 +265,7 @@ export function EditorPageCard({
   eyebrow,
   thumbnail,
   thumbnailHeight,
+  status,
   onSelect,
 }: {
   active: boolean;
@@ -276,6 +275,7 @@ export function EditorPageCard({
   eyebrow: string;
   thumbnail: ReactNode;
   thumbnailHeight?: number;
+  status?: "ready" | "warning" | "error" | "hidden";
   onSelect: () => void;
 }) {
   return (
@@ -311,6 +311,12 @@ export function EditorPageCard({
         <p className="mt-1.5 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-editor-text-muted">
           {eyebrow}
         </p>
+        {status && status !== "ready" ? (
+          <span className={cn(
+            "mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize",
+            status === "error" ? "bg-editor-danger-surface text-editor-danger" : "bg-editor-warning-surface text-editor-warning"
+          )}>{status}</span>
+        ) : null}
       </div>
     </button>
   );
@@ -352,7 +358,7 @@ export const EditorDrawer = forwardRef<
       <button
         type="button"
         tabIndex={-1}
-        aria-label={`Close ${label.toLowerCase()}`}
+        aria-hidden="true"
         onClick={onClose}
         className="absolute inset-0 bg-editor-overlay"
       />
