@@ -19,7 +19,6 @@ import {
   Settings2,
   Sparkles,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type {
   CSSProperties,
@@ -73,7 +72,6 @@ import {
   EditorPanelHeader,
   EditorSegmentedControl,
   EditorStatusBadge,
-  editorButtonStyles,
   editorFocusRing,
 } from "./EditorUi";
 
@@ -171,8 +169,6 @@ const SAVE_TONE: Record<EditorSaveState, "neutral" | "warning" | "success" | "da
 const MIN_ZOOM = 0.3;
 const MAX_ZOOM = 0.95;
 const ZOOM_STEP = 0.05;
-
-type ViewMode = "continuous" | "single";
 
 function clampZoom(value: number) {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(value.toFixed(3))));
@@ -1055,7 +1051,6 @@ function ReviewPanel({ pageMeta, overflowPageIndexes, designContext, saveState, 
 function useFitCanvas(
   viewportRef: RefObject<HTMLDivElement | null>,
   setZoom: (value: number) => void,
-  viewMode: ViewMode,
   pageSize: DocumentPageGeometry
 ) {
   const fitCanvas = useCallback(() => {
@@ -1063,12 +1058,9 @@ function useFitCanvas(
     if (!viewport) return;
 
     const horizontalPadding = viewport.clientWidth < 640 ? 32 : 72;
-    const verticalPadding = viewport.clientHeight < 720 ? 32 : 64;
     const widthScale = (viewport.clientWidth - horizontalPadding) / pageSize.widthPx;
-    const heightScale = (viewport.clientHeight - verticalPadding) / pageSize.heightPx;
-    const fittedScale = viewMode === "continuous" ? widthScale : Math.min(widthScale, heightScale);
-    setZoom(clampZoom(Math.min(fittedScale, MAX_ZOOM)));
-  }, [pageSize.heightPx, pageSize.widthPx, setZoom, viewportRef, viewMode]);
+    setZoom(clampZoom(Math.min(widthScale, MAX_ZOOM)));
+  }, [pageSize.widthPx, setZoom, viewportRef]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -1095,7 +1087,6 @@ export default function ProposalEditorShell({
   const router = useRouter();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [zoom, setZoom] = useState(0.65);
-  const [viewMode, setViewMode] = useState<ViewMode>("continuous");
   const [filter, setFilter] = useState("");
   const [pagesOpen, setPagesOpen] = useState(false);
   const [propertiesOpen, setPropertiesOpen] = useState(false);
@@ -1119,7 +1110,6 @@ export default function ProposalEditorShell({
   const catalogDialogRef = useRef<HTMLDivElement>(null);
   const compositionDialogRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Array<HTMLDivElement | null>>([]);
-  const viewModeTargetRef = useRef(0);
   const regionRequestIdRef = useRef(0);
   const highlightedElementsRef = useRef<HTMLElement[]>([]);
 
@@ -1142,7 +1132,7 @@ export default function ProposalEditorShell({
   );
   const inlineEdit = activeInlineEdit && activeInlineEdit.pageId === selectedPage.id ? activeInlineEdit : null;
   const imageEdit = activeImageEdit && activeImageEdit.pageId === selectedPage.id ? activeImageEdit : null;
-  const fitCanvas = useFitCanvas(canvasViewportRef, setZoom, viewMode, pageSize);
+  const fitCanvas = useFitCanvas(canvasViewportRef, setZoom, pageSize);
 
   const confirmDiscardDraft = useCallback(() => {
     if (saveState !== "dirty" && saveState !== "error") return true;
@@ -1205,12 +1195,9 @@ export default function ProposalEditorShell({
     const nextIndex = Math.min(pageMeta.length - 1, Math.max(0, index));
     if (nextIndex !== selectedIndex && !confirmDiscardDraft()) return false;
     setSelectedIndex(nextIndex);
-
-    if (viewMode === "continuous") {
-      pageRefs.current[nextIndex]?.scrollIntoView({ behavior, block: "start" });
-    }
+    pageRefs.current[nextIndex]?.scrollIntoView({ behavior, block: "start" });
     return true;
-  }, [confirmDiscardDraft, pageMeta.length, selectedIndex, viewMode]);
+  }, [confirmDiscardDraft, pageMeta.length, selectedIndex]);
 
   const selectPage = useCallback((page: ProposalPageMeta) => {
     const index = pageMeta.findIndex((candidate) => candidate.id === page.id);
@@ -1309,25 +1296,9 @@ export default function ProposalEditorShell({
     navigateToIndex(effectiveSelectedIndex + direction);
   }, [effectiveSelectedIndex, navigateToIndex]);
 
-  const changeViewMode = useCallback((mode: ViewMode) => {
-    viewModeTargetRef.current = effectiveSelectedIndex;
-    setViewMode(mode);
-  }, [effectiveSelectedIndex]);
-
-  useEffect(() => {
-    if (viewMode !== "continuous") return;
-
-    const targetIndex = viewModeTargetRef.current;
-    const timeout = window.setTimeout(() => {
-      setSelectedIndex(targetIndex);
-      pageRefs.current[targetIndex]?.scrollIntoView({ behavior: "auto", block: "start" });
-    }, 50);
-    return () => window.clearTimeout(timeout);
-  }, [viewMode]);
-
   useEffect(() => {
     const viewport = canvasViewportRef.current;
-    if (viewMode !== "continuous" || !viewport) return;
+    if (!viewport) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -1357,10 +1328,9 @@ export default function ProposalEditorShell({
       if (page) observer.observe(page);
     });
     return () => observer.disconnect();
-  }, [activeImageEdit, activeInlineEdit, pageMeta.length, saveState, viewMode]);
+  }, [activeImageEdit, activeInlineEdit, pageMeta.length, saveState]);
 
   useEffect(() => {
-    if (viewMode !== "continuous") return;
     const animationFrame = window.requestAnimationFrame(() => {
       const measured = pageRefs.current.flatMap((page, index) => {
         const section = page?.querySelector<HTMLElement>("[data-page-content]")?.firstElementChild;
@@ -1375,7 +1345,7 @@ export default function ProposalEditorShell({
       setOverflowPageIndexes(measured);
     });
     return () => window.cancelAnimationFrame(animationFrame);
-  }, [pageMeta.length, pages, viewMode]);
+  }, [pageMeta.length, pages]);
 
   // Keyboard reach for editable regions is scoped to the selected page only,
   // so Tab cycles that page's fields instead of the whole scrolled document.
@@ -1585,15 +1555,6 @@ export default function ProposalEditorShell({
             <ClipboardCheck className="size-4" aria-hidden="true" />
             <span className="hidden xl:inline">Review</span>
           </EditorButton>
-          <Link
-            href={`/proposals/${proposal.id}/preview`}
-            target="_blank"
-            className={editorButtonStyles()}
-          >
-            <Eye className="size-4" aria-hidden="true" />
-            <span className="hidden sm:inline">Client preview</span>
-            <span className="sr-only sm:hidden">Open client preview</span>
-          </Link>
           <ShareProposalButton
             proposalId={proposal.id}
             disabled={saveState === "dirty" || saveState === "saving" || saveState === "error"}
@@ -1688,43 +1649,12 @@ export default function ProposalEditorShell({
             </div>
 
             <div className="flex items-center gap-1">
-              <EditorSegmentedControl
-                label="Document view mode"
-                value={viewMode}
-                options={[
-                  { value: "continuous", label: "Continuous" },
-                  { value: "single", label: "Single page" },
-                ]}
-                onChange={changeViewMode}
-                className="hidden md:inline-flex"
-              />
-              <div className="flex items-center rounded-xl border border-editor-border bg-editor-raised p-0.5 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setZoom((value) => clampZoom(value - ZOOM_STEP))}
-                  aria-label="Zoom out"
-                  className={`grid size-11 place-items-center rounded-lg text-editor-text hover:bg-editor-inset ${editorFocusRing}`}
-                >
-                  <Minus className="size-4" aria-hidden="true" />
-                </button>
-                <span className="w-11 text-center text-xs font-semibold tabular-nums text-editor-text" aria-live="polite">
-                  {Math.round(zoom * 100)}%
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setZoom((value) => clampZoom(value + ZOOM_STEP))}
-                  aria-label="Zoom in"
-                  className={`grid size-11 place-items-center rounded-lg text-editor-text hover:bg-editor-inset ${editorFocusRing}`}
-                >
-                  <Plus className="size-4" aria-hidden="true" />
-                </button>
-              </div>
               <EditorButton
                 type="button"
                 size="icon"
                 onClick={fitCanvas}
-                aria-label={viewMode === "continuous" ? "Fit pages to available width" : "Fit page to available space"}
-                title={viewMode === "continuous" ? "Fit width" : "Fit page"}
+                aria-label="Fit pages to available width"
+                title="Fit width"
               >
                 <Maximize2 className="size-4" aria-hidden="true" />
               </EditorButton>
@@ -1746,38 +1676,17 @@ export default function ProposalEditorShell({
             onClick={handleCanvasPointerActivate}
             onKeyDown={handleCanvasRegionKeyDown}
           >
-            {viewMode === "continuous" ? (
-              <div className="flex min-h-full min-w-full flex-col items-center gap-4 p-4 sm:gap-7 sm:p-8">
-                {pages.map((page, index) => (
-                  <div
-                    key={pageMeta[index].id}
-                    ref={(element) => { pageRefs.current[index] = element; }}
-                    data-page-index={index}
-                    tabIndex={-1}
-                    aria-label={`Page ${index + 1}: ${pageMeta[index].title}`}
-                    className={`relative shrink-0 bg-white shadow-editor-page ring-1 outline-none transition-shadow ${
-                      effectiveSelectedIndex === index ? "ring-editor-border-strong ring-offset-2 ring-offset-editor-canvas" : "ring-black/5"
-                    }`}
-                    style={{ width: pageSize.widthPx * zoom, height: pageSize.heightPx * zoom }}
-                  >
-                    <div
-                      data-page-content
-                      className="absolute left-0 top-0 origin-top-left bg-white"
-                      style={{ width: pageSize.widthPx, height: pageSize.heightPx, transform: `scale(${zoom})` }}
-                    >
-                      {page}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex min-h-full min-w-full items-start justify-center p-4 sm:p-8">
+            <div className="flex min-h-full min-w-full flex-col items-center gap-4 p-4 sm:gap-7 sm:p-8">
+              {pages.map((page, index) => (
                 <div
-                  ref={(element) => { pageRefs.current[effectiveSelectedIndex] = element; }}
-                  data-page-index={effectiveSelectedIndex}
+                  key={pageMeta[index].id}
+                  ref={(element) => { pageRefs.current[index] = element; }}
+                  data-page-index={index}
                   tabIndex={-1}
-                  aria-label={`Page ${effectiveSelectedIndex + 1}: ${selectedPage.title}`}
-                  className="relative shrink-0 bg-white shadow-editor-page outline-none ring-1 ring-black/5"
+                  aria-label={`Page ${index + 1}: ${pageMeta[index].title}`}
+                  className={`relative shrink-0 bg-white shadow-editor-page ring-1 outline-none transition-shadow ${
+                    effectiveSelectedIndex === index ? "ring-editor-border-strong ring-offset-2 ring-offset-editor-canvas" : "ring-black/5"
+                  }`}
                   style={{ width: pageSize.widthPx * zoom, height: pageSize.heightPx * zoom }}
                 >
                   <div
@@ -1785,11 +1694,11 @@ export default function ProposalEditorShell({
                     className="absolute left-0 top-0 origin-top-left bg-white"
                     style={{ width: pageSize.widthPx, height: pageSize.heightPx, transform: `scale(${zoom})` }}
                   >
-                    {pages[effectiveSelectedIndex]}
+                    {page}
                   </div>
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
           </div>
 
           {inlineEdit ? (
@@ -1840,20 +1749,56 @@ export default function ProposalEditorShell({
         </aside>
       </div>
 
-      <footer className="hidden h-9 shrink-0 items-center justify-between border-t border-editor-border-subtle bg-editor-panel-muted px-4 text-xs text-editor-text-muted sm:flex">
+      <footer className="flex h-12 shrink-0 items-center justify-between border-t border-editor-border-subtle bg-editor-panel-muted px-4 text-xs text-editor-text-muted">
         <div className="flex items-center gap-3">
-          <span>{pageMeta.length} pages</span>
-          <span className="size-1 rounded-full bg-editor-border" aria-hidden="true" />
-          <span>{proposal.travelDates}</span>
-          <span className="size-1 rounded-full bg-editor-border" aria-hidden="true" />
-          <span>{designContext.active.name} · {pageSize.formatLabel}</span>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setZoom((value) => clampZoom(value - ZOOM_STEP))}
+              aria-label="Zoom out"
+              className={`grid size-11 place-items-center rounded-lg text-editor-text hover:bg-editor-inset ${editorFocusRing}`}
+            >
+              <Minus className="size-3.5" aria-hidden="true" />
+            </button>
+            <input
+              type="range"
+              min={Math.round(MIN_ZOOM * 100)}
+              max={Math.round(MAX_ZOOM * 100)}
+              step={Math.round(ZOOM_STEP * 100)}
+              value={Math.round(zoom * 100)}
+              onChange={(event) => setZoom(clampZoom(Number(event.target.value) / 100))}
+              aria-label="Zoom level"
+              className="h-1 w-24 accent-editor-brand"
+            />
+            <button
+              type="button"
+              onClick={() => setZoom((value) => clampZoom(value + ZOOM_STEP))}
+              aria-label="Zoom in"
+              className={`grid size-11 place-items-center rounded-lg text-editor-text hover:bg-editor-inset ${editorFocusRing}`}
+            >
+              <Plus className="size-3.5" aria-hidden="true" />
+            </button>
+            <span className="w-9 text-right tabular-nums text-editor-text" aria-live="polite">
+              {Math.round(zoom * 100)}%
+            </span>
+          </div>
+          <span className="hidden size-1 rounded-full bg-editor-border sm:block" aria-hidden="true" />
+          <div className="hidden items-center gap-3 sm:flex">
+            <span>{pageMeta.length} pages</span>
+            <span className="size-1 rounded-full bg-editor-border" aria-hidden="true" />
+            <span>{proposal.travelDates}</span>
+            <span className="size-1 rounded-full bg-editor-border" aria-hidden="true" />
+            <span>{designContext.active.name} · {pageSize.formatLabel}</span>
+          </div>
         </div>
-        <EditorStatusBadge
-          tone={SAVE_TONE[saveState]}
-          icon={saveState === "error" ? <CircleAlert className="size-3.5" /> : <Check className="size-3.5" />}
-        >
-          {SAVE_COPY[saveState]}
-        </EditorStatusBadge>
+        {saveState !== "loaded" ? (
+          <EditorStatusBadge
+            tone={SAVE_TONE[saveState]}
+            icon={saveState === "error" ? <CircleAlert className="size-3.5" /> : <Check className="size-3.5" />}
+          >
+            {SAVE_COPY[saveState]}
+          </EditorStatusBadge>
+        ) : null}
       </footer>
 
       {pagesOpen ? (

@@ -35,6 +35,12 @@ de assets están en
 [`docs/PHASE9_QUALITY_DEPLOYMENT.md`](docs/PHASE9_QUALITY_DEPLOYMENT.md).
 Deployment, health checks, backups y recuperación están en
 [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
+El análisis competitivo, sus ejes de decisión y la sugerencia de
+resecuenciación (no aprobada) están en
+[`docs/COMPETITIVE_POSITIONING.md`](docs/COMPETITIVE_POSITIONING.md); el
+análisis de diseño visual del documento y del editor, incluyendo el hallazgo
+de que los dos diseños registrados comparten un mismo renderer, está en
+[`docs/VISUAL_DESIGN_POSITIONING.md`](docs/VISUAL_DESIGN_POSITIONING.md).
 El plan de expansión aprobado del estudio (Fases 10–17: edición inline en
 canvas, drag & drop, pipeline multi-propuesta, plantillas/biblioteca,
 variables/pricing interactivo, envío/firma, analytics y comentarios) está en
