@@ -999,9 +999,6 @@ export default function ProposalEditorShell({
               ))}
             </select>
           </div>
-          <EditorStatusBadge tone="neutral" className="sm:hidden">
-            {designContext.active.name}
-          </EditorStatusBadge>
           {designError ? (
             <EditorStatusBadge
               tone="danger"

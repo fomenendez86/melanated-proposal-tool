@@ -1,4 +1,5 @@
 import PageFooter from "@/components/blocks/shared/PageFooter";
+import { editableRegion } from "@/lib/editor/editableRegions";
 import type { CityToursDividerData } from "@/lib/types";
 
 interface CityToursDividerBlockProps {
@@ -12,6 +13,7 @@ export default function CityToursDividerBlock({
     <div className="relative box-border h-[1056px] w-[816px] bg-white text-black">
       <div className="relative h-[610px] w-full">
         <img
+          {...editableRegion("sectionImageUrl", "image")}
           src={data.imageUrl}
           alt={data.city}
           className="h-full w-full object-cover"
@@ -36,8 +38,8 @@ export default function CityToursDividerBlock({
       </div>
 
       <div className="mt-8 px-[82px] text-sm">
-        <p>{data.intro}</p>
-        <p className="mt-4 font-bold">{data.priceNote}</p>
+        <p {...editableRegion("cityIntro", "multiline")}>{data.intro}</p>
+        <p {...editableRegion("priceNote", "multiline")} className="mt-4 font-bold">{data.priceNote}</p>
       </div>
 
       <PageFooter pageNumber={data.pageNumber} />

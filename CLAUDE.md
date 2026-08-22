@@ -5,9 +5,9 @@
 Construir un Proposal Studio visual que permita crear y editar proposals con
 varios diseños de documento desde una sola interfaz consistente. Cada diseño
 aporta sus layouts, variantes y marca; el editor aporta la navegación, canvas,
-inspector, estados y flujos comunes. El sistema reemplaza el trabajo manual en
-Canva sin convertir el producto en un canvas libre ni acoplarlo a una sola
-plantilla.
+inspector, estados y flujos comunes. El sistema reemplaza el armado manual de
+documentos sin convertir el producto en un canvas libre ni acoplarlo a una
+sola plantilla.
 
 ## Plan del Proposal Studio
 El plan de implementación del editor visual está en
@@ -35,13 +35,22 @@ de assets están en
 [`docs/PHASE9_QUALITY_DEPLOYMENT.md`](docs/PHASE9_QUALITY_DEPLOYMENT.md).
 Deployment, health checks, backups y recuperación están en
 [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
-La dirección aprobada es un editor visual multi-diseño inspirado en Proposify,
-con layouts protegidos, editor cronológico de itinerario y catálogo contextual.
+El plan de expansión aprobado del estudio (Fases 10–17: edición inline en
+canvas, drag & drop, pipeline multi-propuesta, plantillas/biblioteca,
+variables/pricing interactivo, envío/firma, analytics y comentarios) está en
+[`docs/STUDIO_EXPANSION_PLAN.md`](docs/STUDIO_EXPANSION_PLAN.md).
+La dirección aprobada es un editor visual multi-diseño con layouts protegidos, editor cronológico de itinerario y catálogo contextual.
 No se construirá un panel administrativo general, un canvas de posicionamiento
 libre ni un editor distinto por cada diseño.
 
-**Prioridad actual:** importar el paquete de marca aprobado para cerrar el
-último criterio de Fase 9. Pruebas, accesibilidad, paginación medida,
+**Prioridad actual:** la Fase 10 del plan de expansión
+(edición directa en el canvas — `docs/STUDIO_EXPANSION_PLAN.md`). La 10.1
+está completa: `lib/editor/editableRegions.ts` define regiones editables
+tipadas (`data-edit-field`/`data-edit-kind`) y los bloques del diseño de
+referencia están anotados y cubiertos por e2e; sigue la 10.2 (selección en
+canvas y puente con el inspector). En paralelo
+sigue pendiente importar el paquete de marca aprobado para cerrar el último
+criterio de Fase 9. Pruebas, accesibilidad, paginación medida,
 persistencia, backup, recuperación y observabilidad están completos. La Fase 8
 está completa con snapshots inmutables, vista responsive, password/expiration,
 eventos y aprobación por revisión. La Fase 7 está completa con generación PDF
@@ -84,6 +93,11 @@ editor de itinerario compartido por Overview y Day Itinerary.
 - Si se decide desviar del original (simplificación, estandarización,
   limitación aceptada), documentarlo en "Pendientes conocidos" o
   "Decisiones de diseño", no dejarlo solo en el historial de chat.
+- **No nombrar aplicaciones ni productos comerciales externos** en ningún
+  archivo del proyecto (docs, código, comentarios) para evitar problemas de
+  marcas/copyright. Describir la categoría ("editor comercial de propuestas",
+  "herramienta de diseño externa") en lugar del nombre. Las librerías y
+  tecnologías del stack (Next.js, Playwright, SQLite, etc.) sí se nombran.
 
 ## Referencia visual
 Las páginas del PDF original están en `reference/pdf-pages/page-NN.png`.
@@ -91,7 +105,8 @@ Representan el primer diseño de referencia, no la estructura universal de todos
 los proposals futuros. El editor debe poder alojar otros diseños sin copiar o
 ramificar su interfaz.
 El documento original NO es consistente entre secciones (fue armado a mano
-en Canva) — cuando haya conflicto entre "replicar el original exacto" y
+en una herramienta de diseño externa) — cuando haya conflicto entre
+"replicar el original exacto" y
 "mantener consistencia del sistema", priorizar consistencia del sistema y
 documentarlo acá.
 

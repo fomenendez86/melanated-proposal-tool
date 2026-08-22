@@ -2,8 +2,9 @@
 
 ## 1. Product direction
 
-Build a multi-design, proposal-first visual editor inspired by Proposify,
-TravelJoy, Travefy, MOGU, and Qwilr. The proposal editor is the product. It must
+Build a multi-design, proposal-first visual editor inspired by leading
+commercial proposal and travel-itinerary builders. The proposal editor is the
+product. It must
 support multiple document designs without creating a separate editor for every
 design. Catalog management is contextual support, not a separate administrative
 application.
@@ -50,7 +51,7 @@ multi-design contract.
 ### Explicit non-goals
 
 - A general-purpose admin dashboard.
-- A freeform Canva/Figma-style canvas.
+- A freeform design-tool-style canvas.
 - A separate editor implementation for each proposal design.
 - CRM, accounting, commissions, or operational reporting.
 - Real-time multi-user collaboration in the initial release.
@@ -560,6 +561,18 @@ workflow and integration evidence are documented in
 - Final output uses approved Melanated Safaris brand assets.
 - Known pagination limits are measured, documented, and surfaced to users.
 
+## Phases 10–17 — Studio expansion roadmap
+
+The next delivery arc makes the studio work like a modern commercial
+proposal editor in locked-template mode: direct inline editing on the canvas (10), drag-and-drop composition
+(11), a multi-proposal pipeline with real revision/share/event tables and
+minimal auth (12), templates and a content library (13), merge variables and
+an interactive pricing table (14), email sending with e-signatures and
+Won/Lost closing (15), client viewing analytics and notifications (16), and
+client/internal comments (17). The detailed scope, ordering rationale,
+acceptance criteria, and cross-phase dependencies are maintained in
+[`STUDIO_EXPANSION_PLAN.md`](STUDIO_EXPANSION_PLAN.md).
+
 ## 5. Data integrity and revision strategy
 
 Catalog rows are living defaults. Sent proposals must be historical records.
@@ -640,3 +653,6 @@ of destructive changes.
 - [ ] Phase 9 — testing, measured pagination, accessibility, persistence,
   backup and recovery are complete. Final brand-asset replacement remains
   gated on an owner-approved source pack; see `PHASE9_QUALITY_DEPLOYMENT.md`.
+- [ ] Phases 10–17 — studio expansion (inline canvas editing, drag-and-drop,
+  pipeline, templates/library, variables/pricing, send/sign, analytics,
+  comments); planned in `STUDIO_EXPANSION_PLAN.md`, not started.

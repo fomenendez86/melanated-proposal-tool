@@ -1,5 +1,6 @@
 import PageFooter from "@/components/blocks/shared/PageFooter";
 import PageHeader from "@/components/blocks/shared/PageHeader";
+import { editableRegion } from "@/lib/editor/editableRegions";
 import type { ThankYouData } from "@/lib/types";
 
 interface ThankYouBlockProps {
@@ -15,6 +16,7 @@ export default function ThankYouBlock({ data }: ThankYouBlockProps) {
 
       <div className="absolute inset-y-0 right-0 h-full w-[45%]">
         <img
+          {...editableRegion("sectionImageUrl", "image")}
           src={data.imageUrl}
           alt="Thank you"
           className="h-full w-full object-cover"
@@ -22,7 +24,7 @@ export default function ThankYouBlock({ data }: ThankYouBlockProps) {
       </div>
 
       <div className="absolute left-0 top-1/2 w-[55%] -translate-y-1/2 px-[82px]">
-        <p className="font-serif text-5xl italic">{data.message}</p>
+        <p {...editableRegion("thankYouMessage", "multiline")} className="font-serif text-5xl italic">{data.message}</p>
       </div>
 
       <div className="absolute -bottom-24 -right-24 h-[420px] w-[420px] rotate-45 bg-black" />

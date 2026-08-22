@@ -1,5 +1,6 @@
 import PageFooter from "@/components/blocks/shared/PageFooter";
 import PageHeader from "@/components/blocks/shared/PageHeader";
+import { editableRegion } from "@/lib/editor/editableRegions";
 import type { WeatherData, WeatherTable } from "@/lib/types";
 
 interface WeatherBlockProps {
@@ -39,7 +40,7 @@ export default function WeatherBlock({ data }: WeatherBlockProps) {
     <div className="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-black">
       <PageHeader variant="proposalOnly" />
 
-      <div className="mt-16 flex flex-col gap-16">
+      <div {...editableRegion("weatherSnapshotText", "multiline")} className="mt-16 flex flex-col gap-16">
         {data.tables.map((table, index) => (
           <WeatherTableSection key={index} table={table} />
         ))}

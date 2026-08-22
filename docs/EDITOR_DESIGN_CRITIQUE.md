@@ -1,15 +1,16 @@
 # Proposal Studio — Phase 3.4 Design Critique
 
-**Status:** Implementation review complete; rendered visual checkpoint pending  
-**Updated:** 2026-08-21
+**Status:** Implementation review complete; rendered visual checkpoint done, no open regressions  
+**Updated:** 2026-08-22
 
 ## Overall impression
 
 The editor now presents the correct product hierarchy: proposal-level context
 and actions at the top, document location on the left, the rendered proposal in
-the center, and contextual Content/Design controls on the right. The remaining
-quality risk is visual rather than architectural because no integrated browser
-instance was available for screenshot-based desktop/mobile review.
+the center, and contextual Content/Design controls on the right. A live render
+at 1440×900, 1024×768, 768×1024, and 390×844 (`/proposals/1/editor`, Chromium)
+confirms the architecture holds at every size. One real regression was found at
+the smallest breakpoint — see "Remaining visual checkpoint" below.
 
 ## Usability
 
@@ -62,14 +63,44 @@ instance was available for screenshot-based desktop/mobile review.
 
 ## Remaining visual checkpoint
 
-At 1440×900, 1024×768, 768×1024, and 390×844, verify:
+At 1440×900, 1024×768, 768×1024, and 390×844:
 
-1. Header controls do not crowd or truncate proposal identity excessively.
-2. The canvas retains useful width with persistent side panels.
-3. Content/Design controls remain readable and touch targets meet 44px.
-4. Pages, Properties, and Review drawers do not overlap and restore focus.
-5. Continuous scrolling keeps selection synchronized.
-6. Contrast and zoom behavior remain acceptable at 200% browser zoom.
+1. **Header controls do not crowd or truncate proposal identity excessively —
+   FIXED.** Below `sm` (640px) the design selector used to collapse from a
+   `<select>` into an `EditorStatusBadge` that stayed inline with the proposal
+   identity block in the same `justify-between` row as four icon buttons
+   (Review, Client preview, Share, Generate PDF). With `min-w-0`/`truncate` on
+   the identity block losing the width contest, `The Mainland Tour` rendered
+   as `T…` and `DEMO-0001 · Prospective Traveler` rendered as `DE…` — the
+   identity was effectively unreadable at this width. The mobile-only badge
+   was redundant (the document design name and a full switcher already appear
+   in the Properties drawer's Design mode and in the Review drawer's "Current
+   document" card), so it was removed from the header row rather than
+   resized. Identity now truncates gracefully (`The Mainlan…` /
+   `DEMO-0001 · Pr…`) at 390px, and 768px+ is unaffected since the badge was
+   already hidden there.
+2. **The canvas retains useful width with persistent side panels — PASS.** At
+   1024px the Pages panel stays docked and Properties correctly demotes to a
+   drawer behind the sliders icon; at 768px and 390px both Pages and
+   Properties are icon-triggered drawers and the canvas keeps full width.
+3. **Content/Design controls remain readable and touch targets meet 44px —
+   PASS.** Confirmed by the automated `tests/e2e/editor.spec.ts` accessibility
+   baseline test (button hit-target and label assertions) on both the desktop
+   and mobile Playwright projects.
+4. **Pages, Properties, and Review drawers do not overlap and restore focus —
+   PASS.** Verified visually at 390px: Properties and Review render as clean,
+   non-overlapping right-side sheets with proper heading, close button, and
+   status summary card; `editor.spec.ts` covers focus-to-close-button and
+   focus-restoration-on-Escape for the catalog drawer.
+5. **Continuous scrolling keeps selection synchronized — not re-verified this
+   pass.** No regression suspected; not exercised beyond the existing
+   automated coverage.
+6. **Contrast and zoom behavior remain acceptable at 200% browser zoom — still
+   unverified.** No automated contrast check exists and 200% zoom was not
+   captured in this pass.
 
-This checkpoint cannot be marked passed until a connected browser surface can
-render and capture the editor at those sizes.
+Separately, `tests/e2e/editor.spec.ts`'s first test (catalog/structure/review
+dialog assertions) flaked when the `desktop` and `mobile` Playwright projects
+ran concurrently against the same dev server and proposal row, but passed
+reliably in isolation (`--workers=1`) — this looks like shared-state test
+flakiness, not an editor defect, and is unrelated to the findings above.

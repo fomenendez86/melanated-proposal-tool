@@ -1,6 +1,7 @@
 import PageFooter from "@/components/blocks/shared/PageFooter";
 import PageHeader from "@/components/blocks/shared/PageHeader";
 import SectionHeader from "@/components/blocks/shared/SectionHeader";
+import { editableRegion } from "@/lib/editor/editableRegions";
 import type { DayEntry, DayItineraryData } from "@/lib/types";
 
 interface DayItineraryBlockProps {
@@ -51,7 +52,7 @@ export default function DayItineraryBlock({ data }: DayItineraryBlockProps) {
         <SectionHeader title="Itinerary" />
       </div>
 
-      <div className="mt-6 flex gap-10">
+      <div {...editableRegion("itinerarySnapshotText", "multiline")} className="mt-6 flex gap-10">
         {data.days.map((day) => (
           <DayColumn key={day.dayNumber} day={day} />
         ))}

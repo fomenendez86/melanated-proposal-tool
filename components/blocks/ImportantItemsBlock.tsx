@@ -3,6 +3,7 @@ import QRCode from "qrcode";
 import PageFooter from "@/components/blocks/shared/PageFooter";
 import PageHeader from "@/components/blocks/shared/PageHeader";
 import SectionHeader from "@/components/blocks/shared/SectionHeader";
+import { editableRegion } from "@/lib/editor/editableRegions";
 import type { ImportantItemsData } from "@/lib/types";
 
 interface ImportantItemsBlockProps {
@@ -35,7 +36,7 @@ export default async function ImportantItemsBlock({
         </h1>
       </div>
 
-      <div className="mt-8 flex flex-col">
+      <div {...editableRegion("importantItemsSnapshotText", "multiline")} className="mt-8 flex flex-col">
         {data.rows.map((row, index) => (
           <div key={index} className="flex">
             <div

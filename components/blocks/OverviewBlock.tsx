@@ -1,6 +1,7 @@
 import PageFooter from "@/components/blocks/shared/PageFooter";
 import PageHeader from "@/components/blocks/shared/PageHeader";
 import SectionHeader from "@/components/blocks/shared/SectionHeader";
+import { editableRegion } from "@/lib/editor/editableRegions";
 import type { OverviewData } from "@/lib/types";
 
 interface OverviewBlockProps {
@@ -16,7 +17,7 @@ export default function OverviewBlock({ data }: OverviewBlockProps) {
         <SectionHeader title="Overview" />
       </div>
 
-      <div className="mt-6 flex flex-col gap-6">
+      <div {...editableRegion("itinerarySnapshotText", "multiline")} className="mt-6 flex flex-col gap-6">
         {data.days.map((day) => (
           <div key={day.dayNumber}>
             <p className="text-sm font-bold">

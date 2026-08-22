@@ -55,6 +55,33 @@ test("editor dialogs and form controls meet the automated accessibility baseline
   expect(undersizedButtons).toEqual([]);
 });
 
+test("rendered pages annotate editable regions from the shared field contract", async ({ page }) => {
+  await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
+  await expect(page.getByLabel("Proposal canvas")).toBeVisible();
+
+  // Thumbnails in the Pages panel render the same annotated blocks; the
+  // editing contract only applies inside the canvas, so scope to it.
+  const regions = await page.locator('[aria-label="Proposal canvas"] [data-edit-field]').evaluateAll((elements) =>
+    elements.map((element) => ({
+      field: element.getAttribute("data-edit-field") ?? "",
+      kind: element.getAttribute("data-edit-kind") ?? "",
+      pageIndex: element.closest("[data-page-index]")?.getAttribute("data-page-index") ?? null,
+    }))
+  );
+
+  expect(regions.length).toBeGreaterThan(30);
+  for (const region of regions) {
+    expect(region.field).not.toBe("");
+    expect(["text", "multiline", "image"]).toContain(region.kind);
+    expect(region.pageIndex).not.toBeNull();
+  }
+
+  const coverRegions = await page
+    .locator('[data-page-index="0"] [data-edit-field]')
+    .evaluateAll((elements) => elements.map((element) => element.getAttribute("data-edit-field")).sort());
+  expect(coverRegions).toEqual(["clientName", "coverImageUrl", "coverSubtitle", "coverTitle"]);
+});
+
 test("rendered proposal has no measured page overflow", async ({ page }) => {
   await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
   await expect(page.getByLabel("Proposal canvas")).toBeVisible();

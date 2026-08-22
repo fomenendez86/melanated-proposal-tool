@@ -1,7 +1,7 @@
 # Proposal Studio — Document Design Contract
 
-**Status:** Phase 3.3 implemented  
-**Updated:** 2026-08-21
+**Status:** Phase 3.3 implemented; editable-region annotation added in Phase 10.1  
+**Updated:** 2026-08-22
 
 ## Purpose
 
@@ -102,6 +102,39 @@ meaningful for future partial designs and is enforced on both client and server.
 - The default design keeps older proposals renderable when no identity exists.
 - Rollback is selecting the prior registered identity; no content restoration
   is required because switching does not mutate content.
+
+## Editable regions (Phase 10.1)
+
+Design renderers declare which DOM elements display an editable value by
+annotating them with `data-edit-field` and `data-edit-kind` through
+`editableRegion()` in `lib/editor/editableRegions.ts`.
+
+- `data-edit-field` must be a `ProposalEditorFieldName` — the same typed union
+  that drives the Properties inspector schema in `getProposalEditorData.ts`.
+  TypeScript enforces the single source of truth; a renderer cannot annotate a
+  field that the inspector does not know.
+- `data-edit-kind` is `text`, `multiline`, or `image` and describes the
+  editing affordance the shell should offer in later phases.
+- Aggregated collections that edit through one inspector field (itinerary,
+  excursions, weather, terms, important items, list columns, payment schedule)
+  annotate their rendered container with that single aggregated field name.
+  When a collection spans several document pages, each page's container
+  carries the same field.
+- Rows assembled from generic view-model shapes (`DetailRow`, `KeyValueLine`)
+  carry an optional `editField` set during server data assembly; renderers
+  spread the region only when it is present. The combined airport row focuses
+  `arrivalAirport`, the first of its two fields.
+- The shell discovers regions by DOM delegation inside the rendered page
+  container and resolves the owning page through its `data-page-index`
+  wrapper. It never imports renderers and never branches on section types.
+- The attributes are inert metadata everywhere else: page thumbnails, preview,
+  share, and PDF output include them with no visual or behavioral effect. The
+  shell's delegation is scoped to the canvas, so annotated thumbnails never
+  become interactive.
+- A design may annotate only part of its fields; regions are a progressive
+  entry point to the inspector, not a coverage requirement. Safari Editorial
+  annotates every content-bearing block; Minimal Grid inherits those
+  annotations only where it reuses the same renderers.
 
 ## Next integration boundary
 

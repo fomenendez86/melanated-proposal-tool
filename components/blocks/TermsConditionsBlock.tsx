@@ -1,6 +1,7 @@
 import PageFooter from "@/components/blocks/shared/PageFooter";
 import PageHeader from "@/components/blocks/shared/PageHeader";
 import SectionHeader from "@/components/blocks/shared/SectionHeader";
+import { editableRegion } from "@/lib/editor/editableRegions";
 import type { TermsConditionsData } from "@/lib/types";
 
 interface TermsConditionsBlockProps {
@@ -24,7 +25,7 @@ export default function TermsConditionsBlock({
         </h1>
       )}
 
-      <div className="mt-8 flex flex-col gap-5">
+      <div {...editableRegion("termsSnapshotText", "multiline")} className="mt-8 flex flex-col gap-5">
         {data.sections.map((section, index) => (
           <div key={index}>
             <p className="text-sm font-bold">{section.heading}</p>

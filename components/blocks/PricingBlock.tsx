@@ -1,6 +1,7 @@
 import PageFooter from "@/components/blocks/shared/PageFooter";
 import PageHeader from "@/components/blocks/shared/PageHeader";
 import SectionHeader from "@/components/blocks/shared/SectionHeader";
+import { editableRegion } from "@/lib/editor/editableRegions";
 import type { KeyValueLine, PricingData } from "@/lib/types";
 
 interface PricingBlockProps {
@@ -17,7 +18,7 @@ function KeyValueList({
   return (
     <ul className={`list-disc space-y-1 pl-4 text-sm ${className}`}>
       {lines.map((line, index) => (
-        <li key={index}>
+        <li key={index} {...(line.editField ? editableRegion(line.editField) : {})}>
           <span className="font-bold">{line.label}: </span>
           {line.value}
         </li>
@@ -39,14 +40,14 @@ export default function PricingBlock({ data }: PricingBlockProps) {
         Pricing and Payment Information
       </h1>
 
-      <p className="mt-8 text-sm leading-relaxed">{data.intro}</p>
+      <p {...editableRegion("pricingIntro", "multiline")} className="mt-8 text-sm leading-relaxed">{data.intro}</p>
 
       <div className="mt-6">
         <p className="text-sm font-bold underline">Package Pricing:</p>
         <KeyValueList lines={data.packagePricing} className="mt-2 text-[#ff0000]" />
       </div>
 
-      <div className="mt-6">
+      <div {...editableRegion("paymentScheduleText", "multiline")} className="mt-6">
         <p className="text-sm font-bold underline">Payment Schedule:</p>
         <KeyValueList lines={data.paymentSchedule} className="mt-2 text-[#ff0000]" />
       </div>

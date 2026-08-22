@@ -1,3 +1,4 @@
+import { editableRegion } from "@/lib/editor/editableRegions";
 import type { CoverData } from "@/lib/types";
 
 interface CoverBlockProps {
@@ -12,6 +13,7 @@ export default function CoverBlock({ data }: CoverBlockProps) {
     <div className="relative box-border h-[1056px] w-[816px] overflow-hidden bg-white text-black">
       <div className="absolute inset-y-0 right-0 w-[68%]">
         <img
+          {...editableRegion("coverImageUrl", "image")}
           src={data.imageUrl}
           alt={data.title}
           className="h-full w-full object-cover"
@@ -25,16 +27,16 @@ export default function CoverBlock({ data }: CoverBlockProps) {
         </p>
 
         <div className="mt-4 flex h-[640px] items-center justify-center">
-          <span className="whitespace-nowrap font-serif text-[110px] leading-none [writing-mode:vertical-rl]">
+          <span {...editableRegion("coverTitle")} className="whitespace-nowrap font-serif text-[110px] leading-none [writing-mode:vertical-rl]">
             {data.title}
           </span>
         </div>
 
         <div className="mt-4">
-          <p className="text-[12px] font-bold uppercase leading-4 tracking-[0.08em]">
+          <p {...editableRegion("coverSubtitle", "multiline")} className="text-[12px] font-bold uppercase leading-4 tracking-[0.08em]">
             {data.subtitle}
           </p>
-          <p className="mt-3 font-serif text-2xl italic">{data.clientLine}</p>
+          <p {...editableRegion("clientName")} className="mt-3 font-serif text-2xl italic">{data.clientLine}</p>
         </div>
       </div>
     </div>

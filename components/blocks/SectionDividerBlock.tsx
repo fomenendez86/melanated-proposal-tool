@@ -1,4 +1,5 @@
 import PageFooter from "@/components/blocks/shared/PageFooter";
+import { editableRegion } from "@/lib/editor/editableRegions";
 import type { SectionDividerData } from "@/lib/types";
 
 interface SectionDividerBlockProps {
@@ -21,15 +22,16 @@ export default function SectionDividerBlock({
       </div>
 
       <div className="absolute inset-x-0 top-0 px-[82px] pt-[110px] text-center">
-        <h1 className="text-[77px] font-bold uppercase leading-none tracking-wide">
+        <h1 {...editableRegion("dividerTitle")} className="text-[77px] font-bold uppercase leading-none tracking-wide">
           {data.title}
         </h1>
         {data.subtitle && (
-          <p className="mt-4 text-xl font-bold italic">{data.subtitle}</p>
+          <p {...editableRegion("dividerSubtitle")} className="mt-4 text-xl font-bold italic">{data.subtitle}</p>
         )}
         <div className="relative isolate mx-auto mt-4 h-[598px] w-[494px]">
           <div className="absolute -bottom-[33px] -right-14 -z-10 h-[439px] w-[104px] bg-red-600" />
           <img
+            {...editableRegion("sectionImageUrl", "image")}
             src={data.imageUrl}
             alt={data.title}
             className="h-full w-full object-cover"

@@ -1,3 +1,5 @@
+import type { ProposalEditorFieldName } from "@/lib/editor/proposalEditorTypes";
+
 export interface DayActivity {
   time: string;
   description: string;
@@ -62,6 +64,8 @@ export interface DetailRow {
   label: string;
   value: string;
   emphasis?: boolean;
+  /** Inspector field this row displays; enables the canvas editable region. */
+  editField?: ProposalEditorFieldName;
 }
 
 export interface DetailsData {
@@ -84,6 +88,8 @@ export interface TwoColumnListData {
 export interface KeyValueLine {
   label: string;
   value: string;
+  /** Inspector field this line displays; enables the canvas editable region. */
+  editField?: ProposalEditorFieldName;
 }
 
 export interface PricingData {

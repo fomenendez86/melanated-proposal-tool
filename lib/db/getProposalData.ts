@@ -247,17 +247,19 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
       type: "details",
       data: {
         rows: [
-          { label: "Package Booked:", value: proposal.packageName ?? "" },
-          { label: "Selected Tier:", value: proposal.selectedTier ?? "" },
-          { label: "Dates:", value: proposal.travelDatesLabel ?? "" },
-          { label: "Passenger Manifest:", value: proposal.passengerManifestLabel ?? "" },
-          { label: "Special Occasion:", value: proposal.specialOccasion ?? "" },
+          { label: "Package Booked:", value: proposal.packageName ?? "", editField: "packageName" },
+          { label: "Selected Tier:", value: proposal.selectedTier ?? "", editField: "selectedTier" },
+          { label: "Dates:", value: proposal.travelDatesLabel ?? "", editField: "travelDatesLabel" },
+          { label: "Passenger Manifest:", value: proposal.passengerManifestLabel ?? "", editField: "passengerManifestLabel" },
+          { label: "Special Occasion:", value: proposal.specialOccasion ?? "", editField: "specialOccasion" },
           {
             label: "Airport Information",
             value: `Arrival(${proposal.arrivalAirport ?? "TBD"}); Departure(${proposal.departureAirport ?? "TBD"})`,
             emphasis: true,
+            // The rendered row combines both airports; the region focuses the first field.
+            editField: "arrivalAirport",
           },
-          { label: "Package Total:", value: proposal.packageTotalLabel ?? "" },
+          { label: "Package Total:", value: proposal.packageTotalLabel ?? "", editField: "packageTotalLabel" },
         ] satisfies DetailRow[],
         pageNumber: 0,
       },
@@ -461,9 +463,9 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
           data: {
             intro: pricing.introText ?? "",
             packagePricing: [
-              { label: "Invoice Total", value: formatMoney(pricing.invoiceTotal, pricing.currency) },
-              { label: "Commission", value: formatMoney(pricing.commission, pricing.currency) },
-              { label: "Amount Due", value: formatMoney(pricing.amountDue, pricing.currency) },
+              { label: "Invoice Total", value: formatMoney(pricing.invoiceTotal, pricing.currency), editField: "invoiceTotal" },
+              { label: "Commission", value: formatMoney(pricing.commission, pricing.currency), editField: "commission" },
+              { label: "Amount Due", value: formatMoney(pricing.amountDue, pricing.currency), editField: "amountDue" },
             ],
             paymentSchedule: schedule.map((s) => ({ label: s.label, value: s.valueText })),
             bankingInfo,

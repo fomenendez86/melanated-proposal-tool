@@ -1,6 +1,7 @@
 import PageFooter from "@/components/blocks/shared/PageFooter";
 import PageHeader from "@/components/blocks/shared/PageHeader";
 import SectionHeader from "@/components/blocks/shared/SectionHeader";
+import { editableRegion } from "@/lib/editor/editableRegions";
 import type { DetailsData } from "@/lib/types";
 
 interface DetailsBlockProps {
@@ -18,7 +19,7 @@ export default function DetailsBlock({ data }: DetailsBlockProps) {
 
       <div className="mt-8 flex flex-col">
         {data.rows.map((row, index) => (
-          <div key={index}>
+          <div key={index} {...(row.editField ? editableRegion(row.editField) : {})}>
             <div className="bg-black px-4 py-2 text-sm font-bold uppercase text-white">
               {row.label}
             </div>

@@ -1,4 +1,5 @@
 import PageFooter from "@/components/blocks/shared/PageFooter";
+import { editableRegion } from "@/lib/editor/editableRegions";
 import type { ExcursionListData } from "@/lib/types";
 
 interface ExcursionListBlockProps {
@@ -16,7 +17,7 @@ export default function ExcursionListBlock({ data }: ExcursionListBlockProps) {
         <div className="text-right">Proposal</div>
       </div>
 
-      <div className="mt-8 flex flex-col">
+      <div {...editableRegion("excursionSnapshotText", "multiline")} className="mt-8 flex flex-col">
         {data.items.map((item, index) => (
           <div key={index}>
             <div className="grid grid-cols-[1fr_auto_190px] items-start gap-6">

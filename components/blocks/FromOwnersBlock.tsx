@@ -1,5 +1,6 @@
 import PageFooter from "@/components/blocks/shared/PageFooter";
 import PageHeader from "@/components/blocks/shared/PageHeader";
+import { editableRegion } from "@/lib/editor/editableRegions";
 import type { FromOwnersData } from "@/lib/types";
 
 interface FromOwnersBlockProps {
@@ -19,13 +20,13 @@ export default function FromOwnersBlock({ data }: FromOwnersBlockProps) {
         <div className="flex-1">
           <PageHeader />
 
-          <div className="mt-10 space-y-4 text-sm">
+          <div {...editableRegion("ownerParagraphsText", "multiline")} className="mt-10 space-y-4 text-sm">
             {data.paragraphs.map((paragraph, index) => (
               <p key={index}>{paragraph}</p>
             ))}
           </div>
 
-          <div className="mt-8 flex gap-16">
+          <div {...editableRegion("founderSignaturesText", "multiline")} className="mt-8 flex gap-16">
             {data.founders.map((founder, index) => (
               <div key={index}>
                 <p className="text-sm font-bold">{founder.name}</p>
@@ -35,6 +36,7 @@ export default function FromOwnersBlock({ data }: FromOwnersBlockProps) {
           </div>
 
           <img
+            {...editableRegion("ownerPhotoUrl", "image")}
             src={data.photoUrl}
             alt="Melanated Safaris team"
             className="mt-8 h-[280px] w-full object-cover"

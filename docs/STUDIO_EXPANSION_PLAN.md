@@ -1,0 +1,527 @@
+# Proposal Studio — Plan de expansión (Fases 10–17)
+
+**Estado:** Plan aprobado; Fase 10.1 completa (contrato de regiones editables)
+**Actualizado:** 2026-08-22
+
+Este documento extiende el roadmap de
+[`EDITOR_IMPLEMENTATION_PLAN.md`](EDITOR_IMPLEMENTATION_PLAN.md) (Fases 1–9,
+completas salvo el paquete de marca de la Fase 9) con las fases necesarias para
+que el Proposal Studio **funcione como un editor comercial de propuestas
+moderno**: edición
+directa sobre el documento, composición drag & drop, pipeline multi-propuesta,
+plantillas, biblioteca de contenido, variables, pricing interactivo, envío,
+firma electrónica, analytics de cliente y comentarios.
+
+## Qué significa "editor comercial moderno" en este producto
+
+Los editores comerciales de referencia ofrecen dos modos: un diseñador libre
+y un modo de **plantillas bloqueadas** donde el vendedor edita contenido dentro de layouts protegidos.
+Este proyecto replica el segundo. Los principios existentes se conservan
+intactos:
+
+- **Layouts protegidos** — se edita contenido, no geometría. Sin canvas libre.
+- **Un editor, varios diseños** — todo lo nuevo (selección en canvas, drag &
+  drop, variables, firma) se define en el contrato de diseño o en el shell,
+  nunca en ramas por plantilla.
+- **Guardado server-authoritative** — la edición inline reutiliza las mismas
+  server actions, allowlists y validaciones existentes; el canvas es otra vista
+  del mismo draft state, no un segundo pipeline de guardado.
+- **Revisiones inmutables** — firmar, aprobar y medir siempre ocurre contra una
+  revisión, nunca contra el borrador vivo.
+
+## Mapa de capacidades
+
+| Capacidad | Estado actual | Fase |
+| --- | --- | --- |
+| Edición inline sobre el documento | No — solo formularios en el inspector | **10** |
+| Selección de bloques haciendo click en la página | No | **10** |
+| Drag & drop de contenido al documento | No — botones en drawers | **11** |
+| Reordenar páginas arrastrando miniaturas | No — botones en Document Structure | **11** |
+| Pipeline de propuestas con estados (Draft/Sent/Viewed/Won/Lost) | No — una sola propuesta seed, `/` redirige a `1` | **12** |
+| Crear, duplicar, archivar propuestas | No | **12** |
+| Plantillas (guardar como / crear desde) | No | **13** |
+| Biblioteca de contenido: secciones guardadas, snippets, imágenes, fees | Parcial — catálogo de hoteles/excursiones | **13** |
+| Variables / merge fields (`{{client.name}}`) | No | **14** |
+| Tabla de precios interactiva (cantidades, ítems opcionales, totales) | Parcial — montos estáticos | **14** |
+| Envío por email con link rastreable | Parcial — link manual con password/expiración | **15** |
+| Firma electrónica y cierre Won/Lost | No — aprobación simple por revisión | **15** |
+| Analytics de visualización por página + feed de actividad | Parcial — eventos shared/opened/approved | **16** |
+| Comentarios del cliente e internos | No | **17** |
+| PDF fiel, multi-diseño, revisiones, share protegido | **Completo (Fases 1–9)** | — |
+
+El orden prioriza primero la *sensación* de edición directa (Fases 10–11,
+sin cambios de esquema), después la *aplicación* alrededor del editor
+(Fases 12–13), después el *contenido inteligente* (Fase 14) y por último el
+*ciclo de venta* (Fases 15–17). Cada fase es entregable y útil por sí sola.
+
+---
+
+## Fase 10 — Edición directa en el canvas
+
+**La brecha central.** Hoy el documento es read-only y todo se edita en el
+inspector. En un editor comercial moderno el documento *es* el formulario:
+click en un texto y
+se edita ahí mismo.
+
+**Tamaño estimado:** XL (la fase más grande del plan). Dividida en 10.1–10.4.
+
+### 10.1 — Contrato de regiones editables
+
+**Estado: Completa (2026-08-22).** `lib/editor/editableRegions.ts` define el
+contrato (`data-edit-field` tipado contra `ProposalEditorFieldName` +
+`data-edit-kind`); los 16 bloques con formulario del diseño de referencia
+están anotados (las colecciones agregadas anotan su contenedor; `DetailRow` y
+`KeyValueLine` llevan `editField` opcional asignado en el ensamblado). El
+contrato está documentado en `DOCUMENT_DESIGN_CONTRACT.md` y validado por un
+test e2e que verifica campos, kinds y pertenencia a página dentro del canvas
+(las miniaturas llevan los atributos de forma inerte).
+
+1. Extender el contrato de diseño (`lib/designs/types.ts` +
+   `DOCUMENT_DESIGN_CONTRACT.md`) con el concepto de **región editable**: cada
+   bloque server-rendered anota sus elementos de texto e imagen con
+   `data-edit-path` (ej. `cover.title`, `hotel.description`,
+   `day.3.activity.2.text`) y `data-edit-kind` (`text` | `multiline` |
+   `image`).
+2. Los paths se derivan del mismo esquema de campos que ya construye
+   `getProposalEditorData.ts` — una sola fuente de verdad entre inspector y
+   canvas. Un campo sin representación visual (ej. metadata) simplemente no
+   emite región.
+3. Anotar los 19 bloques del diseño Safari Editorial. Minimal Grid anota solo
+   sus bloques soportados y valida que el shell no asume cobertura total.
+4. El shell descubre regiones por delegación de eventos sobre
+   `[data-page-content]`; no importa renderers ni conoce tipos de sección.
+
+### 10.2 — Selección en canvas y puente con el inspector
+
+1. Click en una región → outline de selección (tokens `editor-border-strong` /
+   `editor-focus`), la página se selecciona si no lo estaba, y el inspector
+   abre Content mode con **scroll y focus al campo correspondiente**.
+2. Hover muestra affordance sutil (outline punteado + cursor text/pointer).
+3. Selección inversa: focus en un campo del inspector resalta su región en el
+   canvas (si está en viewport).
+4. Teclado: la página seleccionada expone sus regiones en orden de documento
+   con Tab/Shift+Tab cuando el canvas tiene focus; Enter activa edición;
+   Escape devuelve el focus al canvas. Anunciar con live region qué campo se
+   activó.
+5. En pantallas sin panel persistente, el tap en una región abre el drawer de
+   Properties ya enfocado en ese campo.
+
+### 10.3 — Edición de texto inline
+
+1. Al activar una región `text`/`multiline`, superponer un editor inline
+   (contentEditable plano o textarea posicionado con la misma métrica
+   tipográfica) ligado **al mismo draft state** que alimenta el inspector: un
+   solo estado, dos vistas, un solo autosave.
+2. Texto plano únicamente: sin toolbar de formato, sin cambiar fuente, tamaño
+   ni posición — la geometría pertenece al diseño. Paste se sanitiza a texto.
+3. Guardado: mismo debounce/save-on-blur/estados
+   Loaded/Unsaved/Saving/Saved/Error existentes; los errores de validación del
+   server se muestran en el inspector y la región queda marcada en danger.
+4. Los campos de guardado explícito (colecciones 2.3A/2.3B, itinerario)
+   mantienen su flujo: la edición inline participa del mismo draft y el mismo
+   dirty-guard de confirmación al navegar.
+5. Al persistir, el refresh server-rendered ya existente re-renderiza la
+   página; la repaginación puede mover contenido de página — reutilizar la
+   selección tolerante a repaginación de la Fase 2.3B.
+
+### 10.4 — Interacción de imágenes
+
+1. Click en región `image` → popover/inspector con: URL actual, reemplazo por
+   URL o asset local (`/proposal-assets/...`), alt text donde aplique.
+2. Sin crop/resize libre — el encuadre lo controla el diseño (`object-fit`
+   actual). Punto focal opcional (dos valores 0–1) solo si el contrato del
+   diseño lo declara para ese slot.
+3. Validación de URL/formato reutiliza la existente de Fase 2.1.
+
+### Criterios de aceptación
+
+- Todo campo de texto e imagen visible del documento seed es editable con
+  click directo en la página, y el resultado persiste igual que desde el
+  inspector (mismas actions, misma validación, reload-safe).
+- Inspector y canvas nunca divergen: editar en uno se refleja en el otro sin
+  guardar dos veces ni pisarse.
+- El shell no contiene ningún `data-edit-path` hardcodeado ni ramas por tipo
+  de sección; Minimal Grid funciona con cobertura parcial de regiones.
+- Teclado y lector de pantalla pueden descubrir, activar y salir de regiones;
+  los touch targets cumplen 44px; el test de accesibilidad de
+  `tests/e2e/editor.spec.ts` se amplía para cubrirlo.
+- Zoom y modos Continuo/Página individual no rompen el posicionamiento de los
+  overlays de edición.
+
+### Riesgos y decisiones
+
+- **Posicionamiento de overlays con zoom/scroll:** anclar el editor inline
+  dentro del propio nodo de página (no en un portal absoluto sobre el
+  viewport) para heredar transformaciones de escala.
+- **Repaginación mientras se edita:** si el contenido crece y la página se
+  divide, el editor inline debe cerrarse limpiamente y reabrir en la región
+  re-renderizada; si eso resulta frágil, degradar a "guardar cierra el editor
+  inline" y documentarlo.
+- **Server Components:** las páginas siguen siendo RSC; la edición inline es
+  un overlay del cliente sobre nodos ya renderizados. No convertir bloques a
+  client components.
+
+---
+
+## Fase 11 — Composición visual: drag & drop
+
+Completa la manipulación directa: arrastrar contenido al documento y
+reordenar páginas visualmente. Reutiliza las mutaciones seguras de la Fase 6
+(composición) y la Fase 5 (catálogo) — esta fase es *interacción*, no lógica
+nueva de negocio.
+
+**Tamaño estimado:** M.
+
+### Alcance
+
+1. **Reorden de miniaturas:** arrastrar page cards en el panel Pages reordena
+   secciones usando la action transaccional existente de Document Structure.
+   Solo las páginas que inician sección son arrastrables (las continuaciones
+   de paginación se mueven con su sección); indicador de drop entre cards;
+   auto-scroll del panel durante el drag.
+2. **Insertar arrastrando desde drawers:** los ítems del catálogo contextual
+   (hoteles, excursiones) y el picker de secciones de Document Structure se
+   pueden arrastrar al canvas; aparecen **insertion points** válidos entre
+   secciones (respetando compatibilidad del diseño y reglas de duplicado ya
+   existentes). Soltar ejecuta la misma inserción segura de Fase 5/6.
+3. **Puntos de inserción en canvas:** en hover sobre el espacio entre páginas
+   de secciones distintas, mostrar un affordance "+" que abre el picker de
+   secciones anclado a esa posición (alternativa sin drag).
+4. Implementar con pointer events propios (no HTML5 DnD) para soportar touch,
+   con umbral de activación para no robar el scroll; mantener botones
+   Move up/down y la inserción por botones como **camino accesible
+   equivalente** — el drag es mejora progresiva, nunca el único camino.
+5. Estados: preview fantasma del ítem arrastrado, drop targets inválidos
+   marcados, cancelación con Escape, anuncio del resultado en live region.
+
+### Criterios de aceptación
+
+- Reordenar arrastrando produce exactamente el mismo estado persistido que los
+  botones de Document Structure y repagina/renumera correctamente.
+- No se puede soltar un ítem en posición inválida (incompatibilidad o
+  duplicado) — el target ni se ilumina.
+- Todo lo alcanzable por drag sigue siendo alcanzable por teclado/botones.
+- Playwright cubre reorden por drag en desktop y verifica que mobile conserva
+  los caminos por botón.
+
+---
+
+## Fase 12 — Multi-propuesta: pipeline, dashboard y fundaciones
+
+La herramienta debe ser una app de *propuestas*, no de una propuesta. Esta
+fase convierte
+el estudio en multi-propuesta y paga la deuda técnica señalada en
+`DOCUMENT_DESIGN_CONTRACT.md`.
+
+**Tamaño estimado:** L.
+
+### 12.1 — Promoción de esquema (prerrequisito de todo lo posterior)
+
+1. Crear tablas reales: `proposal_revisions` (payload snapshot, diseño,
+   created_at), `proposal_shares` (token, revision_id, password hash/salt,
+   access key, expires_at, revoked_at), `proposal_events` (share_id, tipo,
+   metadata, created_at) y columnas `design_id`/`design_version` en
+   `proposals`.
+2. Migración Drizzle que traslada las filas virtuales actuales de
+   `proposal_sections` (`proposalRevision`, `shareSettings`, `shareEvent`,
+   `documentDesign`) a las tablas nuevas y las elimina del stream de
+   secciones; los links compartidos existentes deben seguir funcionando.
+3. Añadir `status` a `proposals`: `draft | sent | viewed | approved | lost |
+   archived`, con transiciones derivadas de eventos (sent al compartir/enviar,
+   viewed al primer open, approved al aprobar/firmar) y manuales (lost,
+   archived, reabrir).
+4. Actualizar backup/restore (`scripts/`) y el smoke de `OPERATIONS.md` para
+   las tablas nuevas.
+
+### 12.2 — Dashboard de propuestas
+
+1. Ruta `/proposals`: lista con nombre, cliente, valor (desde pricing),
+   estado con badge, diseño, páginas, última actividad; búsqueda por texto,
+   filtro por estado, orden por actividad/valor/nombre. `/` redirige aquí.
+2. Acciones por fila: abrir editor, preview, duplicar (deep copy transaccional
+   del grafo completo: secciones, días, hoteles, pricing, listas — nunca
+   comparte filas hijas), archivar/restaurar, eliminar con confirmación
+   (solo borradores sin shares).
+3. Creación: diálogo con cliente (existente o nuevo), nombre del viaje,
+   diseño inicial (selector del registro con compatibilidad) y origen: en
+   blanco (secciones default del diseño) o duplicado. "Desde plantilla" llega
+   en Fase 13.
+4. Usar el design system del editor (tokens/primitivas de
+   `EDITOR_DESIGN_SYSTEM.md`) — el dashboard es parte del studio, no otra app.
+
+### 12.3 — Autenticación mínima
+
+1. Login single-user (credencial en variable de entorno, sesión firmada con
+   cookie httpOnly) que protege `/proposals`, el editor y las APIs de
+   mutación. `/share/[token]` permanece público con su propia protección.
+2. Rate limiting básico en login y en el endpoint de password de share.
+3. Fuera de alcance: multi-usuario, roles, SSO (se registra en "decisiones a
+   revisitar").
+
+### Criterios de aceptación
+
+- Se pueden crear, duplicar, archivar y navegar N propuestas; el seed es una
+  fila más, no un supuesto del código (grep: ninguna referencia a proposal 1
+  hardcodeada fuera del seed).
+- Los shares creados antes de la migración siguen resolviendo revisión,
+  password y expiración correctamente.
+- Los estados reflejan el ciclo real y aparecen en dashboard y en el header
+  del editor (hoy el badge DRAFT es estático).
+- Sin sesión no hay acceso a editor/dashboard/mutaciones; los tests e2e se
+  autentican en setup.
+
+---
+
+## Fase 13 — Plantillas y biblioteca de contenido
+
+Convierte el trabajo hecho en activos reutilizables — el corazón del flujo
+"crear propuesta en 10 minutos".
+
+**Tamaño estimado:** L.
+
+### 13.1 — Plantillas de propuesta
+
+1. "Guardar como plantilla" desde el editor: snapshot del grafo completo
+   (como duplicar) marcado `is_template`, con nombre, descripción y thumbnail
+   (primera página).
+2. Galería de plantillas en el flujo de creación (Fase 12.3 se amplía):
+   crear desde plantilla = deep copy + asignar cliente nuevo + limpiar datos
+   de cliente/fechas donde el campo lo declare (`resetOnTemplate` en el
+   esquema de campos).
+3. Gestión: renombrar, actualizar desde una propuesta, archivar. Las
+   plantillas no aparecen en el pipeline.
+
+### 13.2 — Secciones guardadas y snippets
+
+1. Guardar una sección de la propuesta actual (payload + variante) en una
+   biblioteca global, con nombre y etiquetas.
+2. Nueva pestaña "Library" en el drawer de catálogo: buscar e insertar
+   secciones guardadas (pasando las mismas validaciones de compatibilidad de
+   diseño) — y arrastrarlas al canvas vía Fase 11.
+3. Snippets de texto (párrafos reutilizables: políticas, descripciones de
+   ciudades) insertables desde el inspector y desde la edición inline
+   (comando o botón "insertar snippet" en campos multiline).
+
+### 13.3 — Biblioteca de imágenes
+
+1. Upload real de imágenes (hasta ahora todo es URL/asset preexistente):
+   almacenamiento en disco del volumen (`OPERATIONS.md` ya define backup),
+   límites de tamaño/formato, nombres content-hash.
+2. Grid de imágenes en el drawer Library con búsqueda por nombre/etiqueta;
+   los pickers de imagen (inspector y Fase 10.4) ofrecen "elegir de la
+   biblioteca | subir | URL".
+3. Registrar la decisión de object storage para producción en "decisiones a
+   revisitar" — el contrato de la biblioteca no debe asumir filesystem.
+
+### 13.4 — Biblioteca de fees (precursor de Fase 14)
+
+1. Tabla de ítems de precio reutilizables: nombre, descripción, precio
+   unitario, moneda, unidad (por persona/noche/vehículo), impuesto aplicable.
+2. CRUD dentro del drawer Library; la Fase 14 los consumirá en la tabla de
+   precios.
+
+### Criterios de aceptación
+
+- Crear desde plantilla produce una propuesta completa editable sin residuos
+  del cliente original.
+- Cambios posteriores en una plantilla o en la biblioteca **nunca** alteran
+  propuestas ya creadas (mismo principio snapshot de Fase 2.3B).
+- Subir una imagen y usarla en portada/hotel/itinerario funciona de punta a
+  punta y sobrevive backup/restore.
+
+---
+
+## Fase 14 — Variables y pricing interactivo
+
+El contenido se vuelve inteligente: datos que se escriben una vez y fluyen, y
+precios que se calculan en lugar de tipearse.
+
+**Tamaño estimado:** L.
+
+### 14.1 — Variables / merge fields
+
+1. Sintaxis `{{path}}` en campos de texto, con catálogo cerrado de variables
+   resuelto server-side en el render: `client.name`, `client.partySize`,
+   `trip.title`, `trip.startDate`, `trip.endDate`, `trip.nights`,
+   `pricing.total`, `pricing.currency`, `company.*`, fechas formateadas.
+2. Picker de variables en inspector y edición inline (botón `{{}}` que
+   inserta en el cursor); en el canvas, las variables renderizan su valor
+   resuelto con un subrayado sutil en modo edición para distinguirlas.
+3. Variables sin resolver (cliente sin nombre, fechas vacías) aparecen en el
+   Review drawer como warnings y bloquean compartir solo si el diseño marca el
+   campo como requerido.
+4. Las revisiones guardan el texto **resuelto** además del crudo — un share
+   firmado nunca cambia porque cambió el cliente.
+
+### 14.2 — Tabla de precios 2.0
+
+1. Modelo de line items: descripción, cantidad, precio unitario, unidad,
+   impuesto %, descuento (monto o %), opcional sí/no, seleccionado por
+   defecto sí/no. Subtotal/impuestos/descuento/total calculados server-side —
+   nunca confiar en cálculo del cliente.
+2. Editor de tabla en inspector + inline (Fase 10 aplica): agregar desde la
+   biblioteca de fees (13.4) o crear ad hoc; reordenar; el `PricingBlock` del
+   diseño renderiza la tabla calculada manteniendo su estética.
+3. **Interactividad del cliente en el share:** los ítems opcionales se pueden
+   marcar/desmarcar y (si se habilita por ítem) editar cantidad; el total se
+   recalcula server-side vía el endpoint del share; la selección queda
+   registrada como evento y congelada al aprobar/firmar.
+4. Compatibilidad: las propuestas existentes con montos estáticos migran a un
+   line item único; el calendario de pagos (Fase 2.3A) puede expresar montos
+   como % del total calculado además de valores fijos.
+
+### Criterios de aceptación
+
+- Cambiar el nombre del cliente actualiza cada aparición en el documento sin
+  tocar ninguna sección; el PDF y el share de revisiones viejas no cambian.
+- Un pricing con cantidades, impuestos, descuento e ítems opcionales cuadra
+  centavo a centavo entre editor, share interactivo y PDF (redondeo definido
+  y testeado por unidad).
+- La selección de opcionales del cliente queda auditada (evento + snapshot al
+  aprobar) y el vendedor la ve en el editor.
+
+---
+
+## Fase 15 — Envío, firma electrónica y cierre
+
+El ciclo de venta completo: enviar desde la app, firmar en el share, cerrar
+Won/Lost. Levanta el non-goal original de e-signatures ahora que las
+revisiones son tablas reales.
+
+**Tamaño estimado:** L.
+
+### 15.1 — Envío por email
+
+1. Abstracción de proveedor (un servicio transaccional de email o SMTP
+   directo, configurable por env; en dev, log + archivo `.eml`). Ningún dato del cliente sale a
+   servicios no configurados explícitamente.
+2. Diálogo "Send" en el editor: destinatarios, asunto y mensaje con variables
+   (14.1), adjuntando el link de share (creándolo si no existe con las
+   opciones de password/expiración actuales).
+3. El envío registra evento `sent` → estado Sent; reenvíos y recordatorios
+   manuales ("Remind client") quedan en el historial.
+
+### 15.2 — Bloque y flujo de firma
+
+1. Nuevo tipo de sección `SignatureBlock` registrado en el contrato de diseño
+   (Safari Editorial lo estiliza; Minimal Grid valida el registro): nombres y
+   roles de firmantes (cliente / empresa), líneas de firma y fecha en el
+   documento y el PDF.
+2. En el share, el cliente firma **tipeando** (nombre renderizado en estilo
+   manuscrito) o **dibujando** (canvas → PNG); se registra nombre, email,
+   timestamp, IP truncada/user-agent y el hash SHA-256 del payload de la
+   revisión firmada.
+3. Al firmar: estado → Approved/Won, la revisión queda sellada, se regenera el
+   PDF con página de **certificado de firma** (firmantes, timestamps, hash) y
+   el flujo de aprobación existente de Fase 8 se convierte en este (aprobar
+   sin firma sigue disponible si la propuesta no tiene SignatureBlock).
+4. Alcance legal: firma electrónica simple con evidencia, no firma calificada
+   ni proveedor externo certificado — documentarlo.
+
+### 15.3 — Cierre del pipeline
+
+1. Marcar Lost con razón opcional; reabrir a Draft crea propuesta duplicada
+   nueva en lugar de mutar la histórica si ya hubo firma.
+2. El dashboard refleja Won/Lost y el valor cerrado.
+
+### Criterios de aceptación
+
+- Enviar, abrir, firmar y descargar el PDF firmado funciona de punta a punta
+  con password y expiración activos.
+- El hash del certificado coincide con la revisión almacenada; ninguna
+  mutación posterior de la propuesta altera lo firmado.
+- Sin proveedor de email configurado, la UI de envío degrada a "copiar link"
+  sin errores rotos.
+
+---
+
+## Fase 16 — Analytics de visualización y notificaciones
+
+La capacidad estrella de esta categoría: saber qué miró el cliente y cuánto
+tiempo.
+
+**Tamaño estimado:** M.
+
+### Alcance
+
+1. Instrumentar el share con IntersectionObserver + Page Visibility: tiempo
+   por página/sección en lotes enviados por `sendBeacon` a
+   `/api/share/[token]/events`; también descargas de PDF y cambios de
+   selección de pricing. Sin cookies de tracking, sin fingerprinting; se mide
+   la sesión del share, no a la persona.
+2. Panel "Activity" por propuesta (drawer o pestaña del dashboard): timeline
+   de eventos (enviada, abierta, X min en Pricing, firmada…) y resumen:
+   aperturas, tiempo total, páginas más y menos vistas.
+3. Notificaciones in-app (badge en dashboard) y por email al vendedor
+   (reutiliza 15.1): primera apertura, firma, expiración próxima —
+   configurables.
+4. Retención definida (ej. eventos crudos 12 meses) y agregados por revisión.
+
+### Criterios de aceptación
+
+- Una visita real de prueba produce tiempos por página plausibles y el feed
+  ordenado correctamente; visitas concurrentes de dos shares no se mezclan.
+- El share no pierde rendimiento perceptible ni rompe sin JS (los eventos son
+  mejora progresiva).
+- Las notificaciones respetan la configuración y nunca bloquean el flujo del
+  cliente.
+
+---
+
+## Fase 17 — Comentarios y colaboración ligera
+
+Cierra el loop de negociación sin salir de la herramienta. La colaboración
+multi-usuario en tiempo real sigue fuera de alcance.
+
+**Tamaño estimado:** M.
+
+### Alcance
+
+1. **Comentarios del cliente en el share:** por sección (anclados a
+   `editorSource`), con nombre + texto; aparecen como hilos en el panel
+   Activity y notifican al vendedor.
+2. **Respuestas del vendedor** desde el editor; el cliente las ve en el share
+   (por revisión: si se re-comparte una revisión nueva, los hilos abiertos se
+   arrastran con referencia a la sección, o se marcan huérfanos si la sección
+   ya no existe).
+3. **Notas internas** por sección en el editor (nunca visibles en share/PDF).
+4. Resolver/reabrir hilos; contador de hilos abiertos en Review antes de
+   re-compartir.
+
+### Criterios de aceptación
+
+- Cliente comenta → vendedor responde → cliente ve la respuesta, todo
+  auditado en eventos.
+- Ninguna nota interna ni hilo aparece en el PDF ni en el render del share
+  fuera de su UI de comentarios.
+- XSS imposible: todo comentario es texto plano escapado.
+
+---
+
+## Dependencias entre fases
+
+```text
+F10 canvas inline ──► F11 drag&drop (usa selección/insertion points)
+F12 esquema+pipeline ──► F13 plantillas (necesita crear/duplicar)
+F13.4 fees ──► F14.2 pricing
+F12 revisiones reales ──► F14.1 texto resuelto ──► F15 firma (hash revisión)
+F15.1 email ──► F16 notificaciones
+F12 eventos en tabla ──► F16 analytics ──► F17 comentarios (mismo canal)
+```
+
+F10–F11 y F12–F13 son trenes paralelos si hace falta; F14+ es secuencial
+sobre F12.
+
+## Riesgos transversales
+
+- **SQLite en producción** con analytics de escritura frecuente (F16):
+  mantener los eventos en batch/transacción; si el volumen crece, es el
+  primer candidato a mover a Postgres (ya listado en decisiones a revisitar).
+- **Crecimiento del shell:** `ProposalEditorShell.tsx` ya es grande; F10–F11
+  deben extraer módulos (selección de canvas, DnD) a hooks/componentes
+  propios antes de sumar lógica.
+- **Fase 9 pendiente:** el paquete de marca sigue gateado por el owner; no
+  bloquea ninguna fase de este plan y puede aterrizar en paralelo.
+- **Cada fase actualiza** `CLAUDE.md` (estado), su doc de fase, los tests de
+  `tests/` y, cuando toque esquema, `scripts/` de backup/restore — según las
+  reglas de mantenimiento existentes.
