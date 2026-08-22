@@ -82,6 +82,67 @@ test("rendered pages annotate editable regions from the shared field contract", 
   expect(coverRegions).toEqual(["clientName", "coverImageUrl", "coverSubtitle", "coverTitle"]);
 });
 
+test("clicking a canvas region selects its field in the inspector", async ({ page }, testInfo) => {
+  await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
+  const canvas = page.getByLabel("Proposal canvas");
+  await expect(canvas).toBeVisible();
+
+  const coverTitleRegion = canvas.locator('[data-page-index="0"] [data-edit-field="coverTitle"]');
+  await coverTitleRegion.click();
+
+  // The desktop inspector instance stays mounted (CSS-hidden) below the xl
+  // breakpoint, so scope to the visible field rather than the accessible
+  // name — the canvas region's own aria-label also contains "Cover title".
+  const titleField = page.locator('input[name="coverTitle"]:visible');
+  await expect(titleField).toBeFocused();
+  await expect(titleField).toHaveValue("Proposal");
+  await expect(coverTitleRegion).toHaveClass(/proposal-studio-region-active/);
+
+  // On mobile the first click opened a modal drawer; a dedicated test covers
+  // that. Close it here so the canvas is clickable again for the next step.
+  if (testInfo.project.name === "mobile") {
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog", { name: "Page properties" })).toBeHidden();
+  }
+
+  // Clicking a region on a different page navigates selection and refocuses.
+  const roomCategoryRegion = canvas.locator('[data-edit-field="roomCategory"]').first();
+  await roomCategoryRegion.scrollIntoViewIfNeeded();
+  await roomCategoryRegion.click();
+  await expect(page.locator('input[name="roomCategory"]:visible')).toBeFocused();
+  await expect(coverTitleRegion).not.toHaveClass(/proposal-studio-region-active/);
+});
+
+test("editable regions are keyboard-reachable only on the selected page, and Escape returns to the canvas", async ({ page }) => {
+  await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
+  await expect(page.getByLabel("Proposal canvas")).toBeVisible();
+
+  const selectedRegions = page.locator('[data-page-index="0"] [data-edit-field]');
+  await expect(selectedRegions.first()).toHaveAttribute("tabindex", "0");
+  const otherPageRegions = page.locator('[data-page-index="1"] [data-edit-field]');
+  await expect(otherPageRegions.first()).not.toHaveAttribute("tabindex", "0");
+
+  const coverTitleRegion = page.locator('[data-page-index="0"] [data-edit-field="coverTitle"]');
+  await expect(coverTitleRegion).toHaveAttribute("aria-label", "Edit Cover title");
+  await coverTitleRegion.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator('input[name="coverTitle"]:visible')).toBeFocused();
+
+  await page.keyboard.press("Escape");
+  await expect(page.locator('[data-page-index="0"]')).toBeFocused();
+});
+
+test("mobile: clicking a canvas region opens the properties drawer focused on that field", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "Mobile-only responsive behavior");
+  await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
+  const canvas = page.getByLabel("Proposal canvas");
+  await expect(canvas).toBeVisible();
+
+  await canvas.locator('[data-page-index="0"] [data-edit-field="coverTitle"]').click();
+  await expect(page.getByRole("dialog", { name: "Page properties" })).toBeVisible();
+  await expect(page.locator('input[name="coverTitle"]:visible')).toBeFocused();
+});
+
 test("rendered proposal has no measured page overflow", async ({ page }) => {
   await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
   await expect(page.getByLabel("Proposal canvas")).toBeVisible();

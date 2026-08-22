@@ -1,6 +1,7 @@
 # Proposal Studio — Plan de expansión (Fases 10–17)
 
-**Estado:** Plan aprobado; Fase 10.1 completa (contrato de regiones editables)
+**Estado:** Plan aprobado; Fases 10.1–10.2 completas (regiones editables +
+selección en canvas/puente con el inspector)
 **Actualizado:** 2026-08-22
 
 Este documento extiende el roadmap de
@@ -93,18 +94,50 @@ test e2e que verifica campos, kinds y pertenencia a página dentro del canvas
 
 ### 10.2 — Selección en canvas y puente con el inspector
 
+**Estado: Completa (2026-08-22).** Implementado en
+`components/editor/ProposalEditorShell.tsx`, `EditorUi.tsx` e
+`ItineraryEditor.tsx`; CSS en `app/globals.css`. Cubierta por 3 tests e2e
+nuevos (click→foco, teclado/Escape, drawer móvil) más los 2 existentes de
+Fase 10.1 — 14/14 pasan en desktop y mobile.
+
 1. Click en una región → outline de selección (tokens `editor-border-strong` /
-   `editor-focus`), la página se selecciona si no lo estaba, y el inspector
-   abre Content mode con **scroll y focus al campo correspondiente**.
-2. Hover muestra affordance sutil (outline punteado + cursor text/pointer).
-3. Selección inversa: focus en un campo del inspector resalta su región en el
-   canvas (si está en viewport).
-4. Teclado: la página seleccionada expone sus regiones en orden de documento
-   con Tab/Shift+Tab cuando el canvas tiene focus; Enter activa edición;
-   Escape devuelve el focus al canvas. Anunciar con live region qué campo se
-   activó.
-5. En pantallas sin panel persistente, el tap en una región abre el drawer de
-   Properties ya enfocado en ese campo.
+   `editor-focus`), la página se selecciona si no lo estaba (reutilizando el
+   guard de descarte de cambios sin guardar), y el inspector cambia a Content
+   mode con **scroll y focus al campo correspondiente**
+   (`fieldElementId()` en `lib/editor/editableRegions.ts` es el id
+   compartido entre el campo anotado y el control del inspector). Para
+   colecciones agregadas sin control por-campo (itinerario), el foco cae en
+   el contenedor del editor estructurado en vez de un input específico —
+   limitación conocida, documentada en el propio componente.
+2. Hover muestra affordance sutil (outline + cursor pointer, ver
+   `app/globals.css`); el resaltado "activo" persistente usa la misma clase
+   (`proposal-studio-region-active`) que dispara el punto 3.
+3. Selección inversa: cualquier campo del inspector que gane foco (click,
+   Tab, o el foco automático del punto 1) notifica al shell, que resalta la
+   región correspondiente **solo en la página seleccionada** — necesario
+   porque el modo Continuo mantiene todas las páginas montadas a la vez y
+   nombres de campo como `sectionImageUrl` se repiten en varias páginas.
+4. Teclado: `tabindex`/`role="button"`/`aria-label` (derivado del mismo
+   `field.label` del inspector) se asignan imperativamente solo a las
+   regiones de la página seleccionada en cada cambio de selección o
+   contenido — Tab/Shift+Tab dentro del canvas solo recorre esa página.
+   Enter/Space activa la región igual que un click. Escape devuelve el foco
+   al contenedor de la página (funciona tanto si el foco estaba en la propia
+   región como si ya había saltado al campo del inspector). Una región
+   `aria-live="polite"` visualmente oculta anuncia "Editing {label}" en cada
+   activación.
+5. En pantallas sin panel persistente (`< 1280px`, el mismo breakpoint `xl`
+   que ya separa el panel fijo del drawer), activar una región abre el
+   drawer de Properties ya enfocado en ese campo.
+
+**Nota de alcance de accesibilidad:** el chequeo automatizado existente de
+44px de touch-target (`tests/e2e/editor.spec.ts`) solo mide elementos
+`<button>` reales — íconos y controles de acción. Las regiones editables de
+texto heredan el tamaño natural de su contenido (igual que en un editor de
+texto convencional: se hace click sobre el texto, no sobre un botón de 44px
+alrededor de cada palabra) y quedan fuera de ese chequeo a propósito; no se
+considera una regresión de accesibilidad sino un alcance distinto de
+interacción.
 
 ### 10.3 — Edición de texto inline
 

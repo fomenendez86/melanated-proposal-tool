@@ -10,7 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { updateProposalFields } from "@/app/proposals/[id]/editor/actions";
 import {
@@ -91,12 +91,24 @@ export default function ItineraryEditor({
   proposalId,
   config,
   onSaveStateChange,
+  focusRequestId,
 }: {
   proposalId: number;
   config: ProposalEditorPageConfig;
   onSaveStateChange: (state: EditorSaveState) => void;
+  /** Bumped when a canvas click activates this collection; scrolls it into view. */
+  focusRequestId?: number;
 }) {
   const router = useRouter();
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (focusRequestId === undefined) return;
+    const element = rootRef.current;
+    element?.scrollIntoView({ block: "center", behavior: "smooth" });
+    element?.focus({ preventScroll: true });
+  }, [focusRequestId]);
+
   const sourceText = config.fields.find((field) => field.name === "itinerarySnapshotText")?.value ?? "";
   const initialDays = useMemo(() => parseItineraryEditorText(sourceText) ?? [], [sourceText]);
   const [days, setDays] = useState<UiDay[]>(() => withUiKeys(initialDays));
@@ -153,7 +165,7 @@ export default function ItineraryEditor({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 outline-none" ref={rootRef} tabIndex={-1}>
       <div>
         <div className="flex items-center gap-2 text-editor-brand">
           <CalendarDays className="size-4" aria-hidden="true" />

@@ -31,6 +31,18 @@ export function editableRegion(
 
 export const EDITABLE_REGION_SELECTOR = "[data-edit-field]";
 
+/** Class toggled on the canvas region that currently mirrors inspector focus. */
+export const EDITABLE_REGION_ACTIVE_CLASS = "proposal-studio-region-active";
+
 export function isEditableRegionKind(value: string | null): value is EditableRegionKind {
   return value === "text" || value === "multiline" || value === "image";
+}
+
+/**
+ * Shared id for the inspector control that edits `field` on `pageId`, so the
+ * canvas click bridge and the form that renders the control agree on one id
+ * without either side hardcoding the other's naming scheme.
+ */
+export function fieldElementId(instanceId: string, pageId: string, field: ProposalEditorFieldName) {
+  return `editor-${instanceId}-${pageId}-${field}`;
 }

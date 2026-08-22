@@ -190,6 +190,32 @@
   }
 }
 
+/*
+ * Canvas editable-region affordance (Phase 10.2). Design renderers only
+ * annotate [data-edit-field]; every visual and interaction state lives here
+ * so it stays shell-owned and design-neutral.
+ */
+.proposal-studio [data-page-content] [data-edit-field] {
+  cursor: pointer;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color 120ms ease, background-color 120ms ease;
+}
+
+.proposal-studio [data-page-content] [data-edit-field]:hover {
+  outline-color: var(--color-editor-border-strong);
+}
+
+.proposal-studio [data-page-content] [data-edit-field]:focus-visible {
+  outline-color: var(--color-editor-focus);
+  background-color: color-mix(in srgb, var(--color-editor-focus) 8%, transparent);
+}
+
+.proposal-studio [data-page-content] [data-edit-field].proposal-studio-region-active {
+  outline-color: var(--color-editor-focus);
+  background-color: color-mix(in srgb, var(--color-editor-focus) 10%, transparent);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

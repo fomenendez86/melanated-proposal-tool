@@ -20,7 +20,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { FocusEvent, ReactNode, RefObject } from "react";
+import type {
+  FocusEvent,
+  KeyboardEvent as ReactKeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+  ReactNode,
+  RefObject,
+} from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { updateProposalFields } from "@/app/proposals/[id]/editor/actions";
@@ -30,6 +36,11 @@ import type { ProposalSummary } from "@/lib/db/getProposalSummary";
 import type { DocumentPageGeometry, ProposalDesignContext } from "@/lib/designs/types";
 import type { ProposalCatalogData } from "@/lib/catalog/types";
 import type { ProposalCompositionData } from "@/lib/composition/types";
+import {
+  EDITABLE_REGION_ACTIVE_CLASS,
+  EDITABLE_REGION_SELECTOR,
+  fieldElementId,
+} from "@/lib/editor/editableRegions";
 import type {
   EditorSaveState,
   ProposalEditorFieldName,
@@ -79,6 +90,11 @@ interface PageNavigatorProps {
   onClose?: () => void;
 }
 
+interface RegionFocusRequest {
+  field: ProposalEditorFieldName;
+  requestId: number;
+}
+
 interface PropertiesPanelProps {
   instanceId: "desktop" | "drawer";
   selectedPage: ProposalPageMeta;
@@ -93,6 +109,14 @@ interface PropertiesPanelProps {
   onVariantChange: (variantId: string) => void;
   onSaveStateChange: (state: EditorSaveState) => void;
   onClose?: () => void;
+  mode: "content" | "design";
+  onModeChange: (mode: "content" | "design") => void;
+  /** Set when a canvas click should scroll/focus a field in this panel. */
+  focusField?: RegionFocusRequest;
+  /** Notifies the canvas bridge that a field gained focus via the inspector. */
+  onFieldFocus: (field: ProposalEditorFieldName) => void;
+  /** Escape inside a field returns focus to this page's canvas region. */
+  onEscapeToCanvas: () => void;
 }
 
 interface ReviewPanelProps {
@@ -252,11 +276,17 @@ function EditableFieldsForm({
   config,
   instanceId,
   onSaveStateChange,
+  focusField,
+  onFieldFocus,
+  onEscapeToCanvas,
 }: {
   proposalId: number;
   config: ProposalEditorPageConfig;
   instanceId: PropertiesPanelProps["instanceId"];
   onSaveStateChange: (state: EditorSaveState) => void;
+  focusField?: RegionFocusRequest;
+  onFieldFocus: (field: ProposalEditorFieldName) => void;
+  onEscapeToCanvas: () => void;
 }) {
   const router = useRouter();
   const initialValues = useMemo(() => fieldValues(config), [config]);
@@ -323,6 +353,15 @@ function EditableFieldsForm({
     if (isDirty && config.saveMode !== "explicit") void saveDraft(values);
   }
 
+  useEffect(() => {
+    if (!focusField) return;
+    const element = document.getElementById(fieldElementId(instanceId, config.pageId, focusField.field));
+    element?.scrollIntoView({ block: "center", behavior: "smooth" });
+    (element as HTMLInputElement | HTMLTextAreaElement | null)?.focus();
+    // Re-run whenever a new activation request lands, even for the same field.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusField?.requestId]);
+
   return (
     <form
       className="space-y-4"
@@ -331,6 +370,9 @@ function EditableFieldsForm({
         void saveDraft(values);
       }}
       onBlur={handleFormBlur}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") onEscapeToCanvas();
+      }}
     >
       <div>
         <h3 className="text-sm font-semibold text-editor-brand">{config.heading}</h3>
@@ -349,7 +391,7 @@ function EditableFieldsForm({
           <EditorField
             key={field.name}
             field={field}
-            id={`editor-${instanceId}-${config.pageId}-${field.name}`}
+            id={fieldElementId(instanceId, config.pageId, field.name)}
             value={values[field.name] ?? ""}
             error={error}
             rows={config.saveMode === "explicit" ? 10 : 3}
@@ -358,6 +400,7 @@ function EditableFieldsForm({
             setFieldErrors((current) => ({ ...current, [field.name]: undefined }));
             onSaveStateChange("dirty");
             }}
+            onFocus={() => onFieldFocus(field.name)}
           />
         );
       })}
@@ -394,8 +437,12 @@ function PropertiesPanel({
   onVariantChange,
   onSaveStateChange,
   onClose,
+  mode,
+  onModeChange,
+  focusField,
+  onFieldFocus,
+  onEscapeToCanvas,
 }: PropertiesPanelProps) {
-  const [mode, setMode] = useState<"content" | "design">("content");
   const variants = designContext.active.sectionVariants[selectedPage.type] ?? [];
   const defaultVariantId = designContext.active.defaultVariantIds[selectedPage.type];
 
@@ -420,7 +467,7 @@ function PropertiesPanel({
               { value: "content", label: "Content" },
               { value: "design", label: "Design" },
             ]}
-            onChange={setMode}
+            onChange={onModeChange}
             className="mt-4 flex w-full"
           />
         </div>
@@ -433,6 +480,7 @@ function PropertiesPanel({
                 proposalId={proposalId}
                 config={editorConfig}
                 onSaveStateChange={onSaveStateChange}
+                focusRequestId={focusField?.requestId}
               />
             ) : editorConfig ? (
               <EditableFieldsForm
@@ -441,6 +489,9 @@ function PropertiesPanel({
                 config={editorConfig}
                 instanceId={instanceId}
                 onSaveStateChange={onSaveStateChange}
+                focusField={focusField}
+                onFieldFocus={onFieldFocus}
+                onEscapeToCanvas={onEscapeToCanvas}
               />
             ) : (
               <EditorEmptyState
@@ -710,6 +761,10 @@ export default function ProposalEditorShell({
   const [designChanging, setDesignChanging] = useState(false);
   const [designError, setDesignError] = useState("");
   const [overflowPageIndexes, setOverflowPageIndexes] = useState<number[]>([]);
+  const [inspectorMode, setInspectorMode] = useState<"content" | "design">("content");
+  const [activeRegion, setActiveRegion] = useState<{ pageId: string; field: ProposalEditorFieldName; requestId: number } | null>(null);
+  const [highlightedField, setHighlightedField] = useState<ProposalEditorFieldName | null>(null);
+  const [regionAnnouncement, setRegionAnnouncement] = useState("");
   const canvasViewportRef = useRef<HTMLDivElement>(null);
   const pagesDialogRef = useRef<HTMLDivElement>(null);
   const propertiesDialogRef = useRef<HTMLDivElement>(null);
@@ -718,6 +773,8 @@ export default function ProposalEditorShell({
   const compositionDialogRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Array<HTMLDivElement | null>>([]);
   const viewModeTargetRef = useRef(0);
+  const regionRequestIdRef = useRef(0);
+  const highlightedElementsRef = useRef<HTMLElement[]>([]);
 
   const effectiveSelectedIndex = Math.min(selectedIndex, Math.max(0, pageMeta.length - 1));
   const selectedPage = pageMeta[effectiveSelectedIndex];
@@ -725,6 +782,9 @@ export default function ProposalEditorShell({
   const pageSize = designContext.active.page;
   const activeDesignKey = `${designContext.active.id}@${designContext.active.version}`;
   const activeVariantId = composition.items.find((item) => item.id === selectedPage.sourceSectionId)?.variantId;
+  const focusField = activeRegion && activeRegion.pageId === selectedPage.id
+    ? { field: activeRegion.field, requestId: activeRegion.requestId }
+    : undefined;
   const fitCanvas = useFitCanvas(canvasViewportRef, setZoom, viewMode, pageSize);
 
   const confirmDiscardDraft = useCallback(() => {
@@ -786,12 +846,13 @@ export default function ProposalEditorShell({
 
   const navigateToIndex = useCallback((index: number, behavior: ScrollBehavior = "smooth") => {
     const nextIndex = Math.min(pageMeta.length - 1, Math.max(0, index));
-    if (nextIndex !== selectedIndex && !confirmDiscardDraft()) return;
+    if (nextIndex !== selectedIndex && !confirmDiscardDraft()) return false;
     setSelectedIndex(nextIndex);
 
     if (viewMode === "continuous") {
       pageRefs.current[nextIndex]?.scrollIntoView({ behavior, block: "start" });
     }
+    return true;
   }, [confirmDiscardDraft, pageMeta.length, selectedIndex, viewMode]);
 
   const selectPage = useCallback((page: ProposalPageMeta) => {
@@ -801,6 +862,56 @@ export default function ProposalEditorShell({
       setPagesOpen(false);
     }
   }, [navigateToIndex, pageMeta]);
+
+  const activateRegion = useCallback((pageIndex: number, field: ProposalEditorFieldName) => {
+    const targetPage = pageMeta[pageIndex];
+    if (!targetPage) return;
+    if (pageIndex !== effectiveSelectedIndex && !navigateToIndex(pageIndex)) return;
+
+    setInspectorMode("content");
+    setHighlightedField(field);
+    regionRequestIdRef.current += 1;
+    setActiveRegion({ pageId: targetPage.id, field, requestId: regionRequestIdRef.current });
+
+    const label = editorPages[targetPage.id]?.fields.find((candidate) => candidate.name === field)?.label ?? field;
+    setRegionAnnouncement(`Editing ${label}`);
+
+    if (typeof window !== "undefined" && !window.matchMedia("(min-width: 1280px)").matches) {
+      setPropertiesOpen(true);
+    }
+  }, [editorPages, effectiveSelectedIndex, navigateToIndex, pageMeta]);
+
+  const focusCanvasPage = useCallback((pageId: string) => {
+    const index = pageMeta.findIndex((candidate) => candidate.id === pageId);
+    if (index >= 0) pageRefs.current[index]?.focus();
+  }, [pageMeta]);
+
+  const activateRegionFromElement = useCallback((element: HTMLElement) => {
+    const field = element.getAttribute("data-edit-field") as ProposalEditorFieldName | null;
+    const pageElement = element.closest<HTMLElement>("[data-page-index]");
+    const pageIndex = Number(pageElement?.getAttribute("data-page-index"));
+    if (!field || !Number.isInteger(pageIndex)) return;
+    activateRegion(pageIndex, field);
+  }, [activateRegion]);
+
+  const handleCanvasPointerActivate = useCallback((event: ReactMouseEvent<HTMLDivElement>) => {
+    const region = (event.target as HTMLElement).closest<HTMLElement>(EDITABLE_REGION_SELECTOR);
+    if (!region) return;
+    event.preventDefault();
+    activateRegionFromElement(region);
+  }, [activateRegionFromElement]);
+
+  const handleCanvasRegionKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    if (!target.hasAttribute("data-edit-field")) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      activateRegionFromElement(target);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      target.closest<HTMLElement>("[data-page-index]")?.focus();
+    }
+  }, [activateRegionFromElement]);
 
   const moveSelection = useCallback((direction: -1 | 1) => {
     navigateToIndex(effectiveSelectedIndex + direction);
@@ -867,6 +978,48 @@ export default function ProposalEditorShell({
     });
     return () => window.cancelAnimationFrame(animationFrame);
   }, [pageMeta.length, pages, viewMode]);
+
+  // Keyboard reach for editable regions is scoped to the selected page only,
+  // so Tab cycles that page's fields instead of the whole scrolled document.
+  useEffect(() => {
+    const container = canvasViewportRef.current;
+    if (!container) return;
+    const selectedPageElement = pageRefs.current[effectiveSelectedIndex];
+    const fields = editorPages[selectedPage.id]?.fields ?? [];
+
+    container.querySelectorAll<HTMLElement>(EDITABLE_REGION_SELECTOR).forEach((region) => {
+      const withinSelectedPage = Boolean(selectedPageElement?.contains(region));
+      if (!withinSelectedPage) {
+        region.removeAttribute("tabindex");
+        region.removeAttribute("role");
+        region.removeAttribute("aria-label");
+        return;
+      }
+      const field = region.getAttribute("data-edit-field");
+      const kind = region.getAttribute("data-edit-kind");
+      const label = fields.find((candidate) => candidate.name === field)?.label ?? field ?? "field";
+      region.setAttribute("tabindex", "0");
+      region.setAttribute("role", "button");
+      region.setAttribute("aria-label", kind === "image" ? `Edit ${label} image` : `Edit ${label}`);
+    });
+  }, [editorPages, effectiveSelectedIndex, pages, selectedPage.id]);
+
+  // Mirrors inspector focus onto the matching canvas region. Cleanup walks
+  // the tracked elements directly rather than re-querying, since continuous
+  // mode keeps every page mounted and a stale highlight can sit on a page the
+  // user has since scrolled away from.
+  useEffect(() => {
+    highlightedElementsRef.current.forEach((element) => element.classList.remove(EDITABLE_REGION_ACTIVE_CLASS));
+    highlightedElementsRef.current = [];
+    if (!highlightedField) return;
+    const selectedPageElement = pageRefs.current[effectiveSelectedIndex];
+    if (!selectedPageElement) return;
+    const matches = Array.from(
+      selectedPageElement.querySelectorAll<HTMLElement>(`[data-edit-field="${highlightedField}"]`)
+    );
+    matches.forEach((element) => element.classList.add(EDITABLE_REGION_ACTIVE_CLASS));
+    highlightedElementsRef.current = matches;
+  }, [effectiveSelectedIndex, highlightedField, pages]);
 
   const closeProperties = useCallback(() => {
     if (confirmDiscardDraft()) setPropertiesOpen(false);
@@ -959,6 +1112,7 @@ export default function ProposalEditorShell({
 
   return (
     <main className="proposal-studio flex h-dvh min-h-0 flex-col overflow-hidden bg-editor-shell text-editor-text-strong">
+      <div aria-live="polite" className="sr-only">{regionAnnouncement}</div>
       <header className="z-20 flex h-16 shrink-0 items-center justify-between border-b border-editor-border-subtle bg-editor-panel px-4 shadow-editor-toolbar lg:px-5">
         <div className="flex min-w-0 items-center gap-3">
           <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-editor-brand text-editor-accent" role="img" aria-label="Melanated Safaris Proposal Studio">
@@ -1188,7 +1342,12 @@ export default function ProposalEditorShell({
             </div>
           </div>
 
-          <div ref={canvasViewportRef} className="min-h-0 flex-1 overflow-auto">
+          <div
+            ref={canvasViewportRef}
+            className="min-h-0 flex-1 overflow-auto"
+            onClick={handleCanvasPointerActivate}
+            onKeyDown={handleCanvasRegionKeyDown}
+          >
             {viewMode === "continuous" ? (
               <div className="flex min-h-full min-w-full flex-col items-center gap-4 p-4 sm:gap-7 sm:p-8">
                 {pages.map((page, index) => (
@@ -1196,8 +1355,9 @@ export default function ProposalEditorShell({
                     key={pageMeta[index].id}
                     ref={(element) => { pageRefs.current[index] = element; }}
                     data-page-index={index}
+                    tabIndex={-1}
                     aria-label={`Page ${index + 1}: ${pageMeta[index].title}`}
-                    className={`relative shrink-0 bg-white shadow-editor-page ring-1 transition-shadow ${
+                    className={`relative shrink-0 bg-white shadow-editor-page ring-1 outline-none transition-shadow ${
                       effectiveSelectedIndex === index ? "ring-editor-border-strong ring-offset-2 ring-offset-editor-canvas" : "ring-black/5"
                     }`}
                     style={{ width: pageSize.widthPx * zoom, height: pageSize.heightPx * zoom }}
@@ -1215,10 +1375,15 @@ export default function ProposalEditorShell({
             ) : (
               <div className="flex min-h-full min-w-full items-start justify-center p-4 sm:p-8">
                 <div
-                  className="relative shrink-0 bg-white shadow-editor-page ring-1 ring-black/5"
+                  ref={(element) => { pageRefs.current[effectiveSelectedIndex] = element; }}
+                  data-page-index={effectiveSelectedIndex}
+                  tabIndex={-1}
+                  aria-label={`Page ${effectiveSelectedIndex + 1}: ${selectedPage.title}`}
+                  className="relative shrink-0 bg-white shadow-editor-page outline-none ring-1 ring-black/5"
                   style={{ width: pageSize.widthPx * zoom, height: pageSize.heightPx * zoom }}
                 >
                   <div
+                    data-page-content
                     className="absolute left-0 top-0 origin-top-left bg-white"
                     style={{ width: pageSize.widthPx, height: pageSize.heightPx, transform: `scale(${zoom})` }}
                   >
@@ -1244,6 +1409,11 @@ export default function ProposalEditorShell({
             activeVariantId={activeVariantId}
             onVariantChange={(variantId) => void changeSectionVariant(variantId)}
             onSaveStateChange={setSaveState}
+            mode={inspectorMode}
+            onModeChange={setInspectorMode}
+            focusField={focusField}
+            onFieldFocus={setHighlightedField}
+            onEscapeToCanvas={() => focusCanvasPage(selectedPage.id)}
           />
         </aside>
       </div>
@@ -1308,6 +1478,11 @@ export default function ProposalEditorShell({
             onVariantChange={(variantId) => void changeSectionVariant(variantId)}
             onSaveStateChange={setSaveState}
             onClose={closeProperties}
+            mode={inspectorMode}
+            onModeChange={setInspectorMode}
+            focusField={focusField}
+            onFieldFocus={setHighlightedField}
+            onEscapeToCanvas={() => focusCanvasPage(selectedPage.id)}
           />
         </EditorDrawer>
       ) : null}

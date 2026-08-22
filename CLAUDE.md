@@ -44,11 +44,16 @@ No se construirá un panel administrativo general, un canvas de posicionamiento
 libre ni un editor distinto por cada diseño.
 
 **Prioridad actual:** la Fase 10 del plan de expansión
-(edición directa en el canvas — `docs/STUDIO_EXPANSION_PLAN.md`). La 10.1
-está completa: `lib/editor/editableRegions.ts` define regiones editables
-tipadas (`data-edit-field`/`data-edit-kind`) y los bloques del diseño de
-referencia están anotados y cubiertos por e2e; sigue la 10.2 (selección en
-canvas y puente con el inspector). En paralelo
+(edición directa en el canvas — `docs/STUDIO_EXPANSION_PLAN.md`). La 10.1 y
+la 10.2 están completas: `lib/editor/editableRegions.ts` define regiones
+editables tipadas (`data-edit-field`/`data-edit-kind`) y los 16 bloques del
+diseño de referencia están anotados; click en una región selecciona la
+página, cambia el inspector a Content mode y enfoca el campo (mismo id
+compartido vía `fieldElementId()`); hover/resaltado activo, puente inverso
+inspector→canvas, Tab/Enter/Escape con alcance a la página seleccionada y
+apertura del drawer en móvil están implementados en
+`ProposalEditorShell.tsx`. Cubierto por 5 tests e2e nuevos (14/14 en desktop y
+mobile). Sigue la 10.3 (edición de texto inline). En paralelo
 sigue pendiente importar el paquete de marca aprobado para cerrar el último
 criterio de Fase 9. Pruebas, accesibilidad, paginación medida,
 persistencia, backup, recuperación y observabilidad están completos. La Fase 8

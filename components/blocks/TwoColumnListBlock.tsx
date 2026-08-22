@@ -1,6 +1,7 @@
 import PageFooter from "@/components/blocks/shared/PageFooter";
 import PageHeader from "@/components/blocks/shared/PageHeader";
 import SectionHeader from "@/components/blocks/shared/SectionHeader";
+import { editableRegion } from "@/lib/editor/editableRegions";
 import type { TwoColumnListData } from "@/lib/types";
 
 interface TwoColumnListBlockProps {
@@ -10,12 +11,14 @@ interface TwoColumnListBlockProps {
 function ListColumn({
   sections,
   align,
+  field,
 }: {
   sections: TwoColumnListData["leftColumn"];
   align: "left" | "right";
+  field: "leftListText" | "rightListText";
 }) {
   return (
-    <div className={`flex-1 space-y-6 ${align === "right" ? "text-center" : ""}`}>
+    <div {...editableRegion(field, "multiline")} className={`flex-1 space-y-6 ${align === "right" ? "text-center" : ""}`}>
       {sections.map((section, index) => (
         <div key={index}>
           <p className="text-sm font-bold uppercase">{section.heading}</p>
@@ -44,8 +47,8 @@ export default function TwoColumnListBlock({ data }: TwoColumnListBlockProps) {
       </h1>
 
       <div className="mt-10 flex gap-16">
-        <ListColumn sections={data.leftColumn} align="left" />
-        <ListColumn sections={data.rightColumn} align="right" />
+        <ListColumn sections={data.leftColumn} align="left" field="leftListText" />
+        <ListColumn sections={data.rightColumn} align="right" field="rightListText" />
       </div>
 
       <PageFooter pageNumber={data.pageNumber} />

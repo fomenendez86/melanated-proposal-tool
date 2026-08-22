@@ -116,6 +116,7 @@ export function EditorField({
   error,
   rows,
   onChange,
+  onFocus,
 }: {
   field: ProposalEditorField;
   id: string;
@@ -123,6 +124,8 @@ export function EditorField({
   error?: string;
   rows: number;
   onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  /** Notifies the canvas bridge that this field now has inspector focus. */
+  onFocus?: () => void;
 }) {
   const describedBy = error ? `error-${id}` : field.helpText ? `help-${id}` : undefined;
   const controlClass = cn(
@@ -139,6 +142,7 @@ export function EditorField({
     "aria-invalid": Boolean(error),
     "aria-describedby": describedBy,
     onChange,
+    onFocus,
     className: controlClass,
   };
 
