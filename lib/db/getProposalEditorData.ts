@@ -202,6 +202,7 @@ export async function getProposalEditorData(
           name: "coverImageUrl",
           label: "Cover image",
           value: row.coverImageUrl ?? "",
+          isImage: true,
           maxLength: 2048,
           placeholder: "/proposal-assets/cover.jpg",
           helpText: "Use a local /path or an https:// URL.",
@@ -262,6 +263,7 @@ export async function getProposalEditorData(
           name: "ownerPhotoUrl",
           label: "Owners photo",
           value: fromOwnersSection.data.photoUrl,
+          isImage: true,
           maxLength: 2048,
           helpText: "Use a local /path or an https:// URL.",
         },
@@ -302,9 +304,9 @@ export async function getProposalEditorData(
             },
             { name: "hotelName", label: "Display name", value: hotelSection?.data.name ?? "", required: true, maxLength: 160 },
             { name: "hotelDescription", label: "Description", value: hotelSection?.data.description ?? "", required: true, maxLength: 6000, multiline: true },
-            { name: "hotelImageTopRight", label: "Top-right image", value: hotelSection?.data.images.topRight ?? "", maxLength: 2048, helpText: "Use a local /path or an https:// URL." },
-            { name: "hotelImageBottomLeftTop", label: "Bottom-left top image", value: hotelSection?.data.images.bottomLeftTop ?? "", maxLength: 2048, helpText: "Use a local /path or an https:// URL." },
-            { name: "hotelImageBottomLeftBottom", label: "Bottom-left bottom image", value: hotelSection?.data.images.bottomLeftBottom ?? "", maxLength: 2048, helpText: "Use a local /path or an https:// URL." },
+            { name: "hotelImageTopRight", label: "Top-right image", value: hotelSection?.data.images.topRight ?? "", isImage: true, maxLength: 2048, helpText: "Use a local /path or an https:// URL." },
+            { name: "hotelImageBottomLeftTop", label: "Bottom-left top image", value: hotelSection?.data.images.bottomLeftTop ?? "", isImage: true, maxLength: 2048, helpText: "Use a local /path or an https:// URL." },
+            { name: "hotelImageBottomLeftBottom", label: "Bottom-left bottom image", value: hotelSection?.data.images.bottomLeftBottom ?? "", isImage: true, maxLength: 2048, helpText: "Use a local /path or an https:// URL." },
           ],
         };
       }
@@ -510,7 +512,7 @@ export async function getProposalEditorData(
             required: index === 0,
             maxLength: 80,
           })),
-          { name: "sectionImageUrl", label: "Image", value: payload.imageUrl ?? "", maxLength: 2048, helpText: "Use a local /path or an https:// URL." },
+          { name: "sectionImageUrl", label: "Image", value: payload.imageUrl ?? "", isImage: true, maxLength: 2048, helpText: "Use a local /path or an https:// URL." },
         ],
       };
     }
@@ -526,7 +528,7 @@ export async function getProposalEditorData(
         fields: [
           { name: "dividerTitle", label: "Title", value: payload.title ?? "", required: true, maxLength: 80 },
           { name: "dividerSubtitle", label: "Subtitle", value: payload.subtitle ?? "", maxLength: 160 },
-          { name: "sectionImageUrl", label: "Image", value: payload.imageUrl ?? "", maxLength: 2048, helpText: "Use a local /path or an https:// URL." },
+          { name: "sectionImageUrl", label: "Image", value: payload.imageUrl ?? "", isImage: true, maxLength: 2048, helpText: "Use a local /path or an https:// URL." },
         ],
       };
     }
@@ -543,7 +545,7 @@ export async function getProposalEditorData(
         fields: [
           { name: "cityIntro", label: "Introduction", value: payload.intro ?? "", required: true, maxLength: 600, multiline: true },
           { name: "priceNote", label: "Price note", value: payload.priceNote ?? "", maxLength: 240, multiline: true },
-          { name: "sectionImageUrl", label: "Image", value: payload.imageUrl ?? "", maxLength: 2048, helpText: "Use a local /path or an https:// URL." },
+          { name: "sectionImageUrl", label: "Image", value: payload.imageUrl ?? "", isImage: true, maxLength: 2048, helpText: "Use a local /path or an https:// URL." },
         ],
       };
     }
@@ -558,7 +560,7 @@ export async function getProposalEditorData(
         description: "Edit the final message and image for this proposal.",
         fields: [
           { name: "thankYouMessage", label: "Message", value: payload.message ?? "", required: true, maxLength: 240, multiline: true },
-          { name: "sectionImageUrl", label: "Image", value: payload.imageUrl ?? "", maxLength: 2048, helpText: "Use a local /path or an https:// URL." },
+          { name: "sectionImageUrl", label: "Image", value: payload.imageUrl ?? "", isImage: true, maxLength: 2048, helpText: "Use a local /path or an https:// URL." },
         ],
       };
     }

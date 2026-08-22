@@ -44,8 +44,8 @@ No se construirá un panel administrativo general, un canvas de posicionamiento
 libre ni un editor distinto por cada diseño.
 
 **Prioridad actual:** la Fase 10 del plan de expansión
-(edición directa en el canvas — `docs/STUDIO_EXPANSION_PLAN.md`). Las 10.1,
-10.2 y 10.3 están completas: `lib/editor/editableRegions.ts` define regiones
+(edición directa en el canvas — `docs/STUDIO_EXPANSION_PLAN.md`) está
+**completa (10.1–10.4)**. `lib/editor/editableRegions.ts` define regiones
 editables tipadas (`data-edit-field`/`data-edit-kind`) y los 16 bloques del
 diseño de referencia están anotados; click en una región selecciona la
 página y cambia el inspector a Content mode. Para campos simples de
@@ -55,15 +55,27 @@ la página** (`InlineRegionEditor`, portado con `createPortal` dentro del
 propio `[data-page-content]`, posicionado y estilizado copiando
 `getBoundingClientRect()`/`getComputedStyle()` del elemento fuente) que
 comparte un solo `usePageFieldDraft` con el inspector — un solo estado, dos
-vistas, un solo autosave. Las colecciones de guardado explícito (Pricing,
-Hotel, itinerario, excursiones, clima, términos, listas) siguen usando el
-salto al inspector de la 10.2 a propósito, porque esas páginas son
-"revisar y luego guardar", no autosave. Hover/resaltado activo, puente
-inverso inspector→canvas, Tab/Enter/Escape con alcance a la página
-seleccionada y apertura del drawer en móvil (solo para campos no-inline)
-están implementados en `ProposalEditorShell.tsx`. Cubierto por 8 tests e2e
-nuevos entre 10.2 y 10.3 (19/19 en desktop y mobile, verificado en corridas
-repetidas). Sigue la 10.4 (interacción de imágenes). En paralelo
+vistas, un solo autosave. Los 9 campos `image` de esas mismas páginas de
+guardado automático abren en cambio un **popover anclado a la página**
+(`ImageRegionPopover`, mismo patrón de portal/zoom que el overlay de texto)
+con miniatura y URL, sobre el mismo `usePageFieldDraft` compartido; el
+inspector (`EditorField`) también gana una miniatura para todo campo
+`isImage`, incluyendo en páginas de guardado explícito. Las colecciones de
+guardado explícito (Pricing, Hotel, itinerario, excursiones, clima,
+términos, listas) siguen usando el salto al inspector de la 10.2 a
+propósito, porque esas páginas son "revisar y luego guardar", no autosave.
+Hover/resaltado activo, puente inverso inspector→canvas, Tab/Enter/Escape
+con alcance a la página seleccionada y apertura del drawer en móvil (solo
+para campos que saltan al inspector) están implementados en
+`ProposalEditorShell.tsx`. Al construir el popover de imágenes se detectó y
+corrigió un riesgo latente ya presente desde la 10.3: en modo Continuo, el
+`IntersectionObserver` que seguía la página "más centrada" podía reasignar
+la selección —y desmontar el overlay/popover abierto— si activar una región
+grande requería scroll suficiente para que la página siguiente pareciera
+más centrada; ahora ese observer no reasigna selección mientras un editor
+inline o un popover de imagen sigue abierto. Cubierto por 11 tests e2e
+nuevos entre 10.2, 10.3 y 10.4 (22/22 en desktop y mobile, verificado en
+corridas separadas por proyecto). En paralelo
 sigue pendiente importar el paquete de marca aprobado para cerrar el último
 criterio de Fase 9. Pruebas, accesibilidad, paginación medida,
 persistencia, backup, recuperación y observabilidad están completos. La Fase 8

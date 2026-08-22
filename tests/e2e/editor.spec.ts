@@ -204,6 +204,67 @@ test("fields outside the inline-editing scope keep the Phase 10.2 inspector flow
   await expect(page.locator('input[name="roomCategory"]:visible')).toBeFocused();
 });
 
+test("clicking an auto-save image region opens a canvas popover, edits, persists, and restores", async ({ page }) => {
+  await page.goto("/proposals/1/editor", { waitUntil: "networkidle" });
+  const canvas = page.getByLabel("Proposal canvas");
+  await expect(canvas).toBeVisible();
+
+  const coverImageRegion = canvas.locator('[data-page-index="0"] [data-edit-field="coverImageUrl"]');
+  await coverImageRegion.click();
+
+  const popover = page.getByRole("dialog", { name: "Replace Cover image" });
+  await expect(popover).toBeVisible();
+  const urlInput = popover.locator("input");
+  await expect(urlInput).toBeFocused();
+  const originalUrl = await urlInput.inputValue();
+  await expect(popover.locator("img")).toHaveAttribute("src", originalUrl);
+
+  const draftUrl = "/proposal-assets/cover-zebras-v1.png?e2e=1";
+  await urlInput.fill(draftUrl);
+  // The inspector reads the same shared draft as the popover. On mobile the
+  // inspector drawer stays closed (the popover never opens it, unlike the
+  // Phase 10.2 jump-to-inspector flow), so check the value without
+  // requiring visibility — same reasoning as the text overlay test above.
+  await expect(page.locator('input[name="coverImageUrl"]')).toHaveValue(draftUrl);
+
+  // Escape closes the popover, returns focus to the canvas, and saves via
+  // the component's unmount cleanup — same pattern as the text overlay.
+  await page.keyboard.press("Escape");
+  await expect(popover).toBeHidden();
+  await expect(page.locator('[data-page-index="0"]')).toBeFocused();
+  await expect(page.locator("footer")).toContainText("Saved", { timeout: 20000 });
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator('[data-page-index="0"] [data-edit-field="coverImageUrl"]')).toHaveAttribute("src", draftUrl);
+
+  // Restore the seed value via click-outside-to-close instead of Escape.
+  await canvas.locator('[data-page-index="0"] [data-edit-field="coverImageUrl"]').click();
+  await page.getByRole("dialog", { name: "Replace Cover image" }).locator("input").fill(originalUrl);
+  await canvas.click({ position: { x: 10, y: 10 } });
+  await expect(page.getByRole("dialog", { name: "Replace Cover image" })).toBeHidden();
+  await expect(page.locator("footer")).toContainText("Saved", { timeout: 20000 });
+  await expect(page.locator('[data-page-index="0"] [data-edit-field="coverImageUrl"]')).toHaveAttribute("src", originalUrl);
+});
+
+test("image regions on explicit-save pages keep the Phase 10.2 inspector flow, with a thumbnail preview", async ({ page }) => {
+  await page.goto("/proposals/1/editor", { waitUntil: "networkidle" });
+  const canvas = page.getByLabel("Proposal canvas");
+  await expect(canvas).toBeVisible();
+
+  // Hotel booking images are an explicit-save (review-then-save) form.
+  const hotelImageRegion = canvas.locator('[data-edit-field="hotelImageTopRight"]').first();
+  await hotelImageRegion.scrollIntoViewIfNeeded();
+  const expectedSrc = await hotelImageRegion.getAttribute("src");
+  await hotelImageRegion.click();
+
+  await expect(page.getByRole("dialog", { name: /^Replace/ })).toHaveCount(0);
+  const inspectorField = page.locator('input[name="hotelImageTopRight"]:visible');
+  await expect(inspectorField).toBeFocused();
+  await expect(inspectorField).toHaveValue(expectedSrc ?? "");
+  // The inspector renders the same thumbnail+URL control as the popover.
+  await expect(inspectorField.locator("xpath=..").locator("img")).toHaveAttribute("src", expectedSrc ?? "");
+});
+
 test("mobile: inline-eligible regions edit on the canvas without opening the properties drawer", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "Mobile-only responsive behavior");
   await page.goto("/proposals/1/editor", { waitUntil: "networkidle" });
@@ -212,6 +273,18 @@ test("mobile: inline-eligible regions edit on the canvas without opening the pro
 
   await canvas.locator('[data-page-index="0"] [data-edit-field="coverSubtitle"]').click();
   await expect(page.locator(".proposal-studio-inline-editor")).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole("dialog", { name: "Page properties" })).toBeHidden();
+  await page.keyboard.press("Escape");
+});
+
+test("mobile: auto-save image regions open the canvas popover without opening the properties drawer", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "Mobile-only responsive behavior");
+  await page.goto("/proposals/1/editor", { waitUntil: "networkidle" });
+  const canvas = page.getByLabel("Proposal canvas");
+  await expect(canvas).toBeVisible();
+
+  await canvas.locator('[data-page-index="0"] [data-edit-field="coverImageUrl"]').click();
+  await expect(page.getByRole("dialog", { name: "Replace Cover image" })).toBeVisible({ timeout: 10000 });
   await expect(page.getByRole("dialog", { name: "Page properties" })).toBeHidden();
   await page.keyboard.press("Escape");
 });

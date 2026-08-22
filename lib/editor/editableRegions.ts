@@ -56,7 +56,8 @@ const INLINE_EDIT_EXCLUDED_FIELDS = new Set<ProposalEditorFieldName>(["coverTitl
 /**
  * Whether `field`/`kind` on a page with `saveMode` is eligible for the inline
  * canvas overlay. Only plain auto-saved text/multiline fields qualify:
- * - `image` regions are out of scope until Phase 10.4.
+ * - `image` regions use the separate popover of Phase 10.4
+ *   (`isImageEditableRegion`), never this text overlay.
  * - `saveMode: "explicit"` pages (Pricing, Hotel, itinerary, excursions,
  *   weather, terms, important items, inclusions/exclusions) are deliberately
  *   review-then-save flows; autosaving them inline would contradict that
@@ -70,6 +71,22 @@ export function isInlineEditableRegion(
   if (kind === "image") return false;
   if (saveMode === "explicit") return false;
   return !INLINE_EDIT_EXCLUDED_FIELDS.has(field);
+}
+
+/**
+ * Whether an `image` region on a page with `saveMode` is eligible for the
+ * Phase 10.4 canvas popover (thumbnail + URL field, autosaved like the
+ * Phase 10.3 text overlay). `saveMode: "explicit"` pages (Hotel, From
+ * Owners) keep the Phase 10.2 jump-to-inspector flow instead — same
+ * review-then-save rationale as `isInlineEditableRegion`, and the inspector
+ * renders the same thumbnail+URL control there (`EditorField`), so nothing
+ * is lost, only the on-canvas popover shortcut.
+ */
+export function isImageEditableRegion(
+  kind: EditableRegionKind,
+  saveMode: "auto" | "explicit" | undefined
+): boolean {
+  return kind === "image" && saveMode !== "explicit";
 }
 
 export function isEditableRegionKind(value: string | null): value is EditableRegionKind {

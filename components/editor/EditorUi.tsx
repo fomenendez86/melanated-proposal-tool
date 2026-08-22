@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { ImagePlus, X } from "lucide-react";
 import { forwardRef } from "react";
 import type { ButtonHTMLAttributes, ChangeEvent, ReactNode } from "react";
 
@@ -151,6 +151,16 @@ export function EditorField({
       <label htmlFor={id} className="text-xs font-semibold text-editor-text">
         {field.label}{field.required ? <span className="text-editor-danger"> *</span> : null}
       </label>
+      {field.isImage ? (
+        <div className="mt-1.5 flex h-20 items-center justify-center overflow-hidden rounded-lg border border-editor-border bg-editor-inset">
+          {value ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={value} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <ImagePlus className="size-5 text-editor-text-subtle" aria-hidden="true" />
+          )}
+        </div>
+      ) : null}
       {field.multiline ? <textarea {...commonProps} rows={rows} /> : <input {...commonProps} type="text" />}
       <div className="mt-1 flex items-start justify-between gap-2 text-[11px]">
         <span

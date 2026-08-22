@@ -1,8 +1,8 @@
 # Proposal Studio — Plan de expansión (Fases 10–17)
 
-**Estado:** Plan aprobado; Fases 10.1–10.3 completas (regiones editables,
-selección en canvas/puente con el inspector, edición de texto inline para
-campos simples)
+**Estado:** Plan aprobado; Fase 10 completa (regiones editables, selección en
+canvas/puente con el inspector, edición de texto inline para campos simples,
+interacción de imágenes con popover en canvas)
 **Actualizado:** 2026-08-22
 
 Este documento extiende el roadmap de
@@ -35,8 +35,8 @@ intactos:
 
 | Capacidad | Estado actual | Fase |
 | --- | --- | --- |
-| Edición inline sobre el documento | No — solo formularios en el inspector | **10** |
-| Selección de bloques haciendo click en la página | No | **10** |
+| Edición inline sobre el documento | **Completo (Fase 10)** | **10** |
+| Selección de bloques haciendo click en la página | **Completo (Fase 10)** | **10** |
 | Drag & drop de contenido al documento | No — botones en drawers | **11** |
 | Reordenar páginas arrastrando miniaturas | No — botones en Document Structure | **11** |
 | Pipeline de propuestas con estados (Draft/Sent/Viewed/Won/Lost) | No — una sola propuesta seed, `/` redirige a `1` | **12** |
@@ -65,7 +65,8 @@ inspector. En un editor comercial moderno el documento *es* el formulario:
 click en un texto y
 se edita ahí mismo.
 
-**Tamaño estimado:** XL (la fase más grande del plan). Dividida en 10.1–10.4.
+**Tamaño estimado:** XL (la fase más grande del plan). Dividida en 10.1–10.4,
+todas completas.
 
 ### 10.1 — Contrato de regiones editables
 
@@ -213,12 +214,54 @@ click de la Fase 10.2.
 
 ### 10.4 — Interacción de imágenes
 
-1. Click en región `image` → popover/inspector con: URL actual, reemplazo por
-   URL o asset local (`/proposal-assets/...`), alt text donde aplique.
-2. Sin crop/resize libre — el encuadre lo controla el diseño (`object-fit`
-   actual). Punto focal opcional (dos valores 0–1) solo si el contrato del
-   diseño lo declara para ese slot.
-3. Validación de URL/formato reutiliza la existente de Fase 2.1.
+**Estado: Completa (2026-08-22).** Implementado en `ProposalEditorShell.tsx`
+(`ImageRegionPopover`, misma familia que `InlineRegionEditor`/
+`usePageFieldDraft` de la Fase 10.3) y `EditorUi.tsx` (`EditorField` gana un
+preview de miniatura cuando `field.isImage`). Cubierto por 3 tests e2e nuevos
+(popover + persistencia + restauración, alcance en páginas de guardado
+explícito, popover en móvil) — 22/22 pasan en desktop y mobile en corridas
+separadas por proyecto.
+
+1. Click en una región `image` en una página de guardado automático (Cover,
+   los tres dividers, Thank You) abre un popover anclado a la página —mismo
+   mecanismo de portal/zoom que el overlay de texto de la 10.3— con miniatura
+   del valor actual y un input de URL que comparte el mismo `usePageFieldDraft`
+   que el inspector (mismo autosave de 800 ms, mismo campo, dos vistas). Las
+   páginas de guardado explícito (Hotel, From Owners) **no** abren el
+   popover — mantienen el salto al inspector de la 10.2 por la misma razón de
+   alcance que la 10.3 (review-then-save), y ahí el inspector ahora también
+   muestra la miniatura vía `EditorField`.
+2. Reemplazo por URL local (`/proposal-assets/...`) o `https://` — no hay
+   "examinar biblioteca" real todavía (eso es Fase 13.3, subida de imágenes);
+   el input de texto ya acepta ambas formas.
+3. Alt text: **no se expone un campo independiente.** Los 9 campos de imagen
+   del diseño de referencia derivan su `alt` de otro campo ya editable
+   (`data.title`, `data.name`, `data.city`, etc.) — no hay ningún slot con
+   alt text propio en el esquema. Añadir uno solo para este caso hipotético
+   iba contra la regla del proyecto de no construir para necesidades
+   especulativas; se documenta como decisión, no como pendiente.
+4. Punto focal: **no implementado.** Ningún diseño registrado
+   (`lib/designs/registry.ts`) declara un slot con punto focal configurable,
+   así que no hay nada que ese control necesite controlar todavía — se
+   añadirá si un diseño futuro lo requiere, siguiendo la condición ya escrita
+   en el punto 2 original de este plan.
+5. Validación de URL/formato reutiliza la existente de Fase 2.1
+   (`isValidImageUrl` en `actions.ts`, sin cambios) — mismo mensaje de error
+   server-side en el popover y en el inspector.
+
+**Riesgo descubierto y corregido (mismo trabajo):** en modo Continuo, el
+`IntersectionObserver` que sigue la página "más centrada" para actualizar la
+selección podía disparar mientras el popover de imagen (o el overlay de texto
+de la 10.3) seguía abierto — activar una región grande como la portada puede
+requerir el scroll suficiente para que el observer decida que la página
+siguiente está más centrada, desmontando el editor a mitad de la edición
+porque ambos overlays dependen de `pageId === selectedPage.id`. Corregido
+añadiendo `!activeInlineEdit && !activeImageEdit` a la condición que llama
+`setSelectedIndex` en ese observer — mientras se edita, el scroll ambiental no
+reasigna la selección. Afecta potencialmente a cualquier región grande de
+texto también, no solo a imágenes; documentado acá porque el popover de
+imagen fue lo que lo hizo evidente (las regiones de texto ya cubiertas por
+tests son pequeñas y no lo disparaban).
 
 ### Criterios de aceptación
 

@@ -7,6 +7,7 @@ import {
   ChevronRight,
   ClipboardCheck,
   Eye,
+  ImagePlus,
   Layers3,
   LibraryBig,
   ListTree,
@@ -28,7 +29,7 @@ import type {
   ReactNode,
   RefObject,
 } from "react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { updateProposalFields } from "@/app/proposals/[id]/editor/actions";
@@ -44,6 +45,7 @@ import {
   EDITABLE_REGION_SELECTOR,
   fieldElementId,
   isEditableRegionKind,
+  isImageEditableRegion,
   isInlineEditableRegion,
 } from "@/lib/editor/editableRegions";
 import type { EditableRegionKind } from "@/lib/editor/editableRegions";
@@ -628,6 +630,145 @@ function InlineRegionEditor({
   );
 }
 
+const IMAGE_POPOVER_WIDTH = 256;
+const IMAGE_POPOVER_GAP = 8;
+
+/**
+ * Phase 10.4 canvas image popover. Anchored just below the clicked `image`
+ * region (portaled into the same `[data-page-content]` node as
+ * `InlineRegionEditor`, so it inherits zoom/scroll for free) and reads/writes
+ * the same shared `usePageFieldDraft` instance as the inspector — one field,
+ * two surfaces, same autosave and server-side URL validation (Phase 2.1).
+ * Only reached for auto-save pages (`isImageEditableRegion`); explicit-save
+ * pages (Hotel, From Owners) keep the Phase 10.2 jump-to-inspector flow,
+ * where `EditorField` renders the same thumbnail+URL control.
+ */
+function ImageRegionPopover({
+  pageRefs,
+  pageIndex,
+  field,
+  label,
+  draft,
+  onClose,
+}: {
+  pageRefs: RefObject<Array<HTMLDivElement | null>>;
+  pageIndex: number;
+  field: ProposalEditorFieldName;
+  label: string;
+  draft: PageFieldDraft;
+  onClose: () => void;
+}) {
+  const [geometry, setGeometry] = useState<{ left: number; top: number } | null>(null);
+  const [contentElement, setContentElement] = useState<HTMLElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const draftRef = useRef(draft);
+  const inputId = useId();
+
+  useEffect(() => {
+    draftRef.current = draft;
+  });
+
+  // Same measurement approach as InlineRegionEditor: convert the target's
+  // screen rect into content-local, unscaled coordinates so the popover (a
+  // DOM child of `content`) inherits the page's own zoom transform.
+  useLayoutEffect(() => {
+    const pageElement = pageRefs.current[pageIndex];
+    const content = pageElement?.querySelector<HTMLElement>("[data-page-content]") ?? null;
+    const target = content?.querySelector<HTMLElement>(`[data-edit-field="${field}"]`) ?? null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setContentElement(content);
+    if (!target || !content) return;
+
+    const zoom = content.offsetWidth > 0
+      ? content.getBoundingClientRect().width / content.offsetWidth
+      : 1;
+    const contentRect = content.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const left = (targetRect.left - contentRect.left) / zoom;
+    const top = (targetRect.bottom - contentRect.top) / zoom + IMAGE_POPOVER_GAP;
+    const maxLeft = Math.max(0, content.offsetWidth - IMAGE_POPOVER_WIDTH);
+
+    setGeometry({ left: Math.min(Math.max(left, 0), maxLeft), top });
+  }, [pageRefs, pageIndex, field]);
+
+  // Re-clamp against the popover's real measured height once it has
+  // rendered — the estimate above has no height to clamp against yet.
+  useLayoutEffect(() => {
+    if (!geometry || !popoverRef.current || !contentElement) return;
+    const maxTop = Math.max(0, contentElement.offsetHeight - popoverRef.current.offsetHeight - IMAGE_POPOVER_GAP);
+    if (geometry.top > maxTop) setGeometry((current) => (current ? { ...current, top: maxTop } : current));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geometry?.left, geometry?.top, contentElement]);
+
+  useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      if (!popoverRef.current?.contains(event.target as Node)) onClose();
+    }
+    document.addEventListener("pointerdown", handlePointerDown, true);
+    return () => document.removeEventListener("pointerdown", handlePointerDown, true);
+  }, [onClose]);
+
+  const isPositioned = geometry !== null;
+  useEffect(() => {
+    // Mirrors InlineRegionEditor: `geometry` starts null, so the very first
+    // commit renders nothing and there is no input to focus yet. Keying on
+    // "just became positioned" (rather than `[]`) catches the real mount.
+    if (!isPositioned) return;
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, [isPositioned]);
+
+  useEffect(() => () => {
+    draftRef.current.saveNow();
+  }, []);
+
+  if (!geometry || !contentElement) return null;
+
+  const value = draft.values[field] ?? "";
+  const error = draft.fieldErrors[field];
+
+  return createPortal(
+    <div
+      ref={popoverRef}
+      role="dialog"
+      aria-label={`Replace ${label}`}
+      className="absolute z-10 rounded-xl border border-editor-border-strong bg-white p-3 shadow-2xl"
+      style={{ left: geometry.left, top: geometry.top, width: IMAGE_POPOVER_WIDTH }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          onClose();
+        }
+      }}
+    >
+      <div className="flex h-20 items-center justify-center overflow-hidden rounded-lg bg-editor-inset">
+        {value ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={value} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <ImagePlus className="size-5 text-editor-text-subtle" aria-hidden="true" />
+        )}
+      </div>
+      <label htmlFor={inputId} className="mt-2 block text-xs font-semibold text-editor-text">{label}</label>
+      <input
+        ref={inputRef}
+        id={inputId}
+        type="text"
+        value={value}
+        onChange={(event) => draft.setFieldValue(field, event.target.value)}
+        placeholder="/proposal-assets/... or https://"
+        aria-invalid={Boolean(error)}
+        className={`mt-1.5 w-full rounded-lg border bg-editor-raised px-3 py-2 text-sm text-editor-text-strong outline-none transition placeholder:text-editor-text-subtle focus:border-editor-border-strong focus:ring-2 focus:ring-editor-border-strong/20 ${error ? "border-editor-danger" : "border-editor-border"}`}
+      />
+      <p className={`mt-1 text-[11px] ${error ? "text-editor-danger" : "text-editor-text-subtle"}`}>
+        {error ?? "Use a local /path or an https:// URL."}
+      </p>
+    </div>,
+    contentElement
+  );
+}
+
 function PropertiesPanel({
   instanceId,
   selectedPage,
@@ -970,6 +1111,7 @@ export default function ProposalEditorShell({
   const [highlightedField, setHighlightedField] = useState<ProposalEditorFieldName | null>(null);
   const [regionAnnouncement, setRegionAnnouncement] = useState("");
   const [activeInlineEdit, setActiveInlineEdit] = useState<{ pageId: string; pageIndex: number; field: ProposalEditorFieldName } | null>(null);
+  const [activeImageEdit, setActiveImageEdit] = useState<{ pageId: string; pageIndex: number; field: ProposalEditorFieldName; label: string } | null>(null);
   const canvasViewportRef = useRef<HTMLDivElement>(null);
   const pagesDialogRef = useRef<HTMLDivElement>(null);
   const propertiesDialogRef = useRef<HTMLDivElement>(null);
@@ -999,6 +1141,7 @@ export default function ProposalEditorShell({
     setSaveState
   );
   const inlineEdit = activeInlineEdit && activeInlineEdit.pageId === selectedPage.id ? activeInlineEdit : null;
+  const imageEdit = activeImageEdit && activeImageEdit.pageId === selectedPage.id ? activeImageEdit : null;
   const fitCanvas = useFitCanvas(canvasViewportRef, setZoom, viewMode, pageSize);
 
   const confirmDiscardDraft = useCallback(() => {
@@ -1089,14 +1232,24 @@ export default function ProposalEditorShell({
     setHighlightedField(field);
     setRegionAnnouncement(`Editing ${label}`);
 
+    if (isImageEditableRegion(kind, targetConfig?.saveMode)) {
+      // Phase 10.4: replace the image from a popover anchored on the page.
+      // Same shared draft as the inspector, so it stays in sync.
+      setActiveInlineEdit(null);
+      setActiveImageEdit({ pageId: targetPage.id, pageIndex, field, label });
+      return;
+    }
+
     if (isInlineEditableRegion(field, kind, targetConfig?.saveMode)) {
       // Phase 10.3: edit directly on the page. The inspector still shows the
       // same shared draft, so it stays in sync without a second focus jump.
+      setActiveImageEdit(null);
       setActiveInlineEdit({ pageId: targetPage.id, pageIndex, field });
       return;
     }
 
     setActiveInlineEdit(null);
+    setActiveImageEdit(null);
     regionRequestIdRef.current += 1;
     setActiveRegion({ pageId: targetPage.id, field, requestId: regionRequestIdRef.current });
 
@@ -1112,6 +1265,13 @@ export default function ProposalEditorShell({
 
   const closeInlineEdit = useCallback(() => {
     setActiveInlineEdit((current) => {
+      if (current) focusCanvasPage(current.pageId);
+      return null;
+    });
+  }, [focusCanvasPage]);
+
+  const closeImageEdit = useCallback(() => {
+    setActiveImageEdit((current) => {
       if (current) focusCanvasPage(current.pageId);
       return null;
     });
@@ -1180,7 +1340,13 @@ export default function ProposalEditorShell({
             return aDistance - bDistance;
           })[0];
         const index = Number((visibleEntry?.target as HTMLElement | undefined)?.dataset.pageIndex);
-        if (Number.isInteger(index) && saveState !== "dirty" && saveState !== "error") {
+        // Skip while an inline text/image edit is open: activating one on a
+        // large region (e.g. a full-bleed cover image) can require enough
+        // scroll to bring the click point into view that this observer's
+        // "closest to viewport center" page flips before the edit even
+        // renders, which would unmount it out from under the user (both
+        // overlays are gated on `selectedPage.id`).
+        if (Number.isInteger(index) && saveState !== "dirty" && saveState !== "error" && !activeInlineEdit && !activeImageEdit) {
           setSelectedIndex(index);
         }
       },
@@ -1191,7 +1357,7 @@ export default function ProposalEditorShell({
       if (page) observer.observe(page);
     });
     return () => observer.disconnect();
-  }, [pageMeta.length, saveState, viewMode]);
+  }, [activeImageEdit, activeInlineEdit, pageMeta.length, saveState, viewMode]);
 
   useEffect(() => {
     if (viewMode !== "continuous") return;
@@ -1634,6 +1800,18 @@ export default function ProposalEditorShell({
               field={inlineEdit.field}
               draft={pageFieldDraft}
               onClose={closeInlineEdit}
+            />
+          ) : null}
+
+          {imageEdit ? (
+            <ImageRegionPopover
+              key={`${imageEdit.pageId}-${imageEdit.field}`}
+              pageRefs={pageRefs}
+              pageIndex={imageEdit.pageIndex}
+              field={imageEdit.field}
+              label={imageEdit.label}
+              draft={pageFieldDraft}
+              onClose={closeImageEdit}
             />
           ) : null}
         </section>

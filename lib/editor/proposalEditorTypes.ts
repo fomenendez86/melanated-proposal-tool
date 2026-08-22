@@ -52,6 +52,8 @@ export interface ProposalEditorField {
   value: string;
   required?: boolean;
   multiline?: boolean;
+  /** Renders a thumbnail preview above the URL input (Phase 10.4). */
+  isImage?: boolean;
   maxLength: number;
   placeholder?: string;
   helpText?: string;
