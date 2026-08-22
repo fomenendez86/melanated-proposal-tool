@@ -1756,9 +1756,9 @@ export default function ProposalEditorShell({
               type="button"
               onClick={() => setZoom((value) => clampZoom(value - ZOOM_STEP))}
               aria-label="Zoom out"
-              className={`grid size-11 place-items-center rounded-lg text-editor-text hover:bg-editor-inset ${editorFocusRing}`}
+              className={`grid size-11 place-items-center rounded-full text-editor-text-muted hover:bg-editor-inset hover:text-editor-text ${editorFocusRing}`}
             >
-              <Minus className="size-3.5" aria-hidden="true" />
+              <Minus className="size-2.5" aria-hidden="true" />
             </button>
             <input
               type="range"
@@ -1774,9 +1774,9 @@ export default function ProposalEditorShell({
               type="button"
               onClick={() => setZoom((value) => clampZoom(value + ZOOM_STEP))}
               aria-label="Zoom in"
-              className={`grid size-11 place-items-center rounded-lg text-editor-text hover:bg-editor-inset ${editorFocusRing}`}
+              className={`grid size-11 place-items-center rounded-full text-editor-text-muted hover:bg-editor-inset hover:text-editor-text ${editorFocusRing}`}
             >
-              <Plus className="size-3.5" aria-hidden="true" />
+              <Plus className="size-2.5" aria-hidden="true" />
             </button>
             <span className="w-9 text-right tabular-nums text-editor-text" aria-live="polite">
               {Math.round(zoom * 100)}%
