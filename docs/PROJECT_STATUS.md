@@ -102,13 +102,65 @@ exacta con persistencia tras reload; alcance por teclado con Escape para
 cancelar sin cambios), desktop-only porque la verificación lee el panel
 Pages, que en mobile vive en un drawer.
 
-**Pendiente dentro de la misma fase:** 11.2 (arrastrar ítems del catálogo al
-canvas para insertarlos — hoteles y excursiones, con ghost preview, drop
-targets y cancelación) queda para una sesión futura, ya apoyada sobre la
-misma base de servidor con posición explícita que dejó lista 11.3. No hace
-falta ningún cambio de servidor adicional: falta la mecánica de arrastre
-cross-panel (catálogo → canvas) en el cliente, que es interacción nueva, no
-lógica de negocio nueva.
+La Fase 11.2 (arrastrar hoteles/excursiones del catálogo al canvas) está
+**completa**, cerrando toda la Fase 11. Al investigar el punto de partida
+se encontró que `CatalogPanel` era un modal a pantalla completa
+(`EditorDrawer`: `fixed inset-0` + overlay que tapa el canvas y cierra al
+click afuera) — mientras estaba abierto el canvas no era visible ni
+interactuable, así que un drag literal del catálogo al canvas no era
+posible sin acoplarlo primero. **Decisión de diseño nueva:** `CatalogPanel`
+se acopla como 4ta columna del shell en un breakpoint nuevo `2xl:`
+(`ProposalEditorShell.tsx`, grid `2xl:grid-cols-[252px_minmax(0,1fr)_304px_380px]`),
+mismo patrón que ya usa `PropertiesPanel` en `xl:` (aside oculto por
+defecto, sin `onClose`, con el botón de toolbar correspondiente ganando
+`2xl:hidden`). Por debajo de `2xl` el catálogo sigue siendo exactamente el
+mismo modal de siempre — sigue siendo el camino accesible equivalente en
+cualquier ancho, ya que el botón "Add to proposal" (agrega al final, sin
+drag) nunca se tocó. `CatalogPanel.onClose` pasó a opcional
+(`EditorPanelHeader` ya no renderiza el botón de cerrar si no se provee).
+
+La mecánica de arrastre es un hook nuevo,
+`components/editor/useCatalogDragInsert.ts`, instanciado en
+`ProposalEditorShell` (no en `CatalogPanel`) porque el origen del drag
+(catálogo) y el destino (gaps del canvas) viven en árboles de componentes
+distintos — el hook expone `startDrag(item, event)` que `CatalogPanel`
+llama desde un handle `GripVertical` (mismo ícono/patrón que
+`PageNavigator` usa para 11.1) en cada card no seleccionada y compatible
+con `designContext.active.supportedSectionTypes`. Sigue la misma mecánica
+de `usePointerReorder.ts` (umbral de activación, listeners en `window`,
+cancelación con Escape, auto-scroll), pero calcula el gap de destino
+comparando la posición del puntero contra los rects reales de
+`pageRefs.current` en cada página que inicia una sección (`sectionRuns`,
+el mismo dato que ya usa `InsertionGap`) — no hizo falta que `InsertionGap`
+se registre como drop target, es el mismo "punto más cercano" que
+`computeGap` de `usePointerReorder` pero aplicado a rects de página en vez
+de miniaturas. Al soltar sobre un gap válido llama
+`addCatalogHotelToProposal`/`addCatalogExcursionToProposal` con el
+`afterSectionId` de ese gap (ya soportado desde 11.3, sin cambios de
+servidor). `InsertionGap.tsx` ganó una prop `highlighted` puramente visual
+(línea/botón resaltados en verde) que `ProposalEditorShell` activa cuando
+el gap coincide con el hover del drag — su lógica de click-to-open-menu
+(11.3) queda intacta y es independiente. Un ghost preview simple
+(`position: fixed`, portaled a `document.body`, `pointer-events-none`)
+sigue el puntero mientras se arrastra.
+
+**Nota de comportamiento documentada, no un bug:** para una excursión cuya
+ciudad ya tiene una lista en la propuesta, la posición de drop no tiene
+efecto — el ítem se agrega a la sección `excursionList` existente en vez de
+crear una nueva (mismo comportamiento ya documentado para 11.3 en
+`catalogActions.ts`); no se bloquea el drag en ese caso, simplemente no
+reposiciona nada.
+
+Cubierto por 2 tests e2e nuevos, ambos a un viewport ancho explícito
+(1600×900, porque `2xl` cae fuera del viewport por defecto del proyecto
+`desktop` de Playwright): arrastrar un hotel recién insertado sin vincular
+(`insertUnlinkedHotel`, vía `better-sqlite3` directo en el test, ya que el
+dataset seed vincula todos sus hoteles/excursiones a la propuesta 1 y no
+deja ninguno "sin agregar" para arrastrar) a un gap específico lo inserta
+ahí y persiste tras reload; y que por debajo de `2xl` el catálogo sigue
+siendo modal, con Escape cancelando un drag en curso sin cambios. Ambos
+desktop-only (mismo criterio que 11.1/11.3: la verificación lee el panel
+Pages y el catálogo acoplado, ninguno disponible en mobile).
 
 En paralelo sigue pendiente importar el paquete de marca aprobado para
 cerrar el último criterio de Fase 9; el pipeline de import ya está listo
@@ -243,6 +295,15 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
   real todavía renderizan como texto/emoji. Nota: los emoji de bandera
   compuestos (🇹🇿) no renderizan en Chromium headless — usar emoji de un
   solo codepoint (🌍, etc.) en su lugar.
+- **Catálogo acoplado solo en `2xl:`:** `CatalogPanel` es modal (`EditorDrawer`)
+  en cualquier ancho por debajo de `2xl` (~1536px) y panel fijo (4ta
+  columna del shell) desde `2xl:` en adelante — necesario para que el drag
+  del catálogo al canvas (Fase 11.2) tenga ambos paneles visibles a la vez.
+  No se acopló en `xl:` (donde ya vive `PropertiesPanel`) para no competir
+  por espacio ni forzar un toggle nuevo; el resultado es que el drag-insert
+  desde catálogo es una mejora exclusiva de pantallas anchas, con el modal
+  + botón "Add to proposal" como camino completo y accesible en cualquier
+  otro ancho.
 
 ## Pendientes conocidos
 
@@ -293,12 +354,9 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
   agregar más secciones, solo falta cargarlas.
 
 **Proposal Studio pendiente:**
-- La cobertura de formularios del documento está completa. Fase 10, Fase
-  11.1 y Fase 11.3 del plan de expansión están completas. El siguiente
-  trabajo es (a) el brand asset pack (ver `docs/BRAND_ASSET_PACK.md`) para
-  cerrar Fase 9, bloqueado en assets externos, y (b) Fase 11.2 (drag-insert
-  de hoteles/excursiones desde el catálogo al canvas), que ya puede
-  apoyarse directamente en `resolveInsertionOrders`/`afterSectionId` sin
-  cambios de servidor adicionales — ver el detalle en "Estado general"
-  arriba. Después siguen las Fases 12+. El orden y criterios están en
-  `docs/EDITOR_IMPLEMENTATION_PLAN.md` y `docs/STUDIO_EXPANSION_PLAN.md`.
+- La cobertura de formularios del documento está completa. La Fase 11 del
+  plan de expansión está **completa (11.1–11.3)**. El siguiente trabajo es
+  el brand asset pack (ver `docs/BRAND_ASSET_PACK.md`) para cerrar Fase 9,
+  bloqueado en assets externos. Después siguen las Fases 12+. El orden y
+  criterios están en `docs/EDITOR_IMPLEMENTATION_PLAN.md` y
+  `docs/STUDIO_EXPANSION_PLAN.md`.

@@ -1,54 +1,51 @@
 import { eq } from "drizzle-orm";
 
-import type {
-  ProposalRevisionPayload,
-  ProposalShareSettingsPayload,
-  SharedProposalRecord,
-} from "@/lib/sharing/types";
+import type { SharedProposalRecord } from "@/lib/sharing/types";
 
 import { db } from "./client";
-import { proposalSections } from "./schema";
+import { nextProposalStatus } from "./proposalStatus";
+import { proposalEvents, proposalRevisions, proposalShares, proposals } from "./schema";
 
 export function shareCookieName(token: string) {
   return `proposal_share_${token.slice(0, 16)}`;
 }
 
-export function isSharedProposalExpired(expiresAt: string | null) {
-  return Boolean(expiresAt && new Date(expiresAt).getTime() < Date.now());
+export function isSharedProposalExpired(expiresAt: Date | null) {
+  return Boolean(expiresAt && expiresAt.getTime() < Date.now());
 }
 
 export async function getSharedProposal(token: string): Promise<SharedProposalRecord | null> {
   if (!/^[a-f0-9]{48}$/.test(token)) return null;
-  const settingsRows = await db
-    .select()
-    .from(proposalSections)
-    .where(eq(proposalSections.sectionType, "shareSettings"));
-  const settingsRow = settingsRows.find((row) =>
-    (row.payload as ProposalShareSettingsPayload | null)?.token === token
-  );
-  if (!settingsRow) return null;
-  const settings = settingsRow.payload as ProposalShareSettingsPayload;
-  const [revisionRow] = await db
-    .select()
-    .from(proposalSections)
-    .where(eq(proposalSections.id, settings.revisionSectionId));
-  if (!revisionRow || revisionRow.sectionType !== "proposalRevision") return null;
-  return {
-    settingsSectionId: settingsRow.id,
-    settings,
-    revision: revisionRow.payload as ProposalRevisionPayload,
-  };
+  const [row] = await db
+    .select({ share: proposalShares, revision: proposalRevisions })
+    .from(proposalShares)
+    .innerJoin(proposalRevisions, eq(proposalRevisions.id, proposalShares.revisionId))
+    .where(eq(proposalShares.token, token))
+    .limit(1);
+  // A revoked share behaves like an unknown token — there's no UI to set
+  // revokedAt yet (that's Fase 12.2), but a future revoke path shouldn't
+  // leak whether a token ever existed.
+  if (!row || row.share.revokedAt) return null;
+  return row;
 }
 
 export async function recordShareEvent(
   proposalId: number,
-  token: string,
-  event: "opened" | "approved"
+  shareId: number,
+  event: "opened" | "approved",
+  metadata?: Record<string, unknown>
 ) {
-  await db.insert(proposalSections).values({
+  await db.insert(proposalEvents).values({
     proposalId,
-    sectionType: "proposalLifecycleEvent",
-    sortOrder: -4,
-    payload: { token, event, occurredAt: new Date().toISOString() },
+    shareId,
+    type: event,
+    metadata: metadata ?? null,
   });
+  if (event === "opened") {
+    const [proposal] = await db.select({ status: proposals.status }).from(proposals).where(eq(proposals.id, proposalId));
+    const nextStatus = proposal ? nextProposalStatus(proposal.status, "viewed") : null;
+    if (nextStatus) {
+      await db.update(proposals).set({ status: nextStatus, updatedAt: new Date() }).where(eq(proposals.id, proposalId));
+    }
+  }
 }

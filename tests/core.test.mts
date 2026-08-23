@@ -42,5 +42,5 @@ test("database assembly exposes design-neutral editor contracts", async () => {
   assert.ok(catalog.hotels.some((hotel) => hotel.cityName === "Karatu"));
   assert.ok(catalog.excursions.length >= 10);
   assert.ok(composition.items.length >= 10);
-  assert.ok(composition.items.every((item) => !["shareSettings", "proposalRevision", "pdfGeneration"].includes(item.sectionType)));
+  assert.ok(composition.items.every((item) => !["documentDesign", "shareSettings", "proposalRevision", "proposalLifecycleEvent", "proposalApproval", "pdfGeneration"].includes(item.sectionType)));
 });

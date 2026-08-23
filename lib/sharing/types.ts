@@ -1,22 +1,4 @@
-import type { DocumentDesignDescriptor } from "@/lib/designs/types";
-import type { ProposalData } from "@/lib/types";
-
-export interface ProposalRevisionPayload {
-  proposalId: number;
-  createdAt: string;
-  data: ProposalData;
-  design: DocumentDesignDescriptor;
-}
-
-export interface ProposalShareSettingsPayload {
-  token: string;
-  revisionSectionId: number;
-  createdAt: string;
-  expiresAt: string | null;
-  passwordSalt?: string;
-  passwordHash?: string;
-  accessKey?: string;
-}
+import type { proposalRevisions, proposalShares } from "@/lib/db/schema";
 
 export interface CreateShareResult {
   ok: boolean;
@@ -26,7 +8,6 @@ export interface CreateShareResult {
 }
 
 export interface SharedProposalRecord {
-  settingsSectionId: number;
-  settings: ProposalShareSettingsPayload;
-  revision: ProposalRevisionPayload;
+  share: typeof proposalShares.$inferSelect;
+  revision: typeof proposalRevisions.$inferSelect;
 }

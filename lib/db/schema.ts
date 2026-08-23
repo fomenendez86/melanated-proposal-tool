@@ -1,6 +1,9 @@
 import { sql } from "drizzle-orm";
 import { check, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
+import type { DocumentDesignDescriptor } from "@/lib/designs/types";
+import type { ProposalData } from "@/lib/types";
+
 const id = { id: integer("id").primaryKey({ autoIncrement: true }) };
 
 const timestamps = {
@@ -237,7 +240,12 @@ export const proposals = sqliteTable(
     leadClientId: integer("lead_client_id")
       .notNull()
       .references(() => clients.id, { onDelete: "restrict" }),
-    status: text("status").notNull().$type<"draft" | "sent" | "accepted" | "expired">().default("draft"),
+    status: text("status")
+      .notNull()
+      .$type<"draft" | "sent" | "viewed" | "approved" | "lost" | "archived">()
+      .default("draft"),
+    designId: text("design_id"),
+    designVersion: integer("design_version"),
     packageName: text("package_name"),
     selectedTier: text("selected_tier"),
     specialOccasion: text("special_occasion"),
@@ -257,7 +265,7 @@ export const proposals = sqliteTable(
   (table) => [
     check(
       "proposals_status_check",
-      sql`${table.status} in ('draft', 'sent', 'accepted', 'expired')`
+      sql`${table.status} in ('draft', 'sent', 'viewed', 'approved', 'lost', 'archived')`
     ),
   ]
 );
@@ -404,8 +412,12 @@ export const proposalPaymentSchedule = sqliteTable("proposal_payment_schedule", 
 // booking, a city) when there is one to point at. `payload` is a JSON escape
 // hatch for one-off presentational content (divider titles, cover-style
 // copy) that isn't worth its own table because nothing else references it.
-// Proposal-scoped virtual metadata rows such as `documentDesign` also use this
-// table temporarily and are filtered out before document rendering.
+// `fromOwnersOverride` (a proposal-scoped content override, not sharing or
+// lifecycle metadata) still uses this table as virtual metadata, filtered
+// out before document rendering — see lib/db/virtualSectionTypes.ts. The
+// other virtual types that used to live here (documentDesign, pdfGeneration,
+// proposalRevision, shareSettings, proposalLifecycleEvent, proposalApproval)
+// were promoted to real tables/columns below (Fase 12.1).
 // "cover", "fromOwners" and "details" are NOT stored here — they're derived
 // directly from `proposals`/`company` on every proposal, so there's nothing
 // to order or toggle.
@@ -419,3 +431,73 @@ export const proposalSections = sqliteTable("proposal_sections", {
   refId: integer("ref_id"),
   payload: text("payload", { mode: "json" }),
 });
+
+// ---------------------------------------------------------------------------
+// Revisions & sharing — an immutable content snapshot per share, a public
+// token pointing at one, and an append-only event log. Replaces the
+// proposalRevision/shareSettings/proposalLifecycleEvent/proposalApproval/
+// pdfGeneration virtual rows that used to live in proposal_sections.
+// ---------------------------------------------------------------------------
+
+// A full point-in-time copy of a proposal's rendered content + active
+// design, taken when a share link is created. `/share/[token]` always
+// renders `data`/`design` as stored here, never the live proposal — later
+// edits to the proposal cannot retroactively change what a client already
+// received a link to.
+export const proposalRevisions = sqliteTable("proposal_revisions", {
+  ...id,
+  proposalId: integer("proposal_id")
+    .notNull()
+    .references(() => proposals.id, { onDelete: "cascade" }),
+  designId: text("design_id").notNull(),
+  designVersion: integer("design_version").notNull(),
+  data: text("data", { mode: "json" }).notNull().$type<ProposalData>(),
+  design: text("design", { mode: "json" }).notNull().$type<DocumentDesignDescriptor>(),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+export const proposalShares = sqliteTable("proposal_shares", {
+  ...id,
+  proposalId: integer("proposal_id")
+    .notNull()
+    .references(() => proposals.id, { onDelete: "cascade" }),
+  revisionId: integer("revision_id")
+    .notNull()
+    .references(() => proposalRevisions.id, { onDelete: "restrict" }),
+  token: text("token").notNull().unique(),
+  passwordSalt: text("password_salt"),
+  passwordHash: text("password_hash"),
+  accessKey: text("access_key"),
+  expiresAt: integer("expires_at", { mode: "timestamp" }),
+  revokedAt: integer("revoked_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+export const proposalEvents = sqliteTable(
+  "proposal_events",
+  {
+    ...id,
+    proposalId: integer("proposal_id")
+      .notNull()
+      .references(() => proposals.id, { onDelete: "cascade" }),
+    // Nullable: pdf_generated/pdf_failed events aren't tied to a share.
+    shareId: integer("share_id").references(() => proposalShares.id, { onDelete: "cascade" }),
+    type: text("type")
+      .notNull()
+      .$type<"shared" | "opened" | "approved" | "pdf_generated" | "pdf_failed">(),
+    metadata: text("metadata", { mode: "json" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    check(
+      "proposal_events_type_check",
+      sql`${table.type} in ('shared', 'opened', 'approved', 'pdf_generated', 'pdf_failed')`
+    ),
+  ]
+);

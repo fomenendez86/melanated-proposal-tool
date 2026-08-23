@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Check, Compass, LibraryBig, MapPin, Plus, Search } from "lucide-react";
+import { Building2, Check, Compass, GripVertical, LibraryBig, MapPin, Plus, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -13,6 +13,7 @@ import {
   updateCatalogHotelDefault,
 } from "@/app/proposals/[id]/editor/catalogActions";
 import type { ProposalCatalogData } from "@/lib/catalog/types";
+import type { ProposalDesignContext, ProposalSectionType } from "@/lib/designs/types";
 
 import {
   EditorButton,
@@ -22,6 +23,7 @@ import {
   EditorSegmentedControl,
   editorFocusRing,
 } from "./EditorUi";
+import type { CatalogDragItem } from "./useCatalogDragInsert";
 
 type CatalogMode = "hotels" | "excursions";
 
@@ -32,10 +34,16 @@ export default function CatalogPanel({
   proposalId,
   catalog,
   onClose,
+  designContext,
+  enableDrag = false,
+  onDragStart,
 }: {
   proposalId: number;
   catalog: ProposalCatalogData;
-  onClose: () => void;
+  onClose?: () => void;
+  designContext: ProposalDesignContext;
+  enableDrag?: boolean;
+  onDragStart?: (item: CatalogDragItem, event: React.PointerEvent) => void;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<CatalogMode>("hotels");
@@ -77,6 +85,9 @@ export default function CatalogPanel({
         && (!normalized || `${label} ${item.description} ${item.cityName} ${item.destinationName}`.toLowerCase().includes(normalized));
     });
   }, [catalog.excursions, catalog.hotels, cityId, countryId, destinationId, mode, query]);
+
+  const requiredTypes: ProposalSectionType[] = mode === "hotels" ? ["triangleDivider", "hotel"] : ["cityToursDivider", "excursionList"];
+  const dragEnabledForMode = enableDrag && requiredTypes.every((type) => designContext.active.supportedSectionTypes.includes(type));
 
   async function addItem(itemId: number) {
     const key = `${mode}-${itemId}`;
@@ -228,11 +239,22 @@ export default function CatalogPanel({
             const isHotel = "name" in item;
             const label = isHotel ? item.name : item.title;
             const selected = item.selected || (isHotel ? selectedHotels.has(item.id) : selectedExcursions.has(item.id));
+            const draggable = dragEnabledForMode && !selected;
             return (
               <article key={`${mode}-${item.id}`} className="overflow-hidden rounded-xl border border-editor-border-subtle bg-editor-raised">
                 {item.previewImageUrl ? <div className="h-28 bg-editor-inset bg-cover bg-center" style={{ backgroundImage: `url("${item.previewImageUrl.replaceAll('"', '\\"')}")` }} role="img" aria-label={`${label} preview`} /> : null}
                 <div className="p-3.5">
                   <div className="flex items-start gap-3">
+                    {draggable ? (
+                      <button
+                        type="button"
+                        onPointerDown={(event) => onDragStart?.({ kind: isHotel ? "hotel" : "excursion", id: item.id, label }, event)}
+                        aria-label={`Drag ${label} to a position in the document`}
+                        className={`-ml-1 mt-0.5 grid size-8 shrink-0 cursor-grab place-items-center rounded-md text-editor-text-subtle hover:bg-editor-inset hover:text-editor-text active:cursor-grabbing ${editorFocusRing}`}
+                      >
+                        <GripVertical className="size-4" aria-hidden="true" />
+                      </button>
+                    ) : null}
                     <div className="mt-0.5 text-editor-brand">{isHotel ? <Building2 className="size-4" /> : <Compass className="size-4" />}</div>
                     <div className="min-w-0 flex-1"><h3 className="text-sm font-semibold text-editor-text">{label}</h3><p className="mt-1 flex items-center gap-1 text-[11px] text-editor-text-muted"><MapPin className="size-3" /> {item.cityName} · {item.destinationName}</p></div>
                   </div>

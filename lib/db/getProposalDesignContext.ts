@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import {
   getDefaultDocumentDesign,
@@ -8,30 +8,19 @@ import {
 import type { ProposalDesignContext, ProposalSectionType } from "@/lib/designs/types";
 
 import { db } from "./client";
-import { proposalSections } from "./schema";
-
-interface DesignSelectionPayload {
-  designId?: string;
-  version?: number;
-}
+import { proposals } from "./schema";
 
 export async function getProposalDesignContext(
   proposalId: number,
   sectionTypes: ProposalSectionType[]
 ): Promise<ProposalDesignContext> {
-  const [selection] = await db
-    .select({ payload: proposalSections.payload })
-    .from(proposalSections)
-    .where(
-      and(
-        eq(proposalSections.proposalId, proposalId),
-        eq(proposalSections.sectionType, "documentDesign")
-      )
-    )
+  const [proposal] = await db
+    .select({ designId: proposals.designId, designVersion: proposals.designVersion })
+    .from(proposals)
+    .where(eq(proposals.id, proposalId))
     .limit(1);
-  const payload = (selection?.payload ?? {}) as DesignSelectionPayload;
-  const active = typeof payload.designId === "string" && Number.isInteger(payload.version)
-    ? getDocumentDesign(payload.designId, payload.version!) ?? getDefaultDocumentDesign()
+  const active = proposal?.designId && proposal.designVersion != null
+    ? getDocumentDesign(proposal.designId, proposal.designVersion) ?? getDefaultDocumentDesign()
     : getDefaultDocumentDesign();
 
   return {

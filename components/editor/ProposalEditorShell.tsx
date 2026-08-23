@@ -1,11 +1,13 @@
 "use client";
 
 import {
+  Building2,
   Check,
   CircleAlert,
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
+  Compass,
   Eye,
   ImagePlus,
   Layers3,
@@ -63,6 +65,7 @@ import InsertionGap from "./InsertionGap";
 import PageNavigator from "./PageNavigator";
 import PdfGenerateButton from "./PdfGenerateButton";
 import ShareProposalButton from "./ShareProposalButton";
+import { useCatalogDragInsert } from "./useCatalogDragInsert";
 import {
   EditorButton,
   EditorDrawer,
@@ -129,8 +132,10 @@ interface ReviewPanelProps {
 const STATUS_COPY: Record<ProposalSummary["status"], string> = {
   draft: "Draft",
   sent: "Sent",
-  accepted: "Accepted",
-  expired: "Expired",
+  viewed: "Viewed",
+  approved: "Approved",
+  lost: "Lost",
+  archived: "Archived",
 };
 
 const SAVE_COPY: Record<EditorSaveState, string> = {
@@ -144,8 +149,10 @@ const SAVE_COPY: Record<EditorSaveState, string> = {
 const STATUS_TONE: Record<ProposalSummary["status"], "neutral" | "warning" | "success" | "danger"> = {
   draft: "warning",
   sent: "neutral",
-  accepted: "success",
-  expired: "danger",
+  viewed: "neutral",
+  approved: "success",
+  lost: "danger",
+  archived: "neutral",
 };
 
 const SAVE_TONE: Record<EditorSaveState, "neutral" | "warning" | "success" | "danger"> = {
@@ -1018,6 +1025,18 @@ export default function ProposalEditorShell({
     sectionRuns.forEach((run, index) => map.set(run.firstPageId, index));
     return map;
   }, [sectionRuns]);
+  const runStartPageIndexes = useMemo(
+    () => sectionRuns.map((run) => pageMeta.findIndex((page) => page.id === run.firstPageId)),
+    [pageMeta, sectionRuns]
+  );
+  const { startDrag, draggingItem, ghostPosition, hoveredAfterSectionId } = useCatalogDragInsert({
+    proposalId: proposal.id,
+    sectionRuns,
+    runStartPageIndexes,
+    pageRefs,
+    canvasViewportRef,
+    announce: setRegionAnnouncement,
+  });
   const focusField = activeRegion && activeRegion.pageId === selectedPage.id
     ? { field: activeRegion.field, requestId: activeRegion.requestId }
     : undefined;
@@ -1465,7 +1484,7 @@ export default function ProposalEditorShell({
         </div>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[252px_minmax(0,1fr)] xl:grid-cols-[252px_minmax(0,1fr)_304px]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[252px_minmax(0,1fr)] xl:grid-cols-[252px_minmax(0,1fr)_304px] 2xl:grid-cols-[252px_minmax(0,1fr)_304px_380px]">
         <aside className="hidden min-h-0 border-r border-editor-border-subtle lg:block">
           <PageNavigator
             proposalId={proposal.id}
@@ -1505,7 +1524,7 @@ export default function ProposalEditorShell({
                 }}
                 aria-label="Open contextual catalog"
                 title="Catalog"
-                className="rounded-lg"
+                className="rounded-lg 2xl:hidden"
               >
                 <LibraryBig className="size-5" aria-hidden="true" />
               </EditorButton>
@@ -1592,6 +1611,7 @@ export default function ProposalEditorShell({
                         positionLabel={runIndex === 0 ? "at the start" : `after ${sectionRuns[runIndex - 1].title}`}
                         designContext={designContext}
                         announce={setRegionAnnouncement}
+                        highlighted={draggingItem != null && hoveredAfterSectionId === (runIndex === 0 ? null : sectionRuns[runIndex - 1].sectionId)}
                       />
                     ) : null}
                     <div
@@ -1622,10 +1642,22 @@ export default function ProposalEditorShell({
                   positionLabel={`after ${sectionRuns[sectionRuns.length - 1].title}`}
                   designContext={designContext}
                   announce={setRegionAnnouncement}
+                  highlighted={draggingItem != null && hoveredAfterSectionId === sectionRuns[sectionRuns.length - 1].sectionId}
                 />
               ) : null}
             </div>
           </div>
+
+          {draggingItem && ghostPosition ? createPortal(
+            <div
+              className="pointer-events-none fixed z-50 flex items-center gap-2 rounded-lg border border-editor-border-strong bg-editor-panel px-3 py-2 text-xs font-semibold text-editor-text shadow-2xl"
+              style={{ left: ghostPosition.x + 14, top: ghostPosition.y + 14 }}
+            >
+              {draggingItem.kind === "hotel" ? <Building2 className="size-3.5 text-editor-brand" aria-hidden="true" /> : <Compass className="size-3.5 text-editor-brand" aria-hidden="true" />}
+              {draggingItem.label}
+            </div>,
+            document.body
+          ) : null}
 
           {inlineEdit ? (
             <InlineRegionEditor
@@ -1671,6 +1703,16 @@ export default function ProposalEditorShell({
             focusField={focusField}
             onFieldFocus={setHighlightedField}
             onEscapeToCanvas={() => focusCanvasPage(selectedPage.id)}
+          />
+        </aside>
+
+        <aside className="hidden min-h-0 border-l border-editor-border-subtle 2xl:block">
+          <CatalogPanel
+            proposalId={proposal.id}
+            catalog={catalog}
+            designContext={designContext}
+            enableDrag
+            onDragStart={startDrag}
           />
         </aside>
       </div>
@@ -1811,7 +1853,7 @@ export default function ProposalEditorShell({
           onClose={() => setCatalogOpen(false)}
           panelClassName="w-[min(96vw,440px)]"
         >
-          <CatalogPanel proposalId={proposal.id} catalog={catalog} onClose={() => setCatalogOpen(false)} />
+          <CatalogPanel proposalId={proposal.id} catalog={catalog} designContext={designContext} onClose={() => setCatalogOpen(false)} />
         </EditorDrawer>
       ) : null}
 

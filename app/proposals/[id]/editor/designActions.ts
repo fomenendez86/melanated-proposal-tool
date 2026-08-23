@@ -1,11 +1,11 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/db/client";
 import { getProposalData } from "@/lib/db/getProposalData";
-import { proposalSections, proposals } from "@/lib/db/schema";
+import { proposals } from "@/lib/db/schema";
 import { getDocumentDesign } from "@/lib/designs/registry";
 import type { UpdateProposalDesignResult } from "@/lib/designs/types";
 
@@ -41,38 +41,13 @@ export async function updateProposalDesign(
     };
   }
 
-  const [existing] = await db
-    .select({ id: proposalSections.id })
-    .from(proposalSections)
-    .where(
-      and(
-        eq(proposalSections.proposalId, proposalId),
-        eq(proposalSections.sectionType, "documentDesign")
-      )
-    )
-    .limit(1);
-
   try {
     db.transaction((transaction) => {
-      const payload = { designId: design.id, version: design.version };
-      if (existing) {
-        transaction
-          .update(proposalSections)
-          .set({ payload })
-          .where(
-            and(
-              eq(proposalSections.id, existing.id),
-              eq(proposalSections.proposalId, proposalId)
-            )
-          )
-          .run();
-      } else {
-        transaction
-          .insert(proposalSections)
-          .values({ proposalId, sectionType: "documentDesign", sortOrder: -2, payload })
-          .run();
-      }
-      transaction.update(proposals).set({ updatedAt: new Date() }).where(eq(proposals.id, proposalId)).run();
+      transaction
+        .update(proposals)
+        .set({ designId: design.id, designVersion: design.version, updatedAt: new Date() })
+        .where(eq(proposals.id, proposalId))
+        .run();
     });
   } catch {
     return { ok: false, formError: "The document design could not be changed. Try again." };

@@ -1,12 +1,14 @@
 import { eq } from "drizzle-orm";
 
+import type { ProposalStatus } from "./proposalStatus";
+
 import { db } from "./client";
 import { clients, proposals } from "./schema";
 
 export interface ProposalSummary {
   id: number;
   proposalNumber: string;
-  status: "draft" | "sent" | "accepted" | "expired";
+  status: ProposalStatus;
   title: string;
   clientName: string;
   travelDates: string;

@@ -507,12 +507,6 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
         break;
       }
       case "fromOwnersOverride":
-      case "documentDesign":
-      case "pdfGeneration":
-      case "proposalRevision":
-      case "shareSettings":
-      case "proposalLifecycleEvent":
-      case "proposalApproval":
         break;
       case "weather": {
         if (row.refId == null) throw new Error(`weather section ${row.id} missing refId`);

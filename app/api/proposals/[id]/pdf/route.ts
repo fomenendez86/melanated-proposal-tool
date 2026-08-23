@@ -4,7 +4,7 @@ import { db } from "@/lib/db/client";
 import { getProposalData } from "@/lib/db/getProposalData";
 import { getProposalDesignContext } from "@/lib/db/getProposalDesignContext";
 import { getProposalSummary } from "@/lib/db/getProposalSummary";
-import { proposalSections } from "@/lib/db/schema";
+import { proposalEvents } from "@/lib/db/schema";
 import { logEvent } from "@/lib/observability/logger";
 
 export const runtime = "nodejs";
@@ -21,14 +21,14 @@ function safeFilenamePart(value: string) {
 
 async function recordGeneration(
   proposalId: number,
-  payload: Record<string, unknown>
+  status: "success" | "failed",
+  metadata: Record<string, unknown>
 ) {
   try {
-    await db.insert(proposalSections).values({
+    await db.insert(proposalEvents).values({
       proposalId,
-      sectionType: "pdfGeneration",
-      sortOrder: -3,
-      payload,
+      type: status === "success" ? "pdf_generated" : "pdf_failed",
+      metadata,
     });
   } catch {
     // Generation metadata must never prevent delivery of a valid PDF response.
@@ -90,8 +90,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       preferCSSPageSize: false,
       margin: { top: "0", right: "0", bottom: "0", left: "0" },
     });
-    await recordGeneration(proposalId, {
-      status: "success",
+    await recordGeneration(proposalId, "success", {
       filename,
       generatedAt: new Date().toISOString(),
       durationMs: Date.now() - startedAt,
@@ -121,8 +120,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown PDF generation error.";
-    await recordGeneration(proposalId, {
-      status: "failed",
+    await recordGeneration(proposalId, "failed", {
       filename,
       generatedAt: new Date().toISOString(),
       durationMs: Date.now() - startedAt,

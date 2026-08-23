@@ -1,4 +1,24 @@
+import Database from "better-sqlite3";
 import { expect, test } from "playwright/test";
+
+/**
+ * The seed dataset links every hotel/excursion it creates straight into
+ * proposal 1, so there's normally no "not yet added" catalog item to drag
+ * in a test. Insert a throwaway hotel directly (bypassing proposal_hotels)
+ * so it shows up in the catalog unselected, with a real drag handle.
+ */
+function insertUnlinkedHotel(name: string): number {
+  const db = new Database("./data/proposals.db");
+  try {
+    const city = db.prepare("select id from cities limit 1").get() as { id: number };
+    const result = db
+      .prepare("insert into hotels (city_id, name, description, default_room_category, default_meal_plan) values (?, ?, ?, ?, ?)")
+      .run(city.id, name, "Temporary hotel inserted for an e2e drag test.", "Standard", "Breakfast");
+    return Number(result.lastInsertRowid);
+  } finally {
+    db.close();
+  }
+}
 
 test("editor exposes document, catalog, structure, review, sharing and PDF controls", async ({ page }) => {
   await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
@@ -446,6 +466,91 @@ test("the insertion affordance is keyboard-reachable and Escape cancels without 
 
   const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
   expect(titles).toEqual(initialTitles);
+});
+
+test("dragging a hotel from the docked catalog inserts it at the drop gap and persists", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Docked catalog (2xl) and Pages panel verification are desktop-only");
+  await page.setViewportSize({ width: 1600, height: 900 });
+
+  const hotelName = `Test Drag Hotel ${Date.now()}`;
+  insertUnlinkedHotel(hotelName);
+
+  await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
+  await expect(page.locator(PAGE_CARD_TITLE_SELECTOR).first()).toBeVisible();
+  const initialTitles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+
+  // "at the start" means before the first composition-backed section — same
+  // unit the Fase 11.1 drag handles use — not literal page 1 (Cover/Details/
+  // From Owners aren't proposalSections rows).
+  const initialCards = await draggableCardRects(page);
+  const firstRunIndex = initialCards.findIndex((card) => card.hasHandle);
+  expect(firstRunIndex).toBeGreaterThanOrEqual(0);
+
+  const handle = page.getByRole("button", { name: `Drag ${hotelName} to a position in the document` });
+  await expect(handle).toBeVisible();
+  const handleBox = await handle.boundingBox();
+  // The first composition-backed gap sits below Cover/Details/From Owners
+  // (fixed intro pages outside the drag/insert range), well past the fold
+  // at default zoom — scroll it into the canvas viewport before targeting it.
+  const gap = page.getByRole("button", { name: "Insert a section at the start" });
+  await gap.scrollIntoViewIfNeeded();
+  const gapBox = await gap.boundingBox();
+  if (!handleBox || !gapBox) throw new Error("drag handle or drop gap not found");
+
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(gapBox.x + gapBox.width / 2, gapBox.y + gapBox.height / 2, { steps: 15 });
+  await page.mouse.up();
+
+  await expect(async () => {
+    const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+    expect(titles.length).toBe(initialTitles.length + 2);
+  }).toPass({ timeout: 8000 });
+
+  const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+  expect(titles[firstRunIndex]).toBe(hotelName);
+  expect(titles[firstRunIndex + 1]).toBe(hotelName);
+  expect(titles[firstRunIndex + 2]).toBe(initialTitles[firstRunIndex]);
+
+  const titlesAfterInsert = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator(PAGE_CARD_TITLE_SELECTOR).first()).toBeVisible();
+  await expect(async () => {
+    const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+    expect(titles).toEqual(titlesAfterInsert);
+  }).toPass({ timeout: 5000 });
+
+  await expect(page.getByRole("button", { name: `Drag ${hotelName} to a position in the document` })).toHaveCount(0);
+});
+
+test("below the 2xl breakpoint the catalog stays a modal, and Escape cancels a canvas drop without changes", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Verifies the docked-vs-modal breakpoint on a wide viewport");
+  await page.setViewportSize({ width: 1600, height: 900 });
+
+  const hotelName = `Test Drag Cancel Hotel ${Date.now()}`;
+  insertUnlinkedHotel(hotelName);
+
+  await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
+  await expect(page.locator(PAGE_CARD_TITLE_SELECTOR).first()).toBeVisible();
+  const initialTitles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+
+  const handle = page.getByRole("button", { name: `Drag ${hotelName} to a position in the document` });
+  await expect(handle).toBeVisible();
+  const handleBox = await handle.boundingBox();
+  if (!handleBox) throw new Error("drag handle not found");
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handleBox.x + 200, handleBox.y + 10, { steps: 5 });
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+
+  const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+  expect(titles).toEqual(initialTitles);
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(page.getByLabel("Open contextual catalog")).toBeVisible();
+  await page.getByLabel("Open contextual catalog").click();
+  await expect(page.getByRole("dialog", { name: "Contextual catalog" })).toBeVisible();
 });
 
 test("mobile: page navigator drawer has no drag handles and keeps Document Structure buttons", async ({ page }, testInfo) => {

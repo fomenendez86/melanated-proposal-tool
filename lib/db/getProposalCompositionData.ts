@@ -5,8 +5,7 @@ import type { ProposalSectionType } from "@/lib/designs/types";
 
 import { db } from "./client";
 import { proposalSections } from "./schema";
-
-const VIRTUAL_TYPES = new Set(["documentDesign", "fromOwnersOverride", "pdfGeneration", "proposalRevision", "shareSettings", "proposalLifecycleEvent", "proposalApproval"]);
+import { VIRTUAL_SECTION_TYPES } from "./virtualSectionTypes";
 
 function sectionLabel(sectionType: string, payload: Record<string, unknown>) {
   if (typeof payload.title === "string" && payload.title.trim()) return payload.title;
@@ -30,7 +29,7 @@ export async function getProposalCompositionData(proposalId: number): Promise<Pr
 
   return {
     items: rows
-      .filter((row) => !VIRTUAL_TYPES.has(row.sectionType))
+      .filter((row) => !VIRTUAL_SECTION_TYPES.has(row.sectionType))
       .map((row) => {
         const payload = (row.payload ?? {}) as Record<string, unknown>;
         return {

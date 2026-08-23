@@ -9,9 +9,8 @@ import { db } from "@/lib/db/client";
 import { getProposalData } from "@/lib/db/getProposalData";
 import { getProposalDesignContext } from "@/lib/db/getProposalDesignContext";
 import { proposalSections, proposals } from "@/lib/db/schema";
+import { VIRTUAL_SECTION_TYPES } from "@/lib/db/virtualSectionTypes";
 import type { ProposalSectionType } from "@/lib/designs/types";
-
-const VIRTUAL_TYPES = new Set(["documentDesign", "fromOwnersOverride", "pdfGeneration", "proposalRevision", "shareSettings", "proposalLifecycleEvent", "proposalApproval"]);
 
 async function proposalRows(proposalId: number) {
   return db.select().from(proposalSections).where(eq(proposalSections.proposalId, proposalId)).orderBy(asc(proposalSections.sortOrder));
@@ -22,7 +21,7 @@ async function verifiedSection(proposalId: number, sectionId: number) {
     db.select({ id: proposals.id }).from(proposals).where(eq(proposals.id, proposalId)).then((rows) => rows[0]),
     db.select().from(proposalSections).where(and(eq(proposalSections.id, sectionId), eq(proposalSections.proposalId, proposalId))).then((rows) => rows[0]),
   ]);
-  return proposal && section && !VIRTUAL_TYPES.has(section.sectionType) ? section : null;
+  return proposal && section && !VIRTUAL_SECTION_TYPES.has(section.sectionType) ? section : null;
 }
 
 function revalidateProposal(proposalId: number) {
@@ -33,7 +32,7 @@ function revalidateProposal(proposalId: number) {
 export async function moveProposalSection(proposalId: number, sectionId: number, direction: -1 | 1): Promise<CompositionMutationResult> {
   const section = await verifiedSection(proposalId, sectionId);
   if (!section || (direction !== -1 && direction !== 1)) return { ok: false, formError: "Section not found." };
-  const rows = (await proposalRows(proposalId)).filter((row) => !VIRTUAL_TYPES.has(row.sectionType));
+  const rows = (await proposalRows(proposalId)).filter((row) => !VIRTUAL_SECTION_TYPES.has(row.sectionType));
   const index = rows.findIndex((row) => row.id === sectionId);
   const target = index + direction;
   if (index < 0 || target < 0 || target >= rows.length) return { ok: false, formError: "The section cannot move farther." };

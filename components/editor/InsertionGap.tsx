@@ -12,10 +12,11 @@ import { editorFocusRing } from "./EditorUi";
 
 /**
  * Hover/focus affordance rendered in the gap between two rendered pages.
- * Only template sections (dividers, thank-you) are offered here — catalog
- * items (hotels, excursions) still go through the Catalog panel until
- * drag-insert (Fase 11.2) lands on top of this same server-side position
- * support.
+ * The "+" menu only offers template sections (dividers, thank-you) — a
+ * catalog item dragged from the docked Catalog panel (Fase 11.2) can also
+ * land here, in which case `highlighted` reflects that this gap is the
+ * current drop target (computed centrally by useCatalogDragInsert, which
+ * doesn't depend on this component rendering at all).
  */
 export default function InsertionGap({
   proposalId,
@@ -23,12 +24,14 @@ export default function InsertionGap({
   positionLabel,
   designContext,
   announce,
+  highlighted = false,
 }: {
   proposalId: number;
   afterSectionId: number | null;
   positionLabel: string;
   designContext: ProposalDesignContext;
   announce: (message: string) => void;
+  highlighted?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -70,13 +73,22 @@ export default function InsertionGap({
 
   return (
     <div ref={containerRef} className="group/gap relative w-full" style={{ height: 12 }}>
-      <div className="pointer-events-none absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-editor-border-subtle opacity-0 transition group-hover/gap:opacity-100" aria-hidden="true" />
+      <div
+        className={`pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 transition ${
+          highlighted ? "h-0.5 rounded-full bg-editor-brand opacity-100" : "h-px bg-editor-border-subtle opacity-0 group-hover/gap:opacity-100"
+        }`}
+        aria-hidden="true"
+      />
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-label={`Insert a section ${positionLabel}`}
         aria-expanded={open}
-        className={`absolute left-1/2 top-1/2 z-10 grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-editor-border bg-editor-raised text-editor-text-muted opacity-0 shadow-sm transition hover:border-editor-border-strong hover:text-editor-text group-hover/gap:opacity-100 focus-visible:opacity-100 ${editorFocusRing} ${open ? "opacity-100" : ""}`}
+        className={`absolute left-1/2 top-1/2 z-10 grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border shadow-sm transition focus-visible:opacity-100 ${editorFocusRing} ${
+          highlighted
+            ? "scale-110 border-editor-brand bg-editor-brand text-white opacity-100"
+            : `border-editor-border bg-editor-raised text-editor-text-muted opacity-0 hover:border-editor-border-strong hover:text-editor-text group-hover/gap:opacity-100 ${open ? "opacity-100" : ""}`
+        }`}
       >
         <Plus className="size-4" aria-hidden="true" />
       </button>
