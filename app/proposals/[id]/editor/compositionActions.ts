@@ -3,6 +3,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import { resolveInsertionOrders } from "@/lib/composition/insertionOrder";
 import type { CompositionMutationResult } from "@/lib/composition/types";
 import { db } from "@/lib/db/client";
 import { getProposalData } from "@/lib/db/getProposalData";
@@ -103,17 +104,19 @@ const ADDABLE_DEFAULTS: Partial<Record<ProposalSectionType, Record<string, unkno
   thankYou: { message: "Thank you for traveling with us.", imageUrl: "" },
 };
 
-export async function addProposalSection(proposalId: number, sectionType: ProposalSectionType): Promise<CompositionMutationResult> {
+export async function addProposalSection(proposalId: number, sectionType: ProposalSectionType, afterSectionId?: number | null): Promise<CompositionMutationResult> {
   const payload = ADDABLE_DEFAULTS[sectionType];
   if (!payload) return { ok: false, formError: "That section type requires catalog or proposal data before it can be added." };
   const data = await getProposalData(proposalId);
   const design = await getProposalDesignContext(proposalId, data.sections.map((section) => section.type));
   if (!design.active.supportedSectionTypes.includes(sectionType)) return { ok: false, formError: `${design.active.name} does not support this section.` };
   const rows = await proposalRows(proposalId);
-  const nextOrder = rows.reduce((highest, row) => Math.max(highest, row.sortOrder), 0) + 10;
+  const resolved = resolveInsertionOrders(rows, afterSectionId, 1);
+  if (!resolved) return { ok: false, formError: "That insertion position no longer exists." };
   try {
     db.transaction((transaction) => {
-      transaction.insert(proposalSections).values({ proposalId, sectionType, sortOrder: nextOrder, payload }).run();
+      resolved.shifts.forEach((shift) => transaction.update(proposalSections).set({ sortOrder: shift.sortOrder }).where(and(eq(proposalSections.id, shift.id), eq(proposalSections.proposalId, proposalId))).run());
+      transaction.insert(proposalSections).values({ proposalId, sectionType, sortOrder: resolved.orders[0], payload }).run();
       transaction.update(proposals).set({ updatedAt: new Date() }).where(eq(proposals.id, proposalId)).run();
     });
   } catch {

@@ -9,6 +9,7 @@ import { moveProposalSection } from "@/app/proposals/[id]/editor/compositionActi
 import type { ProposalCompositionData } from "@/lib/composition/types";
 import type { DocumentPageGeometry } from "@/lib/designs/types";
 import type { ProposalPageMeta } from "@/lib/editor/proposalPageMeta";
+import { computeSectionRuns } from "@/lib/editor/sectionRuns";
 
 import { EditorEmptyState, EditorPageCard, EditorPanelHeader } from "./EditorUi";
 import { usePointerReorder } from "./usePointerReorder";
@@ -30,28 +31,6 @@ function PageThumbnail({ page, pageSize }: { page: ReactNode; pageSize: Document
       </div>
     </div>
   );
-}
-
-interface SectionRun {
-  sectionId: number;
-  firstPageId: string;
-  title: string;
-}
-
-function computeSectionRuns(pageMeta: ProposalPageMeta[]): SectionRun[] {
-  const runs: SectionRun[] = [];
-  let lastSectionId: number | undefined;
-  for (const page of pageMeta) {
-    if (page.sourceSectionId == null) {
-      lastSectionId = undefined;
-      continue;
-    }
-    if (page.sourceSectionId !== lastSectionId) {
-      runs.push({ sectionId: page.sourceSectionId, firstPageId: page.id, title: page.title });
-      lastSectionId = page.sourceSectionId;
-    }
-  }
-  return runs;
 }
 
 export default function PageNavigator({

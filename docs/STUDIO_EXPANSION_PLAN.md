@@ -3,7 +3,10 @@
 **Estado:** Plan aprobado; Fase 10 completa (regiones editables, selección en
 canvas/puente con el inspector, edición de texto inline para campos simples,
 interacción de imágenes con popover en canvas). Fase 11.1 completa (reorden
-de secciones arrastrando miniaturas en el panel Pages); 11.2/11.3 pendientes.
+de secciones arrastrando miniaturas en el panel Pages). Fase 11.3 completa
+(affordance "+" entre páginas, con posición explícita de inserción en las 3
+actions de composición/catálogo). 11.2 pendiente, ya apoyada sobre esa misma
+base de servidor.
 **Actualizado:** 2026-08-22
 
 Este documento extiende el roadmap de
@@ -38,8 +41,8 @@ intactos:
 | --- | --- | --- |
 | Edición inline sobre el documento | **Completo (Fase 10)** | **10** |
 | Selección de bloques haciendo click en la página | **Completo (Fase 10)** | **10** |
-| Drag & drop de contenido al documento | No — botones en drawers | **11** |
-| Reordenar páginas arrastrando miniaturas | **Completo (Fase 11.1)** — inserción por drag (11.2) y affordance "+" (11.3) siguen pendientes | **11** |
+| Drag & drop de contenido al documento | Parcial — el "+" entre páginas (11.3) cubre secciones de plantilla; falta drag desde catálogo (11.2) | **11** |
+| Reordenar páginas arrastrando miniaturas | **Completo (Fase 11.1)** — inserción por drag desde catálogo (11.2) sigue pendiente | **11** |
 | Pipeline de propuestas con estados (Draft/Sent/Viewed/Won/Lost) | No — una sola propuesta seed, `/` redirige a `1` | **12** |
 | Crear, duplicar, archivar propuestas | No | **12** |
 | Plantillas (guardar como / crear desde) | No | **13** |
@@ -301,10 +304,11 @@ reordenar páginas visualmente. Reutiliza las mutaciones seguras de la Fase 6
 (composición) y la Fase 5 (catálogo) — esta fase es *interacción*, no lógica
 nueva de negocio.
 
-**Estado:** 11.1 (reorden de miniaturas) completo. 11.2 (drag-insert desde
-catálogo) y 11.3 (affordance "+" de inserción) pendientes — ambas requieren
-que las actions de inserción, hoy solo agregan al final, acepten una
-posición; ver `docs/PROJECT_STATUS.md`.
+**Estado:** 11.1 (reorden de miniaturas) y 11.3 (affordance "+" de
+inserción, con las 3 actions de inserción aceptando ahora una posición
+explícita vía `lib/composition/insertionOrder.ts`) completos. 11.2
+(drag-insert desde catálogo) pendiente — puede apoyarse directamente en esa
+misma base de servidor; ver `docs/PROJECT_STATUS.md`.
 
 **Tamaño estimado:** M.
 
@@ -315,14 +319,19 @@ posición; ver `docs/PROJECT_STATUS.md`.
    Solo las páginas que inician sección son arrastrables (las continuaciones
    de paginación se mueven con su sección); indicador de drop entre cards;
    auto-scroll del panel durante el drag.
-2. **Insertar arrastrando desde drawers:** los ítems del catálogo contextual
-   (hoteles, excursiones) y el picker de secciones de Document Structure se
-   pueden arrastrar al canvas; aparecen **insertion points** válidos entre
-   secciones (respetando compatibilidad del diseño y reglas de duplicado ya
-   existentes). Soltar ejecuta la misma inserción segura de Fase 5/6.
-3. **Puntos de inserción en canvas:** en hover sobre el espacio entre páginas
-   de secciones distintas, mostrar un affordance "+" que abre el picker de
-   secciones anclado a esa posición (alternativa sin drag).
+2. **Insertar arrastrando desde drawers (pendiente, 11.2):** los ítems del
+   catálogo contextual (hoteles, excursiones) se podrán arrastrar al canvas;
+   aparecerán **insertion points** válidos entre secciones (respetando
+   compatibilidad del diseño y reglas de duplicado ya existentes). Soltar
+   ejecutará `addCatalogHotelToProposal`/`addCatalogExcursionToProposal` con
+   el `afterSectionId` del punto de drop.
+3. **Puntos de inserción en canvas (completo, 11.3):** en hover/foco sobre
+   el espacio entre páginas de secciones distintas, un affordance "+"
+   (`components/editor/InsertionGap.tsx`) abre un menú con las secciones de
+   plantilla (`lib/editor/addableSections.ts`) anclado a esa posición —
+   alternativa sin drag, ya funcional para dividers y thank-you. El mismo
+   menú no ofrece hoteles/excursiones todavía porque esas necesitan elegir
+   un ítem del catálogo, no solo un tipo de bloque — lo cubrirá 11.2.
 4. Implementar con pointer events propios (no HTML5 DnD) para soportar touch,
    con umbral de activación para no robar el scroll; mantener botones
    Move up/down y la inserción por botones como **camino accesible

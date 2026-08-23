@@ -395,6 +395,59 @@ test("dragging a page thumbnail reorders sections and persists, in both directio
   }).toPass({ timeout: 5000 });
 });
 
+test("the canvas insertion affordance adds a section at the exact gap position and persists", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Verification reads the desktop-only Pages panel list");
+  await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
+  await expect(page.locator(PAGE_CARD_TITLE_SELECTOR).first()).toBeVisible();
+  const initialTitles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+
+  // "at the start" means before the first composition-backed section (the
+  // same unit the Fase 11.1 drag handles use) — Cover/Details/From Owners
+  // aren't proposalSections rows, so they're outside the insertable range.
+  const initialCards = await draggableCardRects(page);
+  const firstRunIndex = initialCards.findIndex((card) => card.hasHandle);
+  expect(firstRunIndex).toBeGreaterThanOrEqual(0);
+
+  await page.getByRole("button", { name: "Insert a section at the start" }).click();
+  await page.getByRole("menuitem", { name: "Thank-you page" }).click();
+
+  await expect(async () => {
+    const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+    expect(titles.length).toBe(initialTitles.length + 1);
+  }).toPass({ timeout: 8000 });
+
+  const titlesAfterInsert = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+  expect(titlesAfterInsert[firstRunIndex]).toBe("Thank You");
+  expect(titlesAfterInsert[firstRunIndex + 1]).toBe(initialTitles[firstRunIndex]);
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator(PAGE_CARD_TITLE_SELECTOR).first()).toBeVisible();
+  await expect(async () => {
+    const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+    expect(titles).toEqual(titlesAfterInsert);
+  }).toPass({ timeout: 5000 });
+});
+
+test("the insertion affordance is keyboard-reachable and Escape cancels without changes", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Verification reads the desktop-only Pages panel list");
+  await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
+  await expect(page.locator(PAGE_CARD_TITLE_SELECTOR).first()).toBeVisible();
+  const initialTitles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+
+  const gapButton = page.getByRole("button", { name: "Insert a section at the start" });
+  await gapButton.focus();
+  await expect(gapButton).toBeFocused();
+  await page.keyboard.press("Enter");
+  const menu = page.getByRole("menu", { name: "Section to insert" });
+  await expect(menu).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+
+  const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+  expect(titles).toEqual(initialTitles);
+});
+
 test("mobile: page navigator drawer has no drag handles and keeps Document Structure buttons", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "Mobile-only responsive behavior");
   await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });

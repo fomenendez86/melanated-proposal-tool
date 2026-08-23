@@ -69,18 +69,46 @@ recibe `enableDrag` y no expone handles. Cubierto por 2 tests e2e nuevos
 (reorder bidireccional en desktop con persistencia verificada tras reload;
 ausencia de handles + botones intactos en mobile).
 
+La Fase 11.3 (affordance "+" entre páginas para insertar secciones de
+plantilla en cualquier posición) está **completa**, junto con la base de
+servidor que la desbloqueó: `lib/composition/insertionOrder.ts` expone
+`resolveInsertionOrders(rows, afterSectionId, count)`, que generaliza el
+shift-por-10 que ya usaba `duplicateProposalSection` para insertar `count`
+filas nuevas inmediatamente después de un `afterSectionId` dado (`null`
+inserta al principio del espacio de `sortOrder`; `undefined` preserva el
+comportamiento previo de agregar al final). Las tres actions de inserción
+(`addProposalSection`, `addCatalogHotelToProposal`,
+`addCatalogExcursionToProposal`) ahora aceptan un `afterSectionId` opcional
+sin romper ningún sitio de llamada existente (el parámetro es
+retrocompatible: omitirlo agrega al final, igual que antes). Para
+excursiones, la posición solo aplica cuando se crea un cityToursDivider
+nuevo (ciudad sin lista todavía); agregar un ítem a una lista de excursiones
+ya existente no inserta una fila de sección nueva, así que no hay nada que
+posicionar en ese caso — comportamiento esperado, no una limitación a
+resolver. En el cliente, `computeSectionRuns` (antes local a
+`PageNavigator.tsx`) se extrajo a `lib/editor/sectionRuns.ts` para
+compartirla con el nuevo `components/editor/InsertionGap.tsx`: un botón "+"
+(44px de objetivo táctil, visible en hover/foco) que se renderiza en el
+canvas antes de cada página que inicia una sección y al final del
+documento, usando exactamente la misma noción de "run" que ya usa el drag
+de reorden de 11.1 — por eso el gap "al principio" aparece antes de la
+primera sección respaldada por `proposalSections`, no antes de Cover/
+Details/From Owners (esas páginas no tienen `editorSource`, así que quedan
+fuera del rango insertable/arrastrable, igual que ya quedan fuera del
+panel Document Structure). El menú del botón ofrece las mismas 3 secciones
+de plantilla que `CompositionPanel` (ahora en `lib/editor/addableSections.ts`,
+compartido). Cubierto por 2 tests e2e nuevos (inserción en la posición
+exacta con persistencia tras reload; alcance por teclado con Escape para
+cancelar sin cambios), desktop-only porque la verificación lee el panel
+Pages, que en mobile vive en un drawer.
+
 **Pendiente dentro de la misma fase:** 11.2 (arrastrar ítems del catálogo al
-canvas para insertarlos) y 11.3 (affordance "+" en hover entre páginas,
-alternativa sin drag) quedaron fuera de esta sesión a propósito — a
-diferencia de 11.1, ambas requieren un cambio de servidor real: las actions
-de inserción (`addProposalSection`, `addCatalogHotelToProposal`,
-`addCatalogExcursionToProposal`) hoy solo agregan al final de la
-composición; necesitan aceptar una posición explícita (o insertar y
-reubicar transaccionalmente) antes de que cualquiera de las dos
-interacciones sea posible. Insertar un hotel además crea 2+ secciones a la
-vez (divider + detalle), que tendrían que reubicarse juntas. Este es el
-punto de partida exacto para retomar — no hace falta re-investigar el
-mapeo de `CompositionPanel`/`CatalogPanel`/actions, ya está hecho.
+canvas para insertarlos — hoteles y excursiones, con ghost preview, drop
+targets y cancelación) queda para una sesión futura, ya apoyada sobre la
+misma base de servidor con posición explícita que dejó lista 11.3. No hace
+falta ningún cambio de servidor adicional: falta la mecánica de arrastre
+cross-panel (catálogo → canvas) en el cliente, que es interacción nueva, no
+lógica de negocio nueva.
 
 En paralelo sigue pendiente importar el paquete de marca aprobado para
 cerrar el último criterio de Fase 9; el pipeline de import ya está listo
@@ -265,12 +293,12 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
   agregar más secciones, solo falta cargarlas.
 
 **Proposal Studio pendiente:**
-- La cobertura de formularios del documento está completa. Fase 10 y Fase
-  11.1 del plan de expansión están completas. El siguiente trabajo es (a)
-  el brand asset pack (ver `docs/BRAND_ASSET_PACK.md`) para cerrar Fase 9,
-  bloqueado en assets externos, y (b) Fase 11.2/11.3 (drag-insert desde
-  catálogo y affordance "+" de inserción), que requieren extender las
-  actions de inserción con una posición — ver el detalle en "Estado
-  general" arriba. Después siguen las Fases 12+. El orden y criterios
-  están en `docs/EDITOR_IMPLEMENTATION_PLAN.md` y
-  `docs/STUDIO_EXPANSION_PLAN.md`.
+- La cobertura de formularios del documento está completa. Fase 10, Fase
+  11.1 y Fase 11.3 del plan de expansión están completas. El siguiente
+  trabajo es (a) el brand asset pack (ver `docs/BRAND_ASSET_PACK.md`) para
+  cerrar Fase 9, bloqueado en assets externos, y (b) Fase 11.2 (drag-insert
+  de hoteles/excursiones desde el catálogo al canvas), que ya puede
+  apoyarse directamente en `resolveInsertionOrders`/`afterSectionId` sin
+  cambios de servidor adicionales — ver el detalle en "Estado general"
+  arriba. Después siguen las Fases 12+. El orden y criterios están en
+  `docs/EDITOR_IMPLEMENTATION_PLAN.md` y `docs/STUDIO_EXPANSION_PLAN.md`.

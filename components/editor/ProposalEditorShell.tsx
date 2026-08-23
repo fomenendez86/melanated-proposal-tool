@@ -27,7 +27,7 @@ import type {
   ReactNode,
   RefObject,
 } from "react";
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { updateProposalFields } from "@/app/proposals/[id]/editor/actions";
@@ -54,10 +54,12 @@ import type {
   ProposalEditorPageMap,
 } from "@/lib/editor/proposalEditorTypes";
 import type { ProposalPageMeta } from "@/lib/editor/proposalPageMeta";
+import { computeSectionRuns } from "@/lib/editor/sectionRuns";
 
 import ItineraryEditor from "./ItineraryEditor";
 import CatalogPanel from "./CatalogPanel";
 import CompositionPanel from "./CompositionPanel";
+import InsertionGap from "./InsertionGap";
 import PageNavigator from "./PageNavigator";
 import PdfGenerateButton from "./PdfGenerateButton";
 import ShareProposalButton from "./ShareProposalButton";
@@ -1010,6 +1012,12 @@ export default function ProposalEditorShell({
   const pageSize = designContext.active.page;
   const activeDesignKey = `${designContext.active.id}@${designContext.active.version}`;
   const activeVariantId = composition.items.find((item) => item.id === selectedPage.sourceSectionId)?.variantId;
+  const sectionRuns = useMemo(() => computeSectionRuns(pageMeta), [pageMeta]);
+  const runIndexByPageId = useMemo(() => {
+    const map = new Map<string, number>();
+    sectionRuns.forEach((run, index) => map.set(run.firstPageId, index));
+    return map;
+  }, [sectionRuns]);
   const focusField = activeRegion && activeRegion.pageId === selectedPage.id
     ? { field: activeRegion.field, requestId: activeRegion.requestId }
     : undefined;
@@ -1572,27 +1580,50 @@ export default function ProposalEditorShell({
             onKeyDown={handleCanvasRegionKeyDown}
           >
             <div className="flex min-h-full min-w-full flex-col items-center gap-4 p-4 sm:gap-7 sm:p-8">
-              {pages.map((page, index) => (
-                <div
-                  key={pageMeta[index].id}
-                  ref={(element) => { pageRefs.current[index] = element; }}
-                  data-page-index={index}
-                  tabIndex={-1}
-                  aria-label={`Page ${index + 1}: ${pageMeta[index].title}`}
-                  className={`relative shrink-0 bg-white shadow-editor-page ring-1 outline-none transition-shadow ${
-                    effectiveSelectedIndex === index ? "ring-editor-border-strong ring-offset-2 ring-offset-editor-canvas" : "ring-black/5"
-                  }`}
-                  style={{ width: pageSize.widthPx * zoom, height: pageSize.heightPx * zoom }}
-                >
-                  <div
-                    data-page-content
-                    className="absolute left-0 top-0 origin-top-left bg-white"
-                    style={{ width: pageSize.widthPx, height: pageSize.heightPx, transform: `scale(${zoom})` }}
-                  >
-                    {page}
-                  </div>
-                </div>
-              ))}
+              {pages.map((page, index) => {
+                const runIndex = runIndexByPageId.get(pageMeta[index].id);
+                const isRunStart = runIndex != null;
+                return (
+                  <Fragment key={pageMeta[index].id}>
+                    {isRunStart ? (
+                      <InsertionGap
+                        proposalId={proposal.id}
+                        afterSectionId={runIndex === 0 ? null : sectionRuns[runIndex - 1].sectionId}
+                        positionLabel={runIndex === 0 ? "at the start" : `after ${sectionRuns[runIndex - 1].title}`}
+                        designContext={designContext}
+                        announce={setRegionAnnouncement}
+                      />
+                    ) : null}
+                    <div
+                      ref={(element) => { pageRefs.current[index] = element; }}
+                      data-page-index={index}
+                      tabIndex={-1}
+                      aria-label={`Page ${index + 1}: ${pageMeta[index].title}`}
+                      className={`relative shrink-0 bg-white shadow-editor-page ring-1 outline-none transition-shadow ${
+                        effectiveSelectedIndex === index ? "ring-editor-border-strong ring-offset-2 ring-offset-editor-canvas" : "ring-black/5"
+                      }`}
+                      style={{ width: pageSize.widthPx * zoom, height: pageSize.heightPx * zoom }}
+                    >
+                      <div
+                        data-page-content
+                        className="absolute left-0 top-0 origin-top-left bg-white"
+                        style={{ width: pageSize.widthPx, height: pageSize.heightPx, transform: `scale(${zoom})` }}
+                      >
+                        {page}
+                      </div>
+                    </div>
+                  </Fragment>
+                );
+              })}
+              {sectionRuns.length > 0 ? (
+                <InsertionGap
+                  proposalId={proposal.id}
+                  afterSectionId={sectionRuns[sectionRuns.length - 1].sectionId}
+                  positionLabel={`after ${sectionRuns[sectionRuns.length - 1].title}`}
+                  designContext={designContext}
+                  announce={setRegionAnnouncement}
+                />
+              ) : null}
             </div>
           </div>
 

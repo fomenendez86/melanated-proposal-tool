@@ -13,14 +13,9 @@ import {
 } from "@/app/proposals/[id]/editor/compositionActions";
 import type { ProposalCompositionData } from "@/lib/composition/types";
 import type { ProposalDesignContext, ProposalSectionType } from "@/lib/designs/types";
+import { ADDABLE_SECTIONS } from "@/lib/editor/addableSections";
 
 import { EditorButton, EditorNotice, EditorPanelHeader, EditorStatusBadge, editorFocusRing } from "./EditorUi";
-
-const ADDABLE: Array<{ type: ProposalSectionType; label: string }> = [
-  { type: "triangleDivider", label: "Image title divider" },
-  { type: "sectionDivider", label: "Editorial section divider" },
-  { type: "thankYou", label: "Thank-you page" },
-];
 
 export default function CompositionPanel({ proposalId, composition, designContext, onClose }: {
   proposalId: number;
@@ -65,7 +60,7 @@ export default function CompositionPanel({ proposalId, composition, designContex
           <p className="mt-1 text-xs leading-4 text-editor-text-muted">Catalog-backed sections are added from Catalog. These blocks use safe defaults from {designContext.active.name}.</p>
           <div className="mt-3 flex gap-2">
             <select aria-label="Section type to add" value={newType} onChange={(event) => setNewType(event.target.value as ProposalSectionType)} className={`h-11 min-w-0 flex-1 rounded-lg border border-editor-border bg-editor-raised px-2.5 text-xs font-semibold text-editor-text ${editorFocusRing}`}>
-              {ADDABLE.filter((item) => designContext.active.supportedSectionTypes.includes(item.type)).map((item) => <option key={item.type} value={item.type}>{item.label}</option>)}
+              {ADDABLE_SECTIONS.filter((item) => designContext.active.supportedSectionTypes.includes(item.type)).map((item) => <option key={item.type} value={item.type}>{item.label}</option>)}
             </select>
             <EditorButton type="button" variant="primary" size="sm" disabled={pending === "add"} onClick={async () => {
               if (await mutate("add", () => addProposalSection(proposalId, newType))) router.refresh();

@@ -8,6 +8,7 @@ import type {
   CreateCatalogExcursionInput,
   CreateCatalogHotelInput,
 } from "@/lib/catalog/types";
+import { resolveInsertionOrders } from "@/lib/composition/insertionOrder";
 import { db } from "@/lib/db/client";
 import { getProposalData } from "@/lib/db/getProposalData";
 import { getProposalDesignContext } from "@/lib/db/getProposalDesignContext";
@@ -43,7 +44,7 @@ function validImageUrl(value: string | undefined) {
   return !value || value.startsWith("/") || /^https:\/\//i.test(value);
 }
 
-export async function addCatalogHotelToProposal(proposalId: number, hotelId: number): Promise<CatalogMutationResult> {
+export async function addCatalogHotelToProposal(proposalId: number, hotelId: number, afterSectionId?: number | null): Promise<CatalogMutationResult> {
   if (!Number.isInteger(proposalId) || proposalId < 1 || !Number.isInteger(hotelId) || hotelId < 1) {
     return { ok: false, formError: "Invalid hotel selection." };
   }
@@ -60,15 +61,17 @@ export async function addCatalogHotelToProposal(proposalId: number, hotelId: num
   if (duplicate) return { ok: false, formError: "This hotel is already in the proposal." };
 
   const [sectionRows, bookingRows, images] = await Promise.all([
-    db.select({ sortOrder: proposalSections.sortOrder }).from(proposalSections).where(eq(proposalSections.proposalId, proposalId)),
+    db.select({ id: proposalSections.id, sortOrder: proposalSections.sortOrder }).from(proposalSections).where(eq(proposalSections.proposalId, proposalId)),
     db.select({ sortOrder: proposalHotels.sortOrder }).from(proposalHotels).where(eq(proposalHotels.proposalId, proposalId)),
     db.select().from(hotelImages).where(eq(hotelImages.hotelId, hotelId)).orderBy(asc(hotelImages.sortOrder)),
   ]);
-  const sectionOrder = nextSortOrder(sectionRows);
+  const resolved = resolveInsertionOrders(sectionRows, afterSectionId, 2);
+  if (!resolved) return { ok: false, formError: "That insertion position no longer exists." };
   const bookingOrder = nextSortOrder(bookingRows);
 
   try {
     db.transaction((transaction) => {
+      resolved.shifts.forEach((shift) => transaction.update(proposalSections).set({ sortOrder: shift.sortOrder }).where(and(eq(proposalSections.id, shift.id), eq(proposalSections.proposalId, proposalId))).run());
       const booking = transaction
         .insert(proposalHotels)
         .values({
@@ -85,7 +88,7 @@ export async function addCatalogHotelToProposal(proposalId: number, hotelId: num
         {
           proposalId,
           sectionType: "triangleDivider",
-          sortOrder: sectionOrder,
+          sortOrder: resolved.orders[0],
           refId: booking.id,
           payload: {
             sectionLabel: "Accommodations",
@@ -93,7 +96,7 @@ export async function addCatalogHotelToProposal(proposalId: number, hotelId: num
             imageUrl: images[0]?.url ?? "",
           },
         },
-        { proposalId, sectionType: "hotel", sortOrder: sectionOrder + 1, refId: booking.id },
+        { proposalId, sectionType: "hotel", sortOrder: resolved.orders[1], refId: booking.id },
       ]).run();
       transaction.update(proposals).set({ updatedAt: new Date() }).where(eq(proposals.id, proposalId)).run();
     });
@@ -106,7 +109,7 @@ export async function addCatalogHotelToProposal(proposalId: number, hotelId: num
   return { ok: true };
 }
 
-export async function addCatalogExcursionToProposal(proposalId: number, excursionId: number): Promise<CatalogMutationResult> {
+export async function addCatalogExcursionToProposal(proposalId: number, excursionId: number, afterSectionId?: number | null): Promise<CatalogMutationResult> {
   if (!Number.isInteger(proposalId) || proposalId < 1 || !Number.isInteger(excursionId) || excursionId < 1) {
     return { ok: false, formError: "Invalid excursion selection." };
   }
@@ -130,12 +133,13 @@ export async function addCatalogExcursionToProposal(proposalId: number, excursio
   if (compatibilityError) return { ok: false, formError: compatibilityError };
 
   const [sectionRows, excursionRows, city, images] = await Promise.all([
-    db.select({ sortOrder: proposalSections.sortOrder }).from(proposalSections).where(eq(proposalSections.proposalId, proposalId)),
+    db.select({ id: proposalSections.id, sortOrder: proposalSections.sortOrder }).from(proposalSections).where(eq(proposalSections.proposalId, proposalId)),
     db.select({ sortOrder: proposalExcursions.sortOrder }).from(proposalExcursions).where(eq(proposalExcursions.proposalId, proposalId)),
     db.select().from(cities).where(eq(cities.id, excursion.cityId)).then((rows) => rows[0]),
     db.select().from(excursionImages).where(eq(excursionImages.excursionId, excursionId)).orderBy(asc(excursionImages.sortOrder)),
   ]);
-  const sectionOrder = nextSortOrder(sectionRows);
+  const resolved = existingList ? null : resolveInsertionOrders(sectionRows, afterSectionId, 2);
+  if (!existingList && !resolved) return { ok: false, formError: "That insertion position no longer exists." };
 
   try {
     db.transaction((transaction) => {
@@ -144,12 +148,13 @@ export async function addCatalogExcursionToProposal(proposalId: number, excursio
         excursionId,
         sortOrder: nextSortOrder(excursionRows),
       }).run();
-      if (!existingList) {
+      if (!existingList && resolved) {
+        resolved.shifts.forEach((shift) => transaction.update(proposalSections).set({ sortOrder: shift.sortOrder }).where(and(eq(proposalSections.id, shift.id), eq(proposalSections.proposalId, proposalId))).run());
         transaction.insert(proposalSections).values([
           {
             proposalId,
             sectionType: "cityToursDivider",
-            sortOrder: sectionOrder,
+            sortOrder: resolved.orders[0],
             refId: excursion.cityId,
             payload: {
               intro: `Explore selected experiences in ${city?.name ?? "this destination"}.`,
@@ -157,7 +162,7 @@ export async function addCatalogExcursionToProposal(proposalId: number, excursio
               imageUrl: images[0]?.url ?? "",
             },
           },
-          { proposalId, sectionType: "excursionList", sortOrder: sectionOrder + 1, refId: excursion.cityId },
+          { proposalId, sectionType: "excursionList", sortOrder: resolved.orders[1], refId: excursion.cityId },
         ]).run();
       }
       transaction.update(proposals).set({ updatedAt: new Date() }).where(eq(proposals.id, proposalId)).run();
