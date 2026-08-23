@@ -22,8 +22,11 @@ an error state, so output always uses canonical saved data.
   server file.
 - Page width and height come from the active design contract.
 - Responses are `no-store` and use download-safe filename sanitization.
-- Success/failure metadata is recorded as proposal-scoped virtual metadata,
-  including duration, byte length, design identity, and bounded error detail.
+- Success/failure metadata is recorded as a `proposal_events` row
+  (`type: "pdf_generated"` / `"pdf_failed"`, `lib/db/schema.ts`), including
+  duration, byte length, design identity, and bounded error detail — write-only,
+  nothing reads it back yet (promoted from a proposal-scoped virtual
+  `proposal_sections` row in Fase 12.1; same fields, real table now).
 - Metadata failure never prevents delivery of an otherwise valid PDF.
 - Chromium closes in a `finally` block on success or failure.
 

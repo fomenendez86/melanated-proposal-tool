@@ -6,7 +6,11 @@ interacción de imágenes con popover en canvas). **Fase 11 completa
 (11.1–11.3)**: reorden de secciones arrastrando miniaturas, affordance "+"
 entre páginas con posición explícita de inserción, y drag-insert de
 hoteles/excursiones desde un catálogo ahora acoplado en pantallas anchas
-(`2xl:`) — ver `docs/PROJECT_STATUS.md` para el detalle técnico completo.
+(`2xl:`). **Fase 12.1 completa** (promoción de esquema: revisiones, shares y
+eventos en tablas reales; `proposals.status` conectado con transiciones
+automáticas) — 12.2 (dashboard) y 12.3 (auth) siguen pendientes, apoyadas
+directamente sobre ese esquema. Ver `docs/PROJECT_STATUS.md` para el detalle
+técnico completo de cada sub-fase.
 **Actualizado:** 2026-08-23
 
 Este documento extiende el roadmap de
@@ -362,23 +366,39 @@ el estudio en multi-propuesta y paga la deuda técnica señalada en
 
 **Tamaño estimado:** L.
 
-### 12.1 — Promoción de esquema (prerrequisito de todo lo posterior)
+### 12.1 — Promoción de esquema (prerrequisito de todo lo posterior) — **completa**
 
-1. Crear tablas reales: `proposal_revisions` (payload snapshot, diseño,
-   created_at), `proposal_shares` (token, revision_id, password hash/salt,
-   access key, expires_at, revoked_at), `proposal_events` (share_id, tipo,
-   metadata, created_at) y columnas `design_id`/`design_version` en
-   `proposals`.
-2. Migración Drizzle que traslada las filas virtuales actuales de
-   `proposal_sections` (`proposalRevision`, `shareSettings`, `shareEvent`,
-   `documentDesign`) a las tablas nuevas y las elimina del stream de
-   secciones; los links compartidos existentes deben seguir funcionando.
-3. Añadir `status` a `proposals`: `draft | sent | viewed | approved | lost |
-   archived`, con transiciones derivadas de eventos (sent al compartir/enviar,
-   viewed al primer open, approved al aprobar/firmar) y manuales (lost,
-   archived, reabrir).
-4. Actualizar backup/restore (`scripts/`) y el smoke de `OPERATIONS.md` para
-   las tablas nuevas.
+1. **Hecho.** Tablas reales: `proposal_revisions` (`data`+`design` snapshot
+   completo, `designId`/`designVersion`, `created_at`), `proposal_shares`
+   (`token` **unique**, `revisionId`, password hash/salt, access key,
+   `expiresAt`, `revokedAt`), `proposal_events` (`shareId` nullable, `type`,
+   `metadata`, `created_at`) y columnas `designId`/`designVersion` en
+   `proposals` (`lib/db/schema.ts`).
+2. **Hecho**, con un matiz: no fue una migración Drizzle automática de datos
+   (drizzle-kit no transforma JSON), sino una migración de esquema
+   (`lib/db/migrations/0001_...sql`, con un bug real del generador corregido
+   a mano — el `INSERT...SELECT` intentaba leer columnas que la tabla vieja
+   todavía no tenía) más un script de backfill de datos
+   (`scripts/backfillVirtualProposalSections.ts`) que traslada las filas
+   virtuales viejas (`documentDesign`, `proposalRevision`, `shareSettings`,
+   `proposalLifecycleEvent`, `proposalApproval`, `pdfGeneration` — no
+   `shareEvent`, ese nombre no existía en el código; era
+   `proposalLifecycleEvent`) a las tablas nuevas y las borra. Probado
+   insertando un set completo a mano. `fromOwnersOverride` no se tocó — es
+   un override de contenido, no de compartir/revisiones, fuera de alcance a
+   propósito. Verificado con `tests/http.integration.test.mjs` (ya existía,
+   cubre compartir/PDF/password/aprobación de punta a punta por HTTP) que
+   sigue pasando.
+3. **Hecho** para las transiciones automáticas (`lib/db/proposalStatus.ts`,
+   monótonas): `sent` al compartir, `viewed` al abrir el link, `approved` al
+   aprobar. `lost`/`archived`/reabrir son manuales — el vocabulario ya
+   soporta esos valores pero no hay UI para dispararlos todavía; eso es
+   12.2 (dashboard).
+4. **No hizo falta.** `scripts/backupDatabase.mjs`/`restoreDatabase.mjs`
+   copian el archivo `.db` completo vía `Database.backup()` — son
+   agnósticos al esquema, no referencian tablas específicas. El smoke de
+   `docs/OPERATIONS.md` tampoco menciona tablas por nombre. Verificado, sin
+   cambios necesarios.
 
 ### 12.2 — Dashboard de propuestas
 

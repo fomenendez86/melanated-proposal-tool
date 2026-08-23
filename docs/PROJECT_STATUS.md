@@ -8,6 +8,58 @@ made, or a new pendiente is found.
 
 ## Estado general
 
+La Fase 12.1 del plan de expansión (promoción de esquema —
+`docs/STUDIO_EXPANSION_PLAN.md`) está **completa**. Los 7 `sectionType`
+"virtuales" que vivían mezclados en `proposal_sections`
+(`documentDesign`, `proposalRevision`, `shareSettings`,
+`proposalLifecycleEvent`, `proposalApproval`, `pdfGeneration`, más
+`fromOwnersOverride`, que queda fuera de alcance a propósito por ser un
+override de contenido, no de compartir/revisiones) se redujeron a 6
+promovidos a tablas/columnas reales — `fromOwnersOverride` sigue siendo
+virtual. Diseño nuevo (`lib/db/schema.ts`): `proposals` gana columnas
+`designId`/`designVersion` (reemplaza `documentDesign`); `proposalRevisions`
+guarda el snapshot completo (`data`+`design`) que ya se tomaba al crear un
+share — **la investigación previa confirmó que "revisión" ya era un
+snapshot real** (`createProposalShare` llamaba `getProposalData` en el
+momento de compartir; `/share/[token]` nunca vuelve a consultar la
+propuesta viva), así que la migración fue de storage, no de semántica;
+`proposalShares` reemplaza `shareSettings` con `token` como columna
+`unique()` (antes `getSharedProposal.ts` escaneaba en JS TODAS las filas
+`shareSettings` de TODAS las propuestas buscando el token — ahora es una
+consulta directa) y gana `revokedAt` (columna nueva, ya respetada en la
+lectura — un share revocado resuelve igual que un token desconocido — pero
+sin UI para setearla todavía, eso es 12.2); `proposalEvents` consolida
+`proposalLifecycleEvent`+`proposalApproval`+`pdfGeneration` en un solo log
+de eventos (los tres eran write-only sin ningún read site, confirmado antes
+de migrar). `proposals.status` ya existía pero nunca se escribía en ningún
+lado (confirmado por grep); se amplió el vocabulario a
+`draft|sent|viewed|approved|lost|archived` y se conectaron las
+transiciones automáticas (`lib/db/proposalStatus.ts`, monótonas — nunca
+retroceden, nunca pisan `lost`/`archived`): `sent` al compartir, `viewed`
+al abrir el link, `approved` al aprobar. `lost`/`archived`/reabrir son
+manuales y quedan pendientes de UI (Fase 12.2, sin dashboard todavía).
+`VIRTUAL_TYPES`, que estaba duplicado en `compositionActions.ts` y
+`getProposalCompositionData.ts`, se consolidó en
+`lib/db/virtualSectionTypes.ts`. La migración SQL generada por
+`drizzle-kit generate` tenía un bug real (el `INSERT INTO __new_proposals
+... SELECT` intentaba leer `design_id`/`design_version` de la tabla vieja,
+que todavía no las tenía) — se corrigió a mano en
+`lib/db/migrations/0001_productive_donald_blake.sql` antes de aplicarla.
+`scripts/backfillVirtualProposalSections.ts` (uno-vez, defensivo — la DB de
+dev tenía cero filas virtuales al momento de migrar) traslada cualquier
+fila virtual vieja restante a las tablas nuevas y borra las filas viejas;
+probado insertando un set completo a mano y verificando la migración +
+limpieza. Verificado de punta a punta contra un servidor real: cambiar
+diseño, generar PDF, crear share con y sin password, abrir el link,
+desbloquear, aprobar — confirmando en cada paso que `proposals.status`
+avanza (`draft→sent→viewed→approved` en la corrida real) y que las tablas
+nuevas quedan correctas. `tests/http.integration.test.mjs`
+(`npm run test:integration`) ya cubría automatizado este flujo completo por
+HTTP contra un servidor real (compartir, PDF, password, aprobación) — sigue
+pasando sin cambios; no hizo falta agregar un test e2e nuevo para cerrar
+ese hueco como se había anticipado, porque el hueco no existía. Suite e2e
+completa (desktop+mobile) y `npm run test` verificados sin regresiones.
+
 La Fase 10 del plan de expansión (edición directa en el canvas —
 `docs/STUDIO_EXPANSION_PLAN.md`) está **completa (10.1–10.4)**.
 `lib/editor/editableRegions.ts` define regiones editables tipadas
@@ -354,9 +406,15 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
   agregar más secciones, solo falta cargarlas.
 
 **Proposal Studio pendiente:**
-- La cobertura de formularios del documento está completa. La Fase 11 del
-  plan de expansión está **completa (11.1–11.3)**. El siguiente trabajo es
-  el brand asset pack (ver `docs/BRAND_ASSET_PACK.md`) para cerrar Fase 9,
-  bloqueado en assets externos. Después siguen las Fases 12+. El orden y
-  criterios están en `docs/EDITOR_IMPLEMENTATION_PLAN.md` y
+- La cobertura de formularios del documento está completa. La Fase 11
+  (**11.1–11.3**) y la Fase 12.1 (promoción de esquema) del plan de
+  expansión están completas. Pendiente: el brand asset pack (ver
+  `docs/BRAND_ASSET_PACK.md`) para cerrar Fase 9, bloqueado en assets
+  externos; y dentro de la Fase 12, **12.2** (dashboard de propuestas —
+  listar/crear/duplicar/archivar N propuestas, y ahí sí exponer las
+  transiciones manuales `lost`/`archived`/reabrir que 12.1 dejó en el
+  schema pero sin UI) y **12.3** (autenticación mínima), ambas apoyadas
+  directamente sobre las tablas/columnas que dejó 12.1 sin requerir más
+  cambios de servidor. Después siguen las Fases 13+. El orden y criterios
+  están en `docs/EDITOR_IMPLEMENTATION_PLAN.md` y
   `docs/STUDIO_EXPANSION_PLAN.md`.

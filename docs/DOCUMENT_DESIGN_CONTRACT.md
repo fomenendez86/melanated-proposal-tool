@@ -62,15 +62,20 @@ and mutation functions are deliberately excluded from the descriptor.
 
 ## Persistence decision
 
-The current single-user database stores the selection in a proposal-scoped
-virtual `proposal_sections` row with `sectionType = "documentDesign"`. This
-avoids a migration while the contract is being proven and reuses the existing
-JSON metadata escape hatch. The row is filtered out before document rendering.
+**Resolved (Fase 12.1).** The identity lives in explicit `designId`/
+`designVersion` columns on `proposals` (`lib/db/schema.ts`), read by
+`lib/db/getProposalDesignContext.ts` and written by
+`app/proposals/[id]/editor/designActions.ts`. This replaced the interim
+proposal-scoped virtual `proposal_sections` row (`sectionType =
+"documentDesign"`) described in earlier versions of this document — the
+public loader and action contract did not change when storage moved, as
+planned.
 
-This is an interim storage decision. Before production revisions are added,
-move the identity to explicit proposal/revision columns with a database
-constraint or foreign-key equivalent. The public loader and action contract do
-not need to change when storage moves.
+Every `proposal_revisions` row also snapshots the identity independently
+(`designId`/`designVersion` columns plus the full `design` descriptor JSON,
+alongside the rendered `data`) at the moment a share link is created, so an
+already-shared revision keeps rendering with the design it was created
+against even if the proposal's live selection changes afterward.
 
 ## Safe switching
 

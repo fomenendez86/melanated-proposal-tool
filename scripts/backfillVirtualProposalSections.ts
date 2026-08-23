@@ -10,6 +10,9 @@
 
 import { eq } from "drizzle-orm";
 
+import type { DocumentDesignDescriptor } from "../lib/designs/types";
+import type { ProposalData } from "../lib/types";
+
 import { db } from "../lib/db/client";
 import {
   proposalEvents,
@@ -27,8 +30,8 @@ interface DocumentDesignPayload {
 interface ProposalRevisionPayload {
   proposalId: number;
   createdAt: string;
-  data: unknown;
-  design: { id: string; version: number };
+  data: ProposalData;
+  design: DocumentDesignDescriptor;
 }
 
 interface ProposalShareSettingsPayload {
