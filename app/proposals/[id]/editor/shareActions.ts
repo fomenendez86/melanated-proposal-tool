@@ -3,6 +3,7 @@
 import { randomBytes, scryptSync } from "node:crypto";
 import { eq } from "drizzle-orm";
 
+import { hasValidSession } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
 import { getProposalData } from "@/lib/db/getProposalData";
 import { getProposalDesignContext } from "@/lib/db/getProposalDesignContext";
@@ -14,6 +15,7 @@ export async function createProposalShare(
   proposalId: number,
   input: { password?: string; expiresInDays?: number }
 ): Promise<CreateShareResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
   if (!Number.isInteger(proposalId) || proposalId < 1) return { ok: false, formError: "Invalid proposal." };
   const [proposal] = await db.select({ id: proposals.id, status: proposals.status }).from(proposals).where(eq(proposals.id, proposalId));
   if (!proposal) return { ok: false, formError: "Proposal not found." };

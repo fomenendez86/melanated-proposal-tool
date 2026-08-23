@@ -1,0 +1,68 @@
+import { expect, test } from "playwright/test";
+
+// Desktop-only, matching the existing precedent for the 11.x structural
+// editor tests: nothing here is mobile-specific behavior worth doubling the
+// run for, and it halves how much these fixture-creating tests mutate the
+// shared dev database per full suite run.
+test.beforeEach(({}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Desktop-only: no mobile-specific dashboard behavior to cover.");
+});
+
+test("dashboard lists proposals and supports search", async ({ page }) => {
+  await page.goto("/proposals", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { level: 1, name: "Proposals" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "The Mainland Tour" }).first()).toBeVisible();
+
+  await page.getByLabel("Search proposals").fill("zzz-no-such-proposal-zzz");
+  await expect(page.getByText("No proposals match")).toBeVisible();
+
+  await page.getByLabel("Search proposals").fill("");
+  await expect(page.getByRole("link", { name: "The Mainland Tour" }).first()).toBeVisible();
+});
+
+test("creating a blank proposal seeds only the base pages", async ({ page }) => {
+  await page.goto("/proposals", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "New proposal" }).click();
+  const dialog = page.getByRole("dialog", { name: "New proposal" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel("Trip name").fill("E2E Blank Trip");
+  await dialog.getByRole("button", { name: "Create proposal" }).click();
+
+  await page.waitForURL(/\/proposals\/\d+\/editor/);
+  await expect(page.getByRole("heading", { level: 1, name: "E2E Blank Trip" })).toBeVisible();
+  await expect(page.locator("[data-page-index]")).toHaveCount(3);
+});
+
+test("duplicating a proposal creates an independent copy", async ({ page }) => {
+  await page.goto("/proposals", { waitUntil: "domcontentloaded" });
+  const row = page.locator("tr", { hasText: "DEMO-0001" });
+  await row.getByRole("button", { name: /^Duplicate/ }).click();
+
+  await page.waitForURL(/\/proposals\/\d+\/editor/);
+  expect(page.url()).not.toMatch(/\/proposals\/1\/editor/);
+  await expect(page.getByRole("heading", { level: 1, name: "The Mainland Tour" })).toBeVisible();
+});
+
+test("archive, restore and delete manage lifecycle from the dashboard", async ({ page }) => {
+  await page.goto("/proposals", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "New proposal" }).click();
+  const dialog = page.getByRole("dialog", { name: "New proposal" });
+  await dialog.getByLabel("Trip name").fill("E2E Lifecycle Trip");
+  await dialog.getByRole("button", { name: "Create proposal" }).click();
+  await page.waitForURL(/\/proposals\/\d+\/editor/);
+
+  await page.goto("/proposals", { waitUntil: "domcontentloaded" });
+  const row = page.locator("tr", { has: page.getByRole("link", { name: "E2E Lifecycle Trip" }) });
+  await expect(row.getByText("draft", { exact: true })).toBeVisible();
+
+  await row.getByRole("button", { name: /^Archive/ }).click();
+  await expect(row.getByText("archived", { exact: true })).toBeVisible();
+  await expect(row.getByRole("button", { name: /^Delete/ })).toHaveCount(0);
+
+  await row.getByRole("button", { name: /^Restore/ }).click();
+  await expect(row.getByText("draft", { exact: true })).toBeVisible();
+
+  page.once("dialog", (confirmDialog) => confirmDialog.accept());
+  await row.getByRole("button", { name: /^Delete/ }).click();
+  await expect(row).toBeHidden();
+});

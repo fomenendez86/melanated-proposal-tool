@@ -1,0 +1,159 @@
+"use server";
+
+import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+
+import { hasValidSession } from "@/lib/auth/session";
+import { db } from "@/lib/db/client";
+import { duplicateProposal } from "@/lib/db/duplicateProposal";
+import { generateProposalNumber } from "@/lib/db/generateProposalNumber";
+import { clients, proposalClients, proposalShares, proposals } from "@/lib/db/schema";
+import { getDocumentDesign } from "@/lib/designs/registry";
+
+export interface CreateProposalInput {
+  client: { mode: "existing"; clientId: number } | { mode: "new"; fullName: string; email?: string };
+  tripName: string;
+  designId: string;
+  designVersion: number;
+  origin: { type: "blank" } | { type: "duplicate"; sourceProposalId: number };
+}
+
+export interface ProposalMutationResult {
+  ok: boolean;
+  formError?: string;
+  id?: number;
+}
+
+function revalidateDashboard() {
+  revalidatePath("/proposals");
+}
+
+async function resolveClientId(client: CreateProposalInput["client"]): Promise<number | { formError: string }> {
+  if (client.mode === "existing") {
+    if (!Number.isInteger(client.clientId)) return { formError: "Choose a client." };
+    const [existing] = await db.select({ id: clients.id }).from(clients).where(eq(clients.id, client.clientId));
+    if (!existing) return { formError: "That client no longer exists." };
+    return existing.id;
+  }
+  const fullName = client.fullName?.trim() ?? "";
+  if (!fullName || fullName.length > 120) return { formError: "Enter the client's name (up to 120 characters)." };
+  const email = client.email?.trim() || null;
+  if (email && email.length > 160) return { formError: "Email is too long." };
+  try {
+    return db.transaction((tx) => tx.insert(clients).values({ fullName, email }).returning({ id: clients.id }).get().id);
+  } catch {
+    return { formError: "The client could not be created." };
+  }
+}
+
+export async function createProposal(input: CreateProposalInput): Promise<ProposalMutationResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
+  const tripName = input.tripName?.trim() ?? "";
+  if (!tripName || tripName.length > 120) return { ok: false, formError: "Enter a trip name (up to 120 characters)." };
+
+  const design = getDocumentDesign(input.designId, input.designVersion);
+  if (!design) return { ok: false, formError: "That document design is not available." };
+
+  const clientResult = await resolveClientId(input.client);
+  if (typeof clientResult !== "number") return { ok: false, formError: clientResult.formError };
+  const clientId = clientResult;
+
+  if (input.origin.type === "duplicate") {
+    if (!Number.isInteger(input.origin.sourceProposalId)) return { ok: false, formError: "Choose a proposal to duplicate." };
+    const result = await duplicateProposal(input.origin.sourceProposalId, { leadClientId: clientId });
+    if (!result.ok || !result.id) return { ok: false, formError: result.formError ?? "The proposal could not be duplicated." };
+    const newProposalId = result.id;
+    try {
+      db.transaction((tx) => {
+        tx.update(proposals)
+          .set({ designId: design.id, designVersion: design.version, packageName: tripName, coverTitle: tripName, updatedAt: new Date() })
+          .where(eq(proposals.id, newProposalId))
+          .run();
+      });
+    } catch {
+      return { ok: false, formError: "The proposal was duplicated but could not be renamed. Open it from the list to fix it." };
+    }
+    revalidateDashboard();
+    return { ok: true, id: newProposalId };
+  }
+
+  try {
+    const newId = db.transaction((tx) => {
+      const inserted = tx
+        .insert(proposals)
+        .values({
+          proposalNumber: `TMP-${crypto.randomUUID()}`,
+          leadClientId: clientId,
+          status: "draft",
+          designId: design.id,
+          designVersion: design.version,
+          packageName: tripName,
+          coverTitle: tripName,
+        })
+        .returning({ id: proposals.id })
+        .get();
+      tx.update(proposals).set({ proposalNumber: generateProposalNumber(inserted.id) }).where(eq(proposals.id, inserted.id)).run();
+      tx.insert(proposalClients).values({ proposalId: inserted.id, clientId, role: "lead" }).run();
+      return inserted.id;
+    });
+    revalidateDashboard();
+    return { ok: true, id: newId };
+  } catch {
+    return { ok: false, formError: "The proposal could not be created." };
+  }
+}
+
+export async function duplicateProposalFromDashboard(proposalId: number): Promise<ProposalMutationResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
+  if (!Number.isInteger(proposalId)) return { ok: false, formError: "Proposal not found." };
+  const result = await duplicateProposal(proposalId);
+  if (result.ok) revalidateDashboard();
+  return result;
+}
+
+export async function archiveProposal(proposalId: number): Promise<ProposalMutationResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
+  if (!Number.isInteger(proposalId)) return { ok: false, formError: "Proposal not found." };
+  try {
+    db.transaction((tx) => {
+      tx.update(proposals).set({ status: "archived", updatedAt: new Date() }).where(eq(proposals.id, proposalId)).run();
+    });
+  } catch {
+    return { ok: false, formError: "The proposal could not be archived." };
+  }
+  revalidateDashboard();
+  return { ok: true };
+}
+
+export async function restoreProposal(proposalId: number): Promise<ProposalMutationResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
+  if (!Number.isInteger(proposalId)) return { ok: false, formError: "Proposal not found." };
+  try {
+    db.transaction((tx) => {
+      tx.update(proposals).set({ status: "draft", updatedAt: new Date() }).where(eq(proposals.id, proposalId)).run();
+    });
+  } catch {
+    return { ok: false, formError: "The proposal could not be restored." };
+  }
+  revalidateDashboard();
+  return { ok: true };
+}
+
+export async function deleteProposal(proposalId: number): Promise<ProposalMutationResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
+  if (!Number.isInteger(proposalId)) return { ok: false, formError: "Proposal not found." };
+  const [proposal] = await db.select({ status: proposals.status }).from(proposals).where(eq(proposals.id, proposalId));
+  if (!proposal) return { ok: false, formError: "Proposal not found." };
+  if (proposal.status !== "draft") return { ok: false, formError: "Only draft proposals can be deleted." };
+  const [share] = await db.select({ id: proposalShares.id }).from(proposalShares).where(eq(proposalShares.proposalId, proposalId)).limit(1);
+  if (share) return { ok: false, formError: "This proposal has been shared and can no longer be deleted." };
+  try {
+    db.transaction((tx) => {
+      tx.delete(proposals).where(eq(proposals.id, proposalId)).run();
+    });
+  } catch {
+    return { ok: false, formError: "The proposal could not be deleted." };
+  }
+  revalidateDashboard();
+  return { ok: true };
+}

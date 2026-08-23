@@ -6,11 +6,12 @@ interacción de imágenes con popover en canvas). **Fase 11 completa
 (11.1–11.3)**: reorden de secciones arrastrando miniaturas, affordance "+"
 entre páginas con posición explícita de inserción, y drag-insert de
 hoteles/excursiones desde un catálogo ahora acoplado en pantallas anchas
-(`2xl:`). **Fase 12.1 completa** (promoción de esquema: revisiones, shares y
-eventos en tablas reales; `proposals.status` conectado con transiciones
-automáticas) — 12.2 (dashboard) y 12.3 (auth) siguen pendientes, apoyadas
-directamente sobre ese esquema. Ver `docs/PROJECT_STATUS.md` para el detalle
-técnico completo de cada sub-fase.
+(`2xl:`). **Fase 12 completa (12.1–12.3)**: promoción de esquema (revisiones,
+shares y eventos en tablas reales), dashboard de propuestas en `/proposals`
+con crear/duplicar/archivar/eliminar, y autenticación mínima (login
+single-usuario en `proxy.ts` + sesión firmada) protegiendo todo el studio.
+Ver `docs/PROJECT_STATUS.md` para el detalle técnico completo de cada
+sub-fase.
 **Actualizado:** 2026-08-23
 
 Este documento extiende el roadmap de
@@ -47,8 +48,8 @@ intactos:
 | Selección de bloques haciendo click en la página | **Completo (Fase 10)** | **10** |
 | Drag & drop de contenido al documento | **Completo (Fase 11.2/11.3)** — "+" entre páginas para secciones de plantilla, drag desde el catálogo acoplado (`2xl:`) para hoteles/excursiones | **11** |
 | Reordenar páginas arrastrando miniaturas | **Completo (Fase 11.1)** | **11** |
-| Pipeline de propuestas con estados (Draft/Sent/Viewed/Won/Lost) | No — una sola propuesta seed, `/` redirige a `1` | **12** |
-| Crear, duplicar, archivar propuestas | No | **12** |
+| Pipeline de propuestas con estados (Draft/Sent/Viewed/Won/Lost) | **Completo (Fase 12.1)** — transiciones automáticas conectadas | **12** |
+| Crear, duplicar, archivar propuestas | **Completo (Fase 12.2)** — dashboard en `/proposals` | **12** |
 | Plantillas (guardar como / crear desde) | No | **13** |
 | Biblioteca de contenido: secciones guardadas, snippets, imágenes, fees | Parcial — catálogo de hoteles/excursiones | **13** |
 | Variables / merge fields (`{{client.name}}`) | No | **14** |
@@ -400,28 +401,49 @@ el estudio en multi-propuesta y paga la deuda técnica señalada en
    `docs/OPERATIONS.md` tampoco menciona tablas por nombre. Verificado, sin
    cambios necesarios.
 
-### 12.2 — Dashboard de propuestas
+### 12.2 — Dashboard de propuestas — **completa**
 
-1. Ruta `/proposals`: lista con nombre, cliente, valor (desde pricing),
-   estado con badge, diseño, páginas, última actividad; búsqueda por texto,
-   filtro por estado, orden por actividad/valor/nombre. `/` redirige aquí.
-2. Acciones por fila: abrir editor, preview, duplicar (deep copy transaccional
-   del grafo completo: secciones, días, hoteles, pricing, listas — nunca
-   comparte filas hijas), archivar/restaurar, eliminar con confirmación
-   (solo borradores sin shares).
-3. Creación: diálogo con cliente (existente o nuevo), nombre del viaje,
-   diseño inicial (selector del registro con compatibilidad) y origen: en
-   blanco (secciones default del diseño) o duplicado. "Desde plantilla" llega
-   en Fase 13.
-4. Usar el design system del editor (tokens/primitivas de
-   `EDITOR_DESIGN_SYSTEM.md`) — el dashboard es parte del studio, no otra app.
+1. **Hecho.** Ruta `/proposals` (`app/proposals/page.tsx` +
+   `components/dashboard/ProposalDashboard.tsx`): tabla con nombre, cliente,
+   valor (`proposalPricing.invoiceTotal`), estado con badge, diseño, páginas
+   (conteo real post-paginación vía `getProposalData`), última actividad
+   (`max(proposals.updatedAt, proposalEvents.createdAt)`); búsqueda por
+   texto, filtro por estado, orden por actividad/valor/nombre, todo en
+   cliente. `/` redirige aquí.
+2. **Hecho.** Acciones por fila: abrir editor, preview, duplicar (deep copy
+   transaccional del grafo completo vía `lib/db/duplicateProposal.ts` —
+   secciones, días, hoteles, pricing, listas — nunca comparte filas hijas,
+   remapea ids donde hace falta), archivar/restaurar (manual, bypasea
+   `nextProposalStatus`), eliminar con confirmación (solo borradores sin
+   shares — `app/proposals/actions.ts::deleteProposal`).
+3. **Hecho**, con una desviación decidida con el usuario: creación
+   (`CreateProposalDialog.tsx`) ofrece cliente (existente o nuevo), nombre
+   del viaje, diseño inicial (selector del registro) y origen en blanco o
+   duplicado — pero "en blanco" es **literalmente cero `proposal_sections`**,
+   no "secciones default del diseño" como decía este plan originalmente. Se
+   confirmó que el renderer ya tolera eso (cover/from-owners/details se
+   derivan siempre de `proposals`/`company`/`clients`) y se decidió no
+   introducir un `defaultSections` nuevo en el contrato de diseño solo para
+   este flujo — el usuario arma el documento con las herramientas de
+   inserción de la Fase 11. "Desde plantilla" sigue llegando en Fase 13.
+4. **Hecho.** Todo construido con las primitivas de `EditorUi.tsx` y tokens
+   `editor-*` — nunca `components/ui/button.tsx` (shadcn genérico, fuera del
+   design system del studio).
 
-### 12.3 — Autenticación mínima
+### 12.3 — Autenticación mínima — **completa**
 
-1. Login single-user (credencial en variable de entorno, sesión firmada con
-   cookie httpOnly) que protege `/proposals`, el editor y las APIs de
-   mutación. `/share/[token]` permanece público con su propia protección.
-2. Rate limiting básico en login y en el endpoint de password de share.
+1. **Hecho.** Login single-user (`STUDIO_AUTH_PASSWORD`, sesión firmada con
+   `STUDIO_SESSION_SECRET` vía cookie httpOnly, `lib/auth/session.ts`) protege
+   `/proposals`, el editor, el preview y las 19 funciones de mutación en los
+   6 archivos `"use server"` existentes, vía `proxy.ts` (esta versión de
+   Next.js renombró `middleware.ts` a `proxy.ts`) más un guard
+   `hasValidSession()` dentro de cada action/route (el matcher de proxy solo
+   no alcanza — los propios docs de Next lo señalan como frágil).
+   `/share/[token]` permanece público con su propia protección, sin tocar.
+2. **Hecho.** Rate limiting básico (`lib/auth/rateLimit.ts`, in-memory, 5
+   intentos/15min por IP) en login y retrofit en el endpoint de password de
+   share (`app/api/share/[token]/unlock/route.ts`), que antes no tenía
+   ninguno.
 3. Fuera de alcance: multi-usuario, roles, SSO (se registra en "decisiones a
    revisitar").
 

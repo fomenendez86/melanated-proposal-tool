@@ -1,5 +1,6 @@
 import { chromium } from "playwright";
 
+import { createSessionToken, hasValidSession, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
 import { getProposalData } from "@/lib/db/getProposalData";
 import { getProposalDesignContext } from "@/lib/db/getProposalDesignContext";
@@ -36,6 +37,7 @@ async function recordGeneration(
 }
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!(await hasValidSession())) return Response.json({ error: "Authentication required." }, { status: 401 });
   const startedAt = Date.now();
   const { id } = await params;
   const proposalId = Number(id);
@@ -58,6 +60,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const page = await browser.newPage({
       viewport: { width: design.active.page.widthPx, height: design.active.page.heightPx },
     });
+    // This Playwright browser context starts with no cookies, and
+    // /proposals/[id]/preview is gated by proxy.ts — the caller reaching
+    // this handler is already authenticated, so mint a short-lived internal
+    // session just for this one render instead of forwarding the caller's
+    // actual cookie.
+    await page.context().addCookies([{
+      name: SESSION_COOKIE_NAME,
+      value: createSessionToken(60),
+      domain: new URL(previewUrl).hostname,
+      path: "/",
+      httpOnly: true,
+      secure: new URL(previewUrl).protocol === "https:",
+      sameSite: "Strict",
+    }]);
     await page.goto(previewUrl, { waitUntil: "networkidle", timeout: 45_000 });
     await page.emulateMedia({ media: "print" });
     await page.evaluate(async () => {

@@ -64,7 +64,10 @@ storage migration:
 
 ## Deployment boundary
 
-The current application is intentionally single-user and has no advisor
-authentication. Production deployment must protect editor and proposal-creation
-APIs behind authenticated authorization. Public share tokens, password checks,
-expiration, and approval validation are already enforced independently.
+**Resolved (Fase 12.3).** The studio (`/proposals`, the editor, and every
+mutation server action/API route) is now gated behind single-user login —
+see `docs/STUDIO_EXPANSION_PLAN.md` §12.3 and `docs/OPERATIONS.md`'s "Access"
+section for the required env vars. This remains intentionally single-user
+(one shared credential, no roles) — multi-user auth is out of scope. Public
+share tokens, password checks, expiration, and approval validation are
+enforced independently, as before, and are unaffected by this change.

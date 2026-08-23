@@ -5,6 +5,7 @@ import { getProposalCatalogData } from "../lib/db/getProposalCatalogData";
 import { getProposalCompositionData } from "../lib/db/getProposalCompositionData";
 import { getProposalData } from "../lib/db/getProposalData";
 import { getProposalDesignContext } from "../lib/db/getProposalDesignContext";
+import { generateProposalNumber } from "../lib/db/generateProposalNumber";
 import { parseItineraryEditorText, serializeItineraryEditorDays, validateItineraryEditorDays } from "../lib/editor/itineraryEditorCodec";
 import { paginateDayItinerary, paginateExcursionList, paginateOverview, paginateTermsConditions, renumberSections } from "../lib/paginate";
 
@@ -27,6 +28,12 @@ test("pagination never emits empty pages and renumbers sequentially", () => {
   assert.ok(excursions.every((page) => page.type === "excursionList" && page.data.items.length > 0));
   assert.ok(terms.every((page) => page.type === "termsConditions" && page.data.sections.length > 0));
   assert.deepEqual(renumberSections([...overview, ...excursions], 1).map((section) => section.type === "cover" ? null : section.data.pageNumber), Array.from({ length: overview.length + excursions.length }, (_, index) => index + 1));
+});
+
+test("generateProposalNumber ties the proposal number 1:1 to the row id", () => {
+  assert.equal(generateProposalNumber(1), "PRO-0001");
+  assert.equal(generateProposalNumber(42), "PRO-0042");
+  assert.equal(generateProposalNumber(10000), "PRO-10000");
 });
 
 test("database assembly exposes design-neutral editor contracts", async () => {

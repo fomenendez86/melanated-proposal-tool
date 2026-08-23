@@ -3,6 +3,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import { hasValidSession } from "@/lib/auth/session";
 import { resolveInsertionOrders } from "@/lib/composition/insertionOrder";
 import type { CompositionMutationResult } from "@/lib/composition/types";
 import { db } from "@/lib/db/client";
@@ -11,6 +12,7 @@ import { getProposalDesignContext } from "@/lib/db/getProposalDesignContext";
 import { proposalSections, proposals } from "@/lib/db/schema";
 import { VIRTUAL_SECTION_TYPES } from "@/lib/db/virtualSectionTypes";
 import type { ProposalSectionType } from "@/lib/designs/types";
+import { ADDABLE_SECTION_DEFAULTS } from "@/lib/editor/addableSections";
 
 async function proposalRows(proposalId: number) {
   return db.select().from(proposalSections).where(eq(proposalSections.proposalId, proposalId)).orderBy(asc(proposalSections.sortOrder));
@@ -30,6 +32,7 @@ function revalidateProposal(proposalId: number) {
 }
 
 export async function moveProposalSection(proposalId: number, sectionId: number, direction: -1 | 1): Promise<CompositionMutationResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
   const section = await verifiedSection(proposalId, sectionId);
   if (!section || (direction !== -1 && direction !== 1)) return { ok: false, formError: "Section not found." };
   const rows = (await proposalRows(proposalId)).filter((row) => !VIRTUAL_SECTION_TYPES.has(row.sectionType));
@@ -51,6 +54,7 @@ export async function moveProposalSection(proposalId: number, sectionId: number,
 }
 
 async function setSectionFlags(proposalId: number, sectionId: number, flags: { hidden?: boolean; deleted?: boolean }): Promise<CompositionMutationResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
   const section = await verifiedSection(proposalId, sectionId);
   if (!section) return { ok: false, formError: "Section not found." };
   const payload = { ...((section.payload ?? {}) as Record<string, unknown>), ...flags };
@@ -75,6 +79,7 @@ export async function setProposalSectionDeleted(proposalId: number, sectionId: n
 }
 
 export async function duplicateProposalSection(proposalId: number, sectionId: number): Promise<CompositionMutationResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
   const section = await verifiedSection(proposalId, sectionId);
   if (!section) return { ok: false, formError: "Section not found." };
   const rows = await proposalRows(proposalId);
@@ -97,14 +102,9 @@ export async function duplicateProposalSection(proposalId: number, sectionId: nu
   return { ok: true };
 }
 
-const ADDABLE_DEFAULTS: Partial<Record<ProposalSectionType, Record<string, unknown>>> = {
-  triangleDivider: { sectionLabel: "New section", titleLines: [{ text: "Section title", style: "bold" }], imageUrl: "" },
-  sectionDivider: { title: "NEW SECTION", subtitle: "Add a supporting line", imageUrl: "" },
-  thankYou: { message: "Thank you for traveling with us.", imageUrl: "" },
-};
-
 export async function addProposalSection(proposalId: number, sectionType: ProposalSectionType, afterSectionId?: number | null): Promise<CompositionMutationResult> {
-  const payload = ADDABLE_DEFAULTS[sectionType];
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
+  const payload = ADDABLE_SECTION_DEFAULTS[sectionType];
   if (!payload) return { ok: false, formError: "That section type requires catalog or proposal data before it can be added." };
   const data = await getProposalData(proposalId);
   const design = await getProposalDesignContext(proposalId, data.sections.map((section) => section.type));
@@ -126,6 +126,7 @@ export async function addProposalSection(proposalId: number, sectionType: Propos
 }
 
 export async function updateProposalSectionVariant(proposalId: number, sectionId: number, variantId: string): Promise<CompositionMutationResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
   const section = await verifiedSection(proposalId, sectionId);
   if (!section) return { ok: false, formError: "Section not found." };
   const data = await getProposalData(proposalId);

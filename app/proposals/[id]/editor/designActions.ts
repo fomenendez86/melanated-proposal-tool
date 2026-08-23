@@ -3,6 +3,7 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import { hasValidSession } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
 import { getProposalData } from "@/lib/db/getProposalData";
 import { proposals } from "@/lib/db/schema";
@@ -13,6 +14,7 @@ export async function updateProposalDesign(
   proposalId: number,
   input: { designId: string; version: number }
 ): Promise<UpdateProposalDesignResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
   if (
     !Number.isInteger(proposalId) ||
     proposalId < 1 ||

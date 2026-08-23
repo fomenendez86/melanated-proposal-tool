@@ -3,6 +3,7 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import { hasValidSession } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
 import {
   clients,
@@ -494,6 +495,7 @@ export async function updateProposalFields(
   proposalId: number,
   input: UpdateProposalFieldsInput
 ): Promise<UpdateProposalFieldsResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
   if (
     !Number.isInteger(proposalId) ||
     proposalId < 1 ||

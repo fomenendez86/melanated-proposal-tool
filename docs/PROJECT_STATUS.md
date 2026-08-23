@@ -8,6 +8,150 @@ made, or a new pendiente is found.
 
 ## Estado general
 
+La Fase 12.3 del plan de expansión (autenticación mínima —
+`docs/STUDIO_EXPANSION_PLAN.md`) está **completa, cerrando la Fase 12
+entera**. Login single-usuario (`app/login/page.tsx` + `app/login/
+actions.ts`) protege `/proposals`, el editor, el preview y todas las
+mutaciones. **Decisiones de esta fase:** esta versión de Next.js (16.3.2)
+renombró `middleware.ts` a `proxy.ts` — confirmado leyendo los docs
+vendorizados en `node_modules/next/dist/docs/`, no en memoria de
+entrenamiento — así que la puerta de acceso vive en `proxy.ts` (raíz del
+proyecto) con un matcher **positivo** (`/`, `/proposals`, `/proposals/:path*`,
+`/api/proposals/:path*`) en vez de un negative-lookahead amplio; deja
+`/login`, `/share/**`, `/api/share/**`, `/api/health` y las 18 rutas de
+fixture `/preview/*` (datos hardcodeados, no de la DB) fuera a propósito. La
+sesión es una cookie firmada auto-verificable (HMAC-SHA256 sobre
+`{exp}`, secreto en `STUDIO_SESSION_SECRET`) sin tabla de sesiones —
+`lib/auth/session.ts`. La credencial es una sola contraseña compartida
+(`STUDIO_AUTH_PASSWORD`, sin usuario — no hay tabla de usuarios en el
+schema ni nada que consuma un username) verificada con `timingSafeEqual`,
+mismo patrón que ya usaba el flujo de password de share
+(`app/api/share/[token]/unlock/route.ts`) — sin nueva dependencia,
+`node:crypto` únicamente. Los docs vendorizados de Next advierten
+explícitamente que la cobertura de Server Actions vía matcher de proxy es
+frágil (un refactor de ruta puede perderla en silencio) y recomiendan
+verificar la sesión dentro de cada action — por eso, además del proxy, las
+19 funciones exportadas de mutación en los 6 archivos `"use server"`
+existentes (`app/proposals/actions.ts`,
+`app/proposals/[id]/editor/{actions,compositionActions,designActions,
+catalogActions,shareActions}.ts`) ganaron un guard `hasValidSession()` al
+inicio, mismo patrón `{ok:false, formError}` que ya usaban para cualquier
+otra validación. **Riesgo real encontrado y corregido:** `/api/proposals/
+[id]/pdf` lanza un Chromium headless vía Playwright y navega por HTTP real a
+`/proposals/{id}/preview` — ese contexto de navegador arranca sin cookies,
+así que una vez protegida esa ruta el PDF se hubiera roto en silencio;
+corregido inyectando una cookie de sesión de 60 segundos generada en el
+propio handler (ya autenticado) vía `page.context().addCookies()` antes de
+`page.goto()`, en vez de reenviar la cookie real del que pidió el PDF. Rate
+limiting básico (`lib/auth/rateLimit.ts`, Map en memoria, 5 intentos/15min,
+por IP vía `X-Forwarded-For`) se aplica tanto al login nuevo como —
+retrofit del punto 2 de la spec — al endpoint de unlock de share
+(`app/api/share/[token]/unlock/route.ts`), que antes aceptaba intentos
+ilimitados. Logout es un `<form action={logout}>` en el header del
+dashboard (`ProposalDashboard.tsx`), no duplicado en el toolbar del editor
+para esta pasada mínima. Cookie: `httpOnly`, `sameSite=Strict`, `path=/`,
+`secure` condicional a `X-Forwarded-Proto: https`, 30 días de duración fija
+(sin "remember me"). Tests: `tests/e2e/global-setup.ts` loguea una vez y
+guarda `storageState` (`tests/.auth/session.json`, gitignored) reusado por
+toda la suite existente (`workers: 1` ya la corre en serie); `webServer.url`
+de `playwright.config.ts` pasó de `/proposals/1/editor` (ahora protegida) a
+`/api/health` (pública) para el healthcheck de arranque.
+`tests/e2e/auth.spec.ts` (4 tests nuevos) cubre: redirect + login exitoso,
+password incorrecta con error inline, rate limit disparado tras intentos
+repetidos (incluso bloquea la password correcta mientras dura el lockout), y
+logout re-protegiendo `/proposals`. **Bug real encontrado corriendo la suite
+completa:** como ambos proyectos de Playwright (`desktop`/`mobile`) comparten
+un solo `webServer`, el test de rate-limit de un proyecto agotaba el bucket
+compartido (`login:unknown`, sin `X-Forwarded-For` real en local) y dejaba al
+OTRO proyecto bloqueado para loguearse durante el resto de la corrida —
+corregido asignando un `X-Forwarded-For` fijo distinto por proyecto
+(`extraHTTPHeaders` en `playwright.config.ts`), aislando sus buckets como lo
+estarían dos clientes reales con IPs distintas. `tests/http.integration.test.mjs` ganó
+un login vía submit de formulario no-JS a `/login` (Server Actions
+soportan esto nativamente — sin JS, el POST llega igual y `redirect()`
+devuelve la cookie en la respuesta) para poder seguir pegándole a
+`/proposals/1/editor`/`/api/proposals/1/pdf`/`/api/proposals/1/share`.
+`.env.local` (gitignored, ya cubierto por la regla `.env*` existente) trae
+credenciales de desarrollo; no se agregó `.env.example` — este repo nunca
+tuvo uno, `DATABASE_URL`/`BACKUP_DIRECTORY` ya se documentan solo en prosa
+en `docs/OPERATIONS.md`, que ahora también documenta las dos variables
+nuevas ahí. `docs/CLIENT_PROPOSAL_EXPERIENCE.md` (sección "Deployment
+boundary") actualizado de "gap conocido" a "resuelto".
+
+La Fase 12.2 del plan de expansión (dashboard de propuestas —
+`docs/STUDIO_EXPANSION_PLAN.md`) está **completa**. `/proposals`
+(`app/proposals/page.tsx` +
+`components/dashboard/ProposalDashboard.tsx`) reemplaza a la propuesta seed
+única como punto de entrada — `/` ahora redirige ahí en vez de a
+`/proposals/1/editor`. La lista (`lib/db/getProposalList.ts`) es una tabla
+con nombre, cliente, valor, estado (badge), diseño, páginas y última
+actividad, con búsqueda/filtro/orden en cliente (dataset chico, sin
+paginación de servidor). **Decisiones de esta fase:** "valor" es
+`proposalPricing.invoiceTotal` (el total bruto del paquete, no el neto
+después de comisión); "páginas" se calcula corriendo `getProposalData` por
+fila (cuenta real post-paginación, no el conteo crudo de `proposalSections`)
+— aceptable a esta escala de app, documentado como pendiente si la cantidad
+de propuestas crece lo suficiente como para importar; "última actividad" es
+el máximo entre `proposals.updatedAt` y el último `proposalEvents.createdAt`
+de esa propuesta. `proposalNumber` para propuestas nuevas se genera
+insertando con un placeholder único (`crypto.randomUUID()`) y renombrando a
+`PRO-{id}` en la misma transacción una vez conocido el id
+(`lib/db/generateProposalNumber.ts`, función pura cubierta en
+`tests/core.test.mts`) — evita cualquier condición de carrera por conteo.
+
+**Creación** (`app/proposals/actions.ts::createProposal`, diálogo
+`components/dashboard/CreateProposalDialog.tsx`, modal centrado con el mismo
+patrón de foco/Escape/Tab que `ShareProposalButton.tsx`) ofrece cliente
+existente o nuevo, nombre de viaje, diseño inicial (selector del registro) y
+origen en blanco o duplicado. **"En blanco" significa literalmente cero
+filas `proposal_sections`** — se investigó y confirmó que
+`getProposalData.ts` ya tolera esto (cover/from-owners/details se derivan
+siempre de `proposals`/`company`/`clients`, nunca de `proposal_sections`), y
+se decidió con el usuario no introducir un concepto nuevo de "secciones
+default por diseño" en el contrato de diseño solo para este flujo — el
+usuario arma el documento con las herramientas de inserción ya existentes
+(Fase 11). **Duplicar** (`lib/db/duplicateProposal.ts`, reusado tanto por el
+botón de fila como por el origen "duplicado" del diálogo de creación) es una
+copia profunda de todo el grafo — días+hijos, hoteles (con remapeo de id
+viejo→nuevo, porque `proposal_sections.refId` de tipo `hotel` apunta ahí),
+excursiones, listas+líneas, pricing+calendario de pagos, y **todas** las
+filas de `proposal_sections` incluyendo la virtual `fromOwnersOverride` — sin
+compartir ninguna fila hija con el original. Revisiones/shares/eventos
+**no** se copian a propósito (la copia arranca con estado `draft` y sin
+historial de compartir). **Archivar/restaurar** son transiciones manuales
+que bypasean `nextProposalStatus` (que excluye `lost`/`archived` a
+propósito); restaurar siempre vuelve a `draft` (no hay concepto de "estado
+antes de archivar" que recuperar). **Eliminar** solo aplica a propuestas
+`draft` sin ninguna fila en `proposalShares` — como el estado nunca retrocede
+de `sent` a `draft`, chequear `status === "draft"` ya implica "nunca
+compartida", el chequeo de `proposalShares` es defensa adicional, no la
+única barrera. El borrado depende del `onDelete: cascade` ya declarado en el
+esquema (`foreign_keys = ON` en `lib/db/client.ts`) — sin limpieza manual
+por tabla.
+
+Toda la UI nueva usa exclusivamente primitivas de `components/editor/EditorUi.tsx`
+y tokens `editor-*` (nunca `components/ui/button.tsx`, que es shadcn
+genérico y no pertenece al design system del studio). Se detectó y corrigió
+un problema real durante la verificación: los links de fila a
+`/proposals/{id}/editor` y `/preview` con el prefetch por default de
+`next/link` disparaban, con la tabla completa a la vista, un SSR pesado
+completo (`getProposalData`+`getProposalDesignContext`+`getProposalEditorData`+
+`getProposalCatalogData`+`getProposalCompositionData`) por cada fila en
+paralelo — con SQLite síncrono (`better-sqlite3`) bloqueando el event loop,
+esto causaba cuelgues intermitentes de ~90s en los tests e2e nuevos bajo
+carga (varias filas a la vez). Corregido con `prefetch={false}` en los tres
+links de fila — no hacía falta ese prefetch para una tabla de administración
+interna. **Pendiente descubierto, no introducido por esta fase:** 4 tests de
+`editor.spec.ts` (accesibilidad, edición inline, popover de imagen ×2) fallan
+de forma intermitente en el proyecto `mobile` de Playwright — reproducido
+corriendo *solo* `editor.spec.ts` (sin ningún archivo de dashboard
+involucrado) contra una base de datos recién sembrada, así que es
+preexistente al plan de expansión, no algo que ligar a 12.2; no investigado
+en profundidad todavía. Cubierto por 4 tests e2e nuevos en
+`tests/e2e/dashboard.spec.ts` (desktop-only, mismo criterio que 11.x: listar
+con búsqueda; crear en blanco y verificar 3 páginas base; duplicar produce
+un id independiente; archivar/restaurar/eliminar en el ciclo completo).
+
 La Fase 12.1 del plan de expansión (promoción de esquema —
 `docs/STUDIO_EXPANSION_PLAN.md`) está **completa**. Los 7 `sectionType`
 "virtuales" que vivían mezclados en `proposal_sections`
@@ -407,14 +551,13 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
 
 **Proposal Studio pendiente:**
 - La cobertura de formularios del documento está completa. La Fase 11
-  (**11.1–11.3**) y la Fase 12.1 (promoción de esquema) del plan de
-  expansión están completas. Pendiente: el brand asset pack (ver
-  `docs/BRAND_ASSET_PACK.md`) para cerrar Fase 9, bloqueado en assets
-  externos; y dentro de la Fase 12, **12.2** (dashboard de propuestas —
-  listar/crear/duplicar/archivar N propuestas, y ahí sí exponer las
-  transiciones manuales `lost`/`archived`/reabrir que 12.1 dejó en el
-  schema pero sin UI) y **12.3** (autenticación mínima), ambas apoyadas
-  directamente sobre las tablas/columnas que dejó 12.1 sin requerir más
-  cambios de servidor. Después siguen las Fases 13+. El orden y criterios
-  están en `docs/EDITOR_IMPLEMENTATION_PLAN.md` y
-  `docs/STUDIO_EXPANSION_PLAN.md`.
+  (**11.1–11.3**) y la Fase 12 entera (**12.1–12.3**: promoción de esquema,
+  dashboard de propuestas, autenticación mínima) del plan de expansión están
+  completas. Pendiente: el brand asset pack (ver `docs/BRAND_ASSET_PACK.md`)
+  para cerrar Fase 9, bloqueado en assets externos. Después siguen las
+  Fases 13+. El orden y criterios están en
+  `docs/EDITOR_IMPLEMENTATION_PLAN.md` y `docs/STUDIO_EXPANSION_PLAN.md`.
+- 4 tests de `editor.spec.ts` fallan de forma intermitente en el proyecto
+  `mobile` de Playwright (accesibilidad, edición inline de texto, popover de
+  imagen ×2) — preexistente, reproducido sin ningún cambio de la Fase 12.2
+  de por medio; no investigado en profundidad todavía.

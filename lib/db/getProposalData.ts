@@ -165,7 +165,7 @@ function formatPriceAmount(basePrice: number): string {
   return `$${basePrice.toLocaleString("en-US")}`;
 }
 
-function formatMoney(amount: number, currency: string): string {
+export function formatMoney(amount: number, currency: string): string {
   try {
     return new Intl.NumberFormat("en-US", {
       style: "currency",

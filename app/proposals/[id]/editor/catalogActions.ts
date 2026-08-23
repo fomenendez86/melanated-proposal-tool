@@ -3,6 +3,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import { hasValidSession } from "@/lib/auth/session";
 import type {
   CatalogMutationResult,
   CreateCatalogExcursionInput,
@@ -45,6 +46,7 @@ function validImageUrl(value: string | undefined) {
 }
 
 export async function addCatalogHotelToProposal(proposalId: number, hotelId: number, afterSectionId?: number | null): Promise<CatalogMutationResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
   if (!Number.isInteger(proposalId) || proposalId < 1 || !Number.isInteger(hotelId) || hotelId < 1) {
     return { ok: false, formError: "Invalid hotel selection." };
   }
@@ -110,6 +112,7 @@ export async function addCatalogHotelToProposal(proposalId: number, hotelId: num
 }
 
 export async function addCatalogExcursionToProposal(proposalId: number, excursionId: number, afterSectionId?: number | null): Promise<CatalogMutationResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
   if (!Number.isInteger(proposalId) || proposalId < 1 || !Number.isInteger(excursionId) || excursionId < 1) {
     return { ok: false, formError: "Invalid excursion selection." };
   }
@@ -180,6 +183,7 @@ export async function createCatalogHotelAndAdd(
   proposalId: number,
   input: CreateCatalogHotelInput
 ): Promise<CatalogMutationResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
   const name = input?.name?.trim();
   const description = input?.description?.trim();
   const room = input?.defaultRoomCategory?.trim();
@@ -226,6 +230,7 @@ export async function createCatalogExcursionAndAdd(
   proposalId: number,
   input: CreateCatalogExcursionInput
 ): Promise<CatalogMutationResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
   const title = input?.title?.trim();
   const description = input?.description?.trim();
   const priceNote = input?.priceNote?.trim();
@@ -287,6 +292,7 @@ export async function updateCatalogHotelDefault(
   hotelId: number,
   input: CreateCatalogHotelInput
 ): Promise<CatalogMutationResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
   const name = input?.name?.trim();
   const description = input?.description?.trim();
   const room = input?.defaultRoomCategory?.trim();
@@ -325,6 +331,7 @@ export async function updateCatalogExcursionDefault(
   excursionId: number,
   input: CreateCatalogExcursionInput
 ): Promise<CatalogMutationResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
   const title = input?.title?.trim();
   const description = input?.description?.trim();
   const priceNote = input?.priceNote?.trim();

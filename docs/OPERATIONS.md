@@ -10,6 +10,21 @@ generation. Ephemeral/serverless filesystems are intentionally unsupported.
 For horizontal scaling, migrate transactional storage away from SQLite first;
 do not mount one SQLite file concurrently into multiple application instances.
 
+## Access
+
+Set `STUDIO_AUTH_PASSWORD` (the single shared login credential) and
+`STUDIO_SESSION_SECRET` (a random secret — e.g. `openssl rand -hex 32` —
+used to sign the session cookie) in the hosting platform's environment.
+Neither has a default; the app throws if either is missing when needed,
+rather than silently running unprotected. Rotate `STUDIO_SESSION_SECRET` to
+invalidate every existing session immediately (e.g. after an incident);
+rotate `STUDIO_AUTH_PASSWORD` for routine credential hygiene. Login and the
+share-password endpoint both rate-limit by client IP (5 attempts / 15
+minutes, in-memory — resets on process restart); this assumes the app runs
+behind a reverse proxy that sets `X-Forwarded-For`, otherwise every client
+shares one bucket. `/share/[token]` is unaffected — it has its own,
+separate per-share password protection that predates this.
+
 ## Start and health
 
 `npm run start:production` creates the database directory, applies committed
