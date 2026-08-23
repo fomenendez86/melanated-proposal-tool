@@ -17,7 +17,7 @@ export default function ThankYouBlock({ data }: ThankYouBlockProps) {
       <div className="absolute inset-y-0 right-0 h-full w-[45%]">
         <img
           {...editableRegion("sectionImageUrl", "image")}
-          src={data.imageUrl}
+          src={data.imageUrl || undefined}
           alt="Thank you"
           className="h-full w-full object-cover"
         />

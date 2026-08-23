@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { hasValidSession } from "@/lib/auth/session";
+import { createProposalFromTemplate } from "@/lib/db/createProposalFromTemplate";
 import { db } from "@/lib/db/client";
 import { duplicateProposal } from "@/lib/db/duplicateProposal";
 import { generateProposalNumber } from "@/lib/db/generateProposalNumber";
@@ -15,7 +16,10 @@ export interface CreateProposalInput {
   tripName: string;
   designId: string;
   designVersion: number;
-  origin: { type: "blank" } | { type: "duplicate"; sourceProposalId: number };
+  origin:
+    | { type: "blank" }
+    | { type: "duplicate"; sourceProposalId: number }
+    | { type: "template"; templateId: number };
 }
 
 export interface ProposalMutationResult {
@@ -72,6 +76,25 @@ export async function createProposal(input: CreateProposalInput): Promise<Propos
       });
     } catch {
       return { ok: false, formError: "The proposal was duplicated but could not be renamed. Open it from the list to fix it." };
+    }
+    revalidateDashboard();
+    return { ok: true, id: newProposalId };
+  }
+
+  if (input.origin.type === "template") {
+    if (!Number.isInteger(input.origin.templateId)) return { ok: false, formError: "Choose a template." };
+    const result = await createProposalFromTemplate(input.origin.templateId, { leadClientId: clientId });
+    if (!result.ok || !result.id) return { ok: false, formError: result.formError ?? "The proposal could not be created from the template." };
+    const newProposalId = result.id;
+    try {
+      db.transaction((tx) => {
+        tx.update(proposals)
+          .set({ designId: design.id, designVersion: design.version, packageName: tripName, coverTitle: tripName, updatedAt: new Date() })
+          .where(eq(proposals.id, newProposalId))
+          .run();
+      });
+    } catch {
+      return { ok: false, formError: "The proposal was created but could not be renamed. Open it from the list to fix it." };
     }
     revalidateDashboard();
     return { ok: true, id: newProposalId };

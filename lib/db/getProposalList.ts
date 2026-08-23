@@ -40,7 +40,8 @@ export async function getProposalListSummaries(): Promise<ProposalListRow[]> {
     })
     .from(proposals)
     .leftJoin(clients, eq(clients.id, proposals.leadClientId))
-    .leftJoin(proposalPricing, eq(proposalPricing.proposalId, proposals.id));
+    .leftJoin(proposalPricing, eq(proposalPricing.proposalId, proposals.id))
+    .where(eq(proposals.isTemplate, false));
 
   const events = await db
     .select({ proposalId: proposalEvents.proposalId, createdAt: proposalEvents.createdAt })

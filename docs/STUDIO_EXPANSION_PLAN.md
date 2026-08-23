@@ -10,8 +10,10 @@ hoteles/excursiones desde un catálogo ahora acoplado en pantallas anchas
 shares y eventos en tablas reales), dashboard de propuestas en `/proposals`
 con crear/duplicar/archivar/eliminar, y autenticación mínima (login
 single-usuario en `proxy.ts` + sesión firmada) protegiendo todo el studio.
-Ver `docs/PROJECT_STATUS.md` para el detalle técnico completo de cada
-sub-fase.
+**Fase 13.1 completa** (plantillas de propuesta: guardar/crear
+desde/gestionar) — 13.2 (secciones/snippets), 13.3 (imágenes) y 13.4 (fees)
+siguen pendientes. Ver `docs/PROJECT_STATUS.md` para el detalle técnico
+completo de cada sub-fase.
 **Actualizado:** 2026-08-23
 
 Este documento extiende el roadmap de
@@ -50,7 +52,7 @@ intactos:
 | Reordenar páginas arrastrando miniaturas | **Completo (Fase 11.1)** | **11** |
 | Pipeline de propuestas con estados (Draft/Sent/Viewed/Won/Lost) | **Completo (Fase 12.1)** — transiciones automáticas conectadas | **12** |
 | Crear, duplicar, archivar propuestas | **Completo (Fase 12.2)** — dashboard en `/proposals` | **12** |
-| Plantillas (guardar como / crear desde) | No | **13** |
+| Plantillas (guardar como / crear desde) | **Completo (Fase 13.1)** | **13** |
 | Biblioteca de contenido: secciones guardadas, snippets, imágenes, fees | Parcial — catálogo de hoteles/excursiones | **13** |
 | Variables / merge fields (`{{client.name}}`) | No | **14** |
 | Tabla de precios interactiva (cantidades, ítems opcionales, totales) | Parcial — montos estáticos | **14** |
@@ -468,17 +470,49 @@ Convierte el trabajo hecho en activos reutilizables — el corazón del flujo
 
 **Tamaño estimado:** L.
 
-### 13.1 — Plantillas de propuesta
+### 13.1 — Plantillas de propuesta — **completa**
 
-1. "Guardar como plantilla" desde el editor: snapshot del grafo completo
-   (como duplicar) marcado `is_template`, con nombre, descripción y thumbnail
-   (primera página).
-2. Galería de plantillas en el flujo de creación (Fase 12.3 se amplía):
-   crear desde plantilla = deep copy + asignar cliente nuevo + limpiar datos
-   de cliente/fechas donde el campo lo declare (`resetOnTemplate` en el
-   esquema de campos).
-3. Gestión: renombrar, actualizar desde una propuesta, archivar. Las
-   plantillas no aparecen en el pipeline.
+1. **Hecho.** "Guardar como plantilla" desde el editor
+   (`SaveAsTemplateButton.tsx` en el toolbar →
+   `saveCurrentProposalAsTemplateAction` → `lib/db/saveProposalAsTemplate.ts`):
+   snapshot del grafo completo (deep copy vía `copyProposalGraphInto`, el
+   mismo helper que ahora también usa `duplicateProposal`) marcado
+   `isTemplate`, con nombre, descripción y `templateThumbnailUrl` (reusa
+   `coverImageUrl` de la propuesta origen — sin screenshot real).
+2. **Hecho**, con una precisión sobre el texto original de este plan: el
+   diálogo de creación (`CreateProposalDialog.tsx`) gana un tercer origen
+   "From template" junto a Blank/Duplicate, que llama
+   `lib/db/createProposalFromTemplate.ts`. `resetOnTemplate` se implementó
+   como una lista estática (`lib/editor/resetOnTemplateFields.ts`,
+   `RESET_ON_TEMPLATE_FIELDS`) consultada explícitamente por esa función —no
+   un intérprete genérico sobre el view-model runtime `ProposalEditorField`,
+   que se puebla por render y es la altura equivocada para decidir qué
+   columnas crudas limpiar antes de que la propuesta nueva exista. Limpia
+   `travelDatesLabel`/`arrivalAirport`/`departureAirport`/fechas de cada día
+   copiado, y no copia el roster de clientes de la plantilla (solo el
+   `leadClientId` nuevo que el usuario elige en el diálogo).
+3. **Hecho.** Gestión en `/proposals/templates`
+   (`TemplateGallery.tsx`): renombrar y archivar/restaurar por tarjeta,
+   más "actualizar desde una propuesta"
+   (`updateTemplateFromProposalAction` → `lib/db/updateTemplateFromProposal.ts`,
+   borra el grafo hijo actual de la plantilla y lo reemplaza con una copia
+   fresca — las propuestas ya creadas desde esa plantilla no se tocan, cada
+   una tiene su propia copia independiente). Sin action de borrado — el plan
+   solo pedía renombrar/actualizar/archivar. Las plantillas quedan fuera del
+   pipeline vía `proposals.isTemplate`: `getProposalListSummaries()` las
+   excluye, `getTemplateList()` (más liviano, sin joins de pricing/actividad)
+   las lista aparte.
+
+Migración: 4 columnas aditivas en `proposals`
+(`is_template`/`template_name`/`template_description`/`template_thumbnail_url`),
+`ALTER TABLE ADD` plano generado por `drizzle-kit generate` — sin rebuild de
+tabla, evitando la clase de bug ya documentada para Fase 12.1. Cubierto por 2
+tests nuevos en `tests/core.test.mts` (forma de `RESET_ON_TEMPLATE_FIELDS`;
+round-trip guardar-como-plantilla → crear-desde-plantilla contra la propuesta
+seed, verificando conteo de secciones igual, fechas limpias, y exclusión del
+pipeline) y verificado de punta a punta contra un servidor real (guardar,
+listar en galería, crear, confirmar "Dates not assigned" y las 44 páginas del
+itinerario retenidas).
 
 ### 13.2 — Secciones guardadas y snippets
 

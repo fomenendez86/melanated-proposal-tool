@@ -20,7 +20,7 @@ function DayColumn({ day }: { day: DayEntry }) {
         </div>
       )}
       <div className="mt-4 flex flex-col gap-3">
-        {day.imageUrls.map((url, index) => (
+        {day.imageUrls.filter(Boolean).map((url, index) => (
           <img
             key={index}
             src={url}

@@ -37,7 +37,7 @@ export default function FromOwnersBlock({ data }: FromOwnersBlockProps) {
 
           <img
             {...editableRegion("ownerPhotoUrl", "image")}
-            src={data.photoUrl}
+            src={data.photoUrl || undefined}
             alt="Melanated Safaris team"
             className="mt-8 h-[280px] w-full object-cover"
           />

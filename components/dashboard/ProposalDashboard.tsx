@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, ArchiveRestore, Copy, Eye, FileEdit, LogOut, Search, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, Copy, Eye, FileEdit, LibraryBig, LogOut, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 import { logout } from "@/app/login/actions";
 import { archiveProposal, deleteProposal, duplicateProposalFromDashboard, restoreProposal } from "@/app/proposals/actions";
 import { EditorButton, EditorEmptyState, EditorStatusBadge, editorButtonStyles, editorFocusRing } from "@/components/editor/EditorUi";
+import type { TemplateListRow } from "@/lib/db/getTemplateList";
 import type { ClientOption } from "@/lib/db/getClientOptions";
 import type { ProposalListRow } from "@/lib/db/getProposalList";
 import type { ProposalStatus } from "@/lib/db/proposalStatus";
@@ -42,10 +43,12 @@ export default function ProposalDashboard({
   rows,
   clients,
   designs,
+  templates,
 }: {
   rows: ProposalListRow[];
   clients: ClientOption[];
   designs: DocumentDesignDescriptor[];
+  templates: TemplateListRow[];
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -100,6 +103,9 @@ export default function ProposalDashboard({
   }
 
   const existingProposals = rows.map((row) => ({ id: row.id, title: row.title }));
+  const templateOptions = templates
+    .filter((template) => template.status !== "archived")
+    .map((template) => ({ id: template.id, title: template.name }));
 
   return (
     <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col gap-5 px-6 py-8">
@@ -109,7 +115,11 @@ export default function ProposalDashboard({
           <p className="mt-1 text-sm text-editor-text-muted">{rows.length} proposal{rows.length === 1 ? "" : "s"} total</p>
         </div>
         <div className="flex items-center gap-2">
-          <CreateProposalDialog clients={clients} designs={designs} existingProposals={existingProposals} />
+          <Link href="/proposals/templates" prefetch={false} className={editorButtonStyles({ variant: "secondary" })}>
+            <LibraryBig className="size-4" aria-hidden="true" />
+            Templates
+          </Link>
+          <CreateProposalDialog clients={clients} designs={designs} existingProposals={existingProposals} templates={templateOptions} />
           <form action={logout}>
             <EditorButton type="submit" variant="ghost" aria-label="Log out">
               <LogOut className="size-4" aria-hidden="true" />

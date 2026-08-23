@@ -45,7 +45,7 @@ export default function TriangleDividerBlock({
 
       <img
         {...editableRegion("sectionImageUrl", "image")}
-        src={data.imageUrl}
+        src={data.imageUrl || undefined}
         alt={data.sectionLabel}
         className="mt-10 h-[420px] w-full object-cover"
       />

@@ -15,7 +15,7 @@ export default function CoverBlock({ data }: CoverBlockProps) {
       <div className="absolute inset-y-0 right-0 w-[68%]">
         <img
           {...editableRegion("coverImageUrl", "image")}
-          src={data.imageUrl}
+          src={data.imageUrl || undefined}
           alt={data.title}
           className="h-full w-full object-cover"
           style={{ clipPath: TORN_EDGE_CLIP_PATH }}

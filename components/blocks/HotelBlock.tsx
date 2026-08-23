@@ -21,13 +21,13 @@ export default function HotelBlock({ data }: HotelBlockProps) {
         <div className="flex w-[45%] shrink-0 flex-col gap-4">
           <img
             {...editableRegion("hotelImageBottomLeftTop", "image")}
-            src={data.images.bottomLeftTop}
+            src={data.images.bottomLeftTop || undefined}
             alt={`${data.name} detail`}
             className="h-[500px] w-full object-cover"
           />
           <img
             {...editableRegion("hotelImageBottomLeftBottom", "image")}
-            src={data.images.bottomLeftBottom}
+            src={data.images.bottomLeftBottom || undefined}
             alt={`${data.name} exterior`}
             className="h-[280px] w-full object-cover"
           />
@@ -35,7 +35,7 @@ export default function HotelBlock({ data }: HotelBlockProps) {
         <div className="flex flex-1 flex-col">
           <img
             {...editableRegion("hotelImageTopRight", "image")}
-            src={data.images.topRight}
+            src={data.images.topRight || undefined}
             alt={`${data.name} room`}
             className="aspect-[292/268] w-full object-cover"
           />

@@ -36,7 +36,7 @@ export default function ExcursionListBlock({ data }: ExcursionListBlockProps) {
               </div>
               <div>
                 <img
-                  src={item.imageUrl}
+                  src={item.imageUrl || undefined}
                   alt={item.title}
                   className="h-[140px] w-[190px] object-cover"
                 />

@@ -33,7 +33,7 @@ export default function SectionDividerBlock({
           <div className="absolute -bottom-[33px] -right-14 -z-10 h-[439px] w-[104px] bg-red-600" />
           <img
             {...editableRegion("sectionImageUrl", "image")}
-            src={data.imageUrl}
+            src={data.imageUrl || undefined}
             alt={data.title}
             className="h-full w-full object-cover"
           />

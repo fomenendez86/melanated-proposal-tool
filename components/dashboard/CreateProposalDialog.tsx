@@ -15,10 +15,12 @@ export default function CreateProposalDialog({
   clients,
   designs,
   existingProposals,
+  templates,
 }: {
   clients: ClientOption[];
   designs: DocumentDesignDescriptor[];
   existingProposals: { id: number; title: string }[];
+  templates: { id: number; title: string }[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -28,8 +30,9 @@ export default function CreateProposalDialog({
   const [newClientEmail, setNewClientEmail] = useState("");
   const [tripName, setTripName] = useState("");
   const [designChoice, setDesignChoice] = useState(designs[0] ? `${designs[0].id}:${designs[0].version}` : "");
-  const [origin, setOrigin] = useState<"blank" | "duplicate">("blank");
+  const [origin, setOrigin] = useState<"blank" | "duplicate" | "template">("blank");
   const [sourceProposalId, setSourceProposalId] = useState(existingProposals[0]?.id ?? 0);
+  const [templateId, setTemplateId] = useState(templates[0]?.id ?? 0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -82,6 +85,10 @@ export default function CreateProposalDialog({
       setError("Choose a proposal to duplicate.");
       return;
     }
+    if (origin === "template" && !templateId) {
+      setError("Choose a template.");
+      return;
+    }
     setLoading(true);
     const result = await createProposal({
       tripName,
@@ -91,7 +98,12 @@ export default function CreateProposalDialog({
         clientMode === "existing"
           ? { mode: "existing", clientId: existingClientId }
           : { mode: "new", fullName: newClientName, email: newClientEmail || undefined },
-      origin: origin === "blank" ? { type: "blank" } : { type: "duplicate", sourceProposalId },
+      origin:
+        origin === "blank"
+          ? { type: "blank" }
+          : origin === "duplicate"
+            ? { type: "duplicate", sourceProposalId }
+            : { type: "template", templateId },
     });
     setLoading(false);
     if (!result.ok || !result.id) {
@@ -183,6 +195,7 @@ export default function CreateProposalDialog({
                     options={[
                       { value: "blank", label: "Blank" },
                       { value: "duplicate", label: "Duplicate existing" },
+                      { value: "template", label: "From template" },
                     ]}
                   />
                 </div>
@@ -196,6 +209,19 @@ export default function CreateProposalDialog({
                     {existingProposals.length === 0 ? <option value={0}>No proposals to duplicate</option> : null}
                     {existingProposals.map((proposal) => (
                       <option key={proposal.id} value={proposal.id}>{proposal.title}</option>
+                    ))}
+                  </select>
+                ) : null}
+                {origin === "template" ? (
+                  <select
+                    aria-label="Template"
+                    className={`mt-2 ${inputClass}`}
+                    value={templateId}
+                    onChange={(event) => setTemplateId(Number(event.target.value))}
+                  >
+                    {templates.length === 0 ? <option value={0}>No templates yet</option> : null}
+                    {templates.map((template) => (
+                      <option key={template.id} value={template.id}>{template.title}</option>
                     ))}
                   </select>
                 ) : null}

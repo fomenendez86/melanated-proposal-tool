@@ -260,6 +260,10 @@ export const proposals = sqliteTable(
     travelDatesLabel: text("travel_dates_label"),
     packageTotalLabel: text("package_total_label"),
     passengerManifestLabel: text("passenger_manifest_label"),
+    isTemplate: integer("is_template", { mode: "boolean" }).notNull().default(false),
+    templateName: text("template_name"),
+    templateDescription: text("template_description"),
+    templateThumbnailUrl: text("template_thumbnail_url"),
     ...timestamps,
   },
   (table) => [

@@ -64,6 +64,7 @@ import CompositionPanel from "./CompositionPanel";
 import InsertionGap from "./InsertionGap";
 import PageNavigator from "./PageNavigator";
 import PdfGenerateButton from "./PdfGenerateButton";
+import SaveAsTemplateButton from "./SaveAsTemplateButton";
 import ShareProposalButton from "./ShareProposalButton";
 import { useCatalogDragInsert } from "./useCatalogDragInsert";
 import {
@@ -163,9 +164,9 @@ const SAVE_TONE: Record<EditorSaveState, "neutral" | "warning" | "success" | "da
   error: "danger",
 };
 
-const MIN_ZOOM = 0.3;
-const MAX_ZOOM = 0.95;
-const ZOOM_STEP = 0.05;
+const MIN_ZOOM = 0.2;
+const MAX_ZOOM = 2;
+const ZOOM_STEP = 0.1;
 
 function clampZoom(value: number) {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(value.toFixed(3))));
@@ -1416,29 +1417,6 @@ export default function ProposalEditorShell({
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="hidden items-center gap-2 sm:flex">
-            <label htmlFor="document-design" className="hidden text-xs font-semibold text-editor-text-muted lg:block">
-              Design
-            </label>
-            <select
-              id="document-design"
-              value={activeDesignKey}
-              disabled={designChanging}
-              onChange={(event) => void changeDocumentDesign(event.target.value)}
-              aria-describedby={designError ? "document-design-error" : undefined}
-              className={`h-11 max-w-44 rounded-lg border border-editor-border bg-editor-raised px-2.5 text-xs font-semibold text-editor-text outline-none transition hover:border-editor-border-strong disabled:cursor-wait disabled:text-editor-disabled-text ${editorFocusRing}`}
-            >
-              {designContext.choices.map(({ design, compatible }) => (
-                <option
-                  key={`${design.id}@${design.version}`}
-                  value={`${design.id}@${design.version}`}
-                  disabled={!compatible}
-                >
-                  {design.name} · v{design.version}{design.status === "preview" ? " · Preview" : ""}{!compatible ? " · Incompatible" : ""}
-                </option>
-              ))}
-            </select>
-          </div>
           {designError ? (
             <EditorStatusBadge
               tone="danger"
@@ -1473,6 +1451,7 @@ export default function ProposalEditorShell({
             <ClipboardCheck className="size-4" aria-hidden="true" />
             <span className="hidden xl:inline">Review</span>
           </EditorButton>
+          <SaveAsTemplateButton proposalId={proposal.id} />
           <ShareProposalButton
             proposalId={proposal.id}
             disabled={saveState === "dirty" || saveState === "saving" || saveState === "error"}

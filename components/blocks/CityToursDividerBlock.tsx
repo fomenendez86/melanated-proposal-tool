@@ -16,7 +16,7 @@ export default function CityToursDividerBlock({
       <div className="relative h-[610px] w-full">
         <img
           {...editableRegion("sectionImageUrl", "image")}
-          src={data.imageUrl}
+          src={data.imageUrl || undefined}
           alt={data.city}
           className="h-full w-full object-cover"
         />

@@ -62,7 +62,17 @@
       "Bash(node scratch-ratelimit-debug.mjs)",
       "Bash(grep -n \"^\\\\s*[0-9]*\\) \\\\[desktop\\\\]\\\\|^\\\\s*[0-9]*\\) \\\\[mobile\\\\]\" /tmp/full-run-auth.log)",
       "Bash(sed -n '451,578p' /tmp/full-run-auth.log)",
-      "Bash(echo \"TSC:$?\")"
+      "Bash(echo \"TSC:$?\")",
+      "Bash(timeout 30 bash -c 'until curl -sf http://localhost:3000/api/health >/dev/null; do sleep 1; done')",
+      "Bash(SCREENSHOT_DIR=\"C:\\\\Users\\\\fomen\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-fomen-OneDrive-Development-melanated-proposal-tool\\\\761e8b85-1d61-4113-8abd-9a2cf8634a4a\\\\scratchpad\" STUDIO_AUTH_PASSWORD=\"dev-password\" node \"C:\\\\Users\\\\fomen\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-fomen-OneDrive-Development-melanated-proposal-tool\\\\761e8b85-1d61-4113-8abd-9a2cf8634a4a\\\\scratchpad\\\\run-check.mjs\")",
+      "Bash(SCREENSHOT_DIR=\"C:\\\\Users\\\\fomen\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-fomen-OneDrive-Development-melanated-proposal-tool\\\\761e8b85-1d61-4113-8abd-9a2cf8634a4a\\\\scratchpad\" STUDIO_AUTH_PASSWORD=\"dev-password\" node .tmp-run-check.mjs)",
+      "Bash(SCREENSHOT_DIR=\"C:\\\\Users\\\\fomen\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-fomen-OneDrive-Development-melanated-proposal-tool\\\\761e8b85-1d61-4113-8abd-9a2cf8634a4a\\\\scratchpad\" STUDIO_AUTH_PASSWORD=\"dev-password\" node .tmp-run-check2.mjs)",
+      "Bash(SCREENSHOT_DIR=\"C:\\\\Users\\\\fomen\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-fomen-OneDrive-Development-melanated-proposal-tool\\\\761e8b85-1d61-4113-8abd-9a2cf8634a4a\\\\scratchpad\" STUDIO_AUTH_PASSWORD=\"dev-password\" node .tmp-run-check3.mjs)",
+      "Bash(STUDIO_AUTH_PASSWORD=\"dev-password\" node .tmp-run-check4.mjs)",
+      "Bash(rm .tmp-run-check4.mjs)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:3000/proposals/1/editor\" --cookie \"studio_session=test\")",
+      "Bash(STUDIO_AUTH_PASSWORD=\"dev-password\" node .tmp-run-check5.mjs)",
+      "Bash(rm .tmp-run-check5.mjs)"
     ],
     "additionalDirectories": [
       "C:\\Users\\fomen\\OneDrive\\Development\\melanated-proposal-tool\\output",

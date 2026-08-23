@@ -8,6 +8,103 @@ made, or a new pendiente is found.
 
 ## Estado general
 
+**UI: selector de diseño removido de la toolbar.** El toolbar del editor
+tenía un selector de diseño duplicado (`#document-design`, junto a
+"Review"/"Share"/"Generate PDF") además del que ya existe dentro del panel
+Properties, modo "Design" (`#inspector-document-design-*`, con formato de
+página/orientación y variantes visibles debajo). A pedido del usuario se
+quitó el de la toolbar; el cambio de diseño sigue disponible completo desde
+Properties → Design. `activeDesignKey`/`changeDocumentDesign` no cambiaron —
+siguen siendo consumidos por el selector del inspector.
+
+**Recalibración de zoom, fuera del alcance de cualquier fase:** el rango de
+zoom del canvas (`ProposalEditorShell.tsx`) estaba `MIN_ZOOM=0.3`/
+`MAX_ZOOM=0.95`/`ZOOM_STEP=0.05` — un techo de 95% que aplicaba tanto al zoom
+manual (+/-, slider) como a la fórmula de "Fit width", así que **nunca** era
+posible ver una página a tamaño real (100%) ni más grande para inspeccionar
+detalle, y "Fit width" en ventanas angostas (sin el panel de catálogo
+acoplado) quedaba pegado en 95% en vez del valor real que le correspondía —
+confirmado midiendo el ancho real en píxeles de la página: a 1000px de
+ventana, el fit correcto es ~114%, pero el código lo recortaba a 95% igual.
+Recalibrado a `MIN_ZOOM=0.2`/`MAX_ZOOM=2`/`ZOOM_STEP=0.1` (20%–200%, pasos de
+10%) — mismo mecanismo (`clampZoom`, slider, botones +/-, "Fit width" son
+todos derivados de estas 3 constantes, sin cambios de lógica), solo se movió
+el rango. Verificado que "Fit width" en 1000px ahora da 114% real en vez de
+95% recortado, y que el zoom manual llega genuinamente a 20% y 200%.
+
+**Bug real corregido, fuera del alcance de cualquier fase:** los 9 bloques con
+campos de imagen opcionales (`CoverBlock`, `TriangleDividerBlock`,
+`SectionDividerBlock`, `CityToursDividerBlock`, `ThankYouBlock`,
+`FromOwnersBlock`, `HotelBlock` ×3, `ExcursionListBlock`,
+`DayItineraryBlock`) renderizaban `<img src={...}>` sin proteger contra
+string vacío — cualquier campo de imagen dejado en blanco (posible desde
+siempre: `validImageUrl()` en las actions acepta `""` como válido, y
+`ADDABLE_SECTION_DEFAULTS` en `lib/editor/addableSections.ts` arranca
+`triangleDivider`/`sectionDivider`/`thankYou` nuevos con `imageUrl: ""` hasta
+que el usuario carga una imagen) producía una imagen rota real en editor,
+preview **y PDF**, no solo un warning de consola. Corregido con
+`src={value || undefined}` (el patrón que React mismo recomienda en su propio
+warning) en cada bloque; `DayItineraryBlock` filtra `imageUrls` vacíos antes
+de mapear en vez de renderizar un hueco. Descubierto al investigar errores de
+consola reportados por el usuario, que en este caso puntual venían de 2
+secciones (`thankYou`/`triangleDivider`) dejadas sin imagen por corridas
+previas de la suite e2e completa contra la propuesta seed — esas 2 filas se
+borraron; sigue habiendo una sección `hotel` extra (id 273, con imagen real,
+sin bug asociado) de otro test de persistencia de la misma corrida, sin
+limpiar a propósito por ahora.
+
+La Fase 13.1 del plan de expansión (plantillas de propuesta —
+`docs/STUDIO_EXPANSION_PLAN.md`) está **completa**. "Guardar como plantilla"
+(`components/editor/SaveAsTemplateButton.tsx`, botón nuevo en el toolbar del
+editor junto a Share) hace un deep copy del grafo completo de la propuesta
+actual marcado `proposals.isTemplate` — 4 columnas nuevas y aditivas en
+`proposals` (`is_template`/`template_name`/`template_description`/
+`template_thumbnail_url`, migración `0002_worthless_wilson_fisk.sql`, `ALTER
+TABLE ADD` plano sin rebuild de tabla). **Refactor clave:** la lógica de copia
+de grafo que antes vivía solo dentro de `duplicateProposal.ts` (días,
+reservas de hotel, excursiones, listas, pricing, secciones con remapeo de
+`refId`) se extrajo a `lib/db/copyProposalGraph.ts::copyProposalGraphInto(tx,
+sourceId, targetId, overrides?)`, reusada ahora por `duplicateProposal.ts`,
+`lib/db/saveProposalAsTemplate.ts` (guardar) y
+`lib/db/createProposalFromTemplate.ts` (crear desde plantilla) —
+`duplicateProposal.ts` no cambió de comportamiento, solo delega. "Crear desde
+plantilla" es un tercer origen en `CreateProposalDialog.tsx` ("From
+template", junto a Blank/Duplicate) que llama `createProposalFromTemplate`:
+copia el grafo con `skipClients:true` (inserta solo el `leadClientId` nuevo
+elegido en el diálogo, sin roster de travelers de la plantilla) y limpia los
+campos listados en `lib/editor/resetOnTemplateFields.ts::RESET_ON_TEMPLATE_FIELDS`
+(`leadClient`, `travelDatesLabel`, `arrivalAirport`, `departureAirport`,
+`proposalDaysDate`) — lista estática consultada explícitamente por la
+función, **no** un intérprete genérico sobre el view-model runtime
+`ProposalEditorField` (esa capa se puebla por render de página, la altura
+equivocada para decidir qué columnas crudas limpiar antes de que la propuesta
+nueva exista). Gestión de plantillas vive en la ruta dedicada nueva
+`/proposals/templates` (`TemplateGallery.tsx`, tarjetas con thumbnail —reusa
+`coverImageUrl` de la propuesta origen, sin screenshot real—, nombre,
+descripción, diseño y estado): renombrar y "actualizar desde una propuesta"
+comparten un solo diálogo modal (`ManageTemplateDialog`, mismo patrón de
+focus-trap que `ShareProposalButton.tsx`); archivar/restaurar son botones de
+ícono directos en la tarjeta. "Actualizar desde una propuesta"
+(`lib/db/updateTemplateFromProposal.ts`) borra el grafo hijo actual de la
+plantilla (delete de las filas padre alcanza — las hijas cascadean por FK) y
+lo reemplaza con una copia fresca vía el mismo `copyProposalGraphInto`; las
+propuestas ya creadas desde esa plantilla no se tocan, cada una tiene su
+propia copia independiente tomada en el momento de creación — mismo
+principio snapshot que Fase 2.3B. Las plantillas quedan fuera del pipeline
+principal vía `proposals.isTemplate`: `getProposalListSummaries()` (dashboard
+`/proposals`) las excluye con `.where(eq(proposals.isTemplate, false))`;
+`lib/db/getTemplateList.ts` (nuevo, deliberadamente más liviano — sin los
+joins de pricing/última-actividad que sí necesita el dashboard) las lista
+aparte. Sin action de borrado de plantilla — el plan solo pedía
+renombrar/actualizar/archivar. Cubierto por 2 tests nuevos en
+`tests/core.test.mts` (forma de `RESET_ON_TEMPLATE_FIELDS`; round-trip
+guardar-como-plantilla→crear-desde-plantilla contra la propuesta seed,
+verificando conteo de secciones igual al original, fechas limpias, exclusión
+del pipeline, con cleanup de las filas creadas al final del test) y verificado
+de punta a punta contra un servidor real corriendo en Playwright (guardar,
+ver en galería, crear, confirmar "Dates not assigned" en el nuevo proposal y
+las 44 páginas de itinerario retenidas intactas).
+
 La Fase 12.3 del plan de expansión (autenticación mínima —
 `docs/STUDIO_EXPANSION_PLAN.md`) está **completa, cerrando la Fase 12
 entera**. Login single-usuario (`app/login/page.tsx` + `app/login/
@@ -551,11 +648,13 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
 
 **Proposal Studio pendiente:**
 - La cobertura de formularios del documento está completa. La Fase 11
-  (**11.1–11.3**) y la Fase 12 entera (**12.1–12.3**: promoción de esquema,
-  dashboard de propuestas, autenticación mínima) del plan de expansión están
-  completas. Pendiente: el brand asset pack (ver `docs/BRAND_ASSET_PACK.md`)
-  para cerrar Fase 9, bloqueado en assets externos. Después siguen las
-  Fases 13+. El orden y criterios están en
+  (**11.1–11.3**), la Fase 12 entera (**12.1–12.3**: promoción de esquema,
+  dashboard de propuestas, autenticación mínima) y la Fase 13.1 (plantillas
+  de propuesta) del plan de expansión están completas. Pendiente: el brand
+  asset pack (ver `docs/BRAND_ASSET_PACK.md`) para cerrar Fase 9, bloqueado
+  en assets externos. Después siguen 13.2 (secciones guardadas/snippets),
+  13.3 (biblioteca de imágenes) y 13.4 (biblioteca de fees) para cerrar la
+  Fase 13, luego las Fases 14+. El orden y criterios están en
   `docs/EDITOR_IMPLEMENTATION_PLAN.md` y `docs/STUDIO_EXPANSION_PLAN.md`.
 - 4 tests de `editor.spec.ts` fallan de forma intermitente en el proyecto
   `mobile` de Playwright (accesibilidad, edición inline de texto, popover de

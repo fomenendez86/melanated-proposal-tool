@@ -11,3 +11,5 @@ sqlite.pragma("busy_timeout = 5000");
 
 export const db = drizzle(sqlite, { schema });
 export { sqlite };
+
+export type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];

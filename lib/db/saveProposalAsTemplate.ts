@@ -5,24 +5,23 @@ import { generateProposalNumber } from "./generateProposalNumber";
 import { db } from "./client";
 import { proposals } from "./schema";
 
-export interface DuplicateProposalResult {
+export interface SaveProposalAsTemplateResult {
   ok: boolean;
   id?: number;
   formError?: string;
 }
 
-// Full-graph deep copy: every proposal-scoped child row gets a fresh id, so
-// editing the duplicate never mutates the source (and vice versa). Shared
-// catalog rows (hotels, excursions, cities, bank accounts) stay referenced,
-// not copied. Revisions/shares/events are deliberately NOT copied — a
-// duplicate starts with clean sharing history, consistent with its reset
-// `draft` status.
-export async function duplicateProposal(
-  sourceProposalId: number,
-  overrides?: { leadClientId?: number }
-): Promise<DuplicateProposalResult> {
-  const [source] = await db.select().from(proposals).where(eq(proposals.id, sourceProposalId));
+// Deep-copies proposalId's graph into a brand-new template row (isTemplate),
+// same shape as duplicateProposal — every child gets a fresh id, so later
+// edits to either the source proposal or the template never affect the
+// other. A template can't itself be saved as a template.
+export async function saveProposalAsTemplate(
+  proposalId: number,
+  input: { name: string; description: string | null }
+): Promise<SaveProposalAsTemplateResult> {
+  const [source] = await db.select().from(proposals).where(eq(proposals.id, proposalId));
   if (!source) return { ok: false, formError: "Proposal not found." };
+  if (source.isTemplate) return { ok: false, formError: "A template cannot be saved as another template." };
 
   try {
     const newId = db.transaction((tx) => {
@@ -30,8 +29,12 @@ export async function duplicateProposal(
         .insert(proposals)
         .values({
           proposalNumber: `TMP-${crypto.randomUUID()}`,
-          leadClientId: overrides?.leadClientId ?? source.leadClientId,
+          leadClientId: source.leadClientId,
           status: "draft",
+          isTemplate: true,
+          templateName: input.name,
+          templateDescription: input.description,
+          templateThumbnailUrl: source.coverImageUrl,
           designId: source.designId,
           designVersion: source.designVersion,
           packageName: source.packageName,
@@ -49,16 +52,16 @@ export async function duplicateProposal(
         })
         .returning({ id: proposals.id })
         .get();
-      const newProposalId = inserted.id;
-      tx.update(proposals).set({ proposalNumber: generateProposalNumber(newProposalId) }).where(eq(proposals.id, newProposalId)).run();
+      const newTemplateId = inserted.id;
+      tx.update(proposals).set({ proposalNumber: generateProposalNumber(newTemplateId) }).where(eq(proposals.id, newTemplateId)).run();
 
-      copyProposalGraphInto(tx, sourceProposalId, newProposalId, { leadClientId: overrides?.leadClientId });
+      copyProposalGraphInto(tx, proposalId, newTemplateId, {});
 
-      return newProposalId;
+      return newTemplateId;
     });
 
     return { ok: true, id: newId };
   } catch {
-    return { ok: false, formError: "The proposal could not be duplicated." };
+    return { ok: false, formError: "The template could not be saved." };
   }
 }
