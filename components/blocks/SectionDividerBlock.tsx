@@ -1,3 +1,4 @@
+import BrandWordmark from "@/components/blocks/shared/BrandWordmark";
 import PageFooter from "@/components/blocks/shared/PageFooter";
 import { editableRegion } from "@/lib/editor/editableRegions";
 import type { SectionDividerData } from "@/lib/types";
@@ -14,7 +15,7 @@ export default function SectionDividerBlock({
       <div className="absolute left-[35px] top-[-12px] h-[492px] w-6 bg-green-700" />
       <div className="absolute left-[13px] top-[98px] h-[5px] w-[77px] bg-yellow-400" />
       <div className="absolute left-[98px] top-[101px] -translate-y-1/2 whitespace-nowrap text-[10px] font-semibold uppercase tracking-wide">
-        Melanated Safaris
+        <BrandWordmark />
       </div>
 
       <div className="absolute right-[82px] top-16 text-[10px] uppercase tracking-wide">

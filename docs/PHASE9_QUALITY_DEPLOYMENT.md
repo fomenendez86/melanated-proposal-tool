@@ -60,3 +60,13 @@ extracted assets. The required handoff is the approved logo, licensed fonts,
 founder and travel photography, icons/illustrations, and usage rights. Until
 supplied, Picsum URLs and text/emoji stand-ins remain explicit placeholders;
 the final brand acceptance criterion must not be marked complete.
+
+The import path for that handoff is now mechanical: the logo wordmark and the
+two fixed section icons (globe, warning triangle) are config-driven through
+`lib/brand/config.ts`, and heading typography resolves through a single CSS
+variable chain in `app/globals.css` (`--font-serif` → `--font-heading` →
+`--font-brand-heading`) rather than being hardcoded per block. Content
+photography (hotel, excursion, itinerary, cover, team photos) stays a data
+edit in `lib/db/seed.ts`, not a config slot, because each photo is
+independent per-record content. See `docs/BRAND_ASSET_PACK.md` for the exact
+file paths and activation steps.

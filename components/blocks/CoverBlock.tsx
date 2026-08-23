@@ -1,3 +1,4 @@
+import BrandWordmark from "@/components/blocks/shared/BrandWordmark";
 import { editableRegion } from "@/lib/editor/editableRegions";
 import type { CoverData } from "@/lib/types";
 
@@ -23,7 +24,7 @@ export default function CoverBlock({ data }: CoverBlockProps) {
 
       <div className="absolute left-0 top-0 h-full w-[32%] px-10 py-10">
         <p className="text-[10px] font-semibold uppercase tracking-wide">
-          Melanated Safaris
+          <BrandWordmark />
         </p>
 
         <div className="mt-4 flex h-[640px] items-center justify-center">

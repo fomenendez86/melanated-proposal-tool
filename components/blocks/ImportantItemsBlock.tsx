@@ -1,5 +1,6 @@
 import QRCode from "qrcode";
 
+import BrandIcon from "@/components/blocks/shared/BrandIcon";
 import PageFooter from "@/components/blocks/shared/PageFooter";
 import PageHeader from "@/components/blocks/shared/PageHeader";
 import SectionHeader from "@/components/blocks/shared/SectionHeader";
@@ -30,7 +31,7 @@ export default async function ImportantItemsBlock({
       </div>
 
       <div className="mt-8 text-center">
-        <span className="text-5xl">⚠️</span>
+        <BrandIcon slot="warning" className="text-5xl" />
         <h1 className="mt-2 text-2xl font-bold uppercase tracking-wide">
           Important Items
         </h1>

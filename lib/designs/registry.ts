@@ -38,8 +38,8 @@ const designs: DocumentDesignDescriptor[] = [
       accent: "#d6b45b",
       surface: "#ffffff",
       text: "#1c202b",
-      headingFontFamily: "serif",
-      bodyFontFamily: "sans-serif",
+      headingFontFamily: "var(--font-heading)",
+      bodyFontFamily: "var(--font-sans)",
     },
     supportedSectionTypes: [...ALL_SECTION_TYPES],
     sectionVariants: {

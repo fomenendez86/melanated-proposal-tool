@@ -1,3 +1,4 @@
+import BrandWordmark from "@/components/blocks/shared/BrandWordmark";
 import PageFooter from "@/components/blocks/shared/PageFooter";
 import { editableRegion } from "@/lib/editor/editableRegions";
 import type { ExcursionListData } from "@/lib/types";
@@ -12,7 +13,7 @@ export default function ExcursionListBlock({ data }: ExcursionListBlockProps) {
       <div className="flex items-center justify-between text-[10px] font-sans uppercase tracking-wide">
         <div className="flex items-center gap-2">
           <div className="h-[5px] w-[77px] bg-yellow-400" />
-          <span className="font-semibold">Melanated Safaris</span>
+          <span className="font-semibold"><BrandWordmark /></span>
         </div>
         <div className="text-right">Proposal</div>
       </div>
