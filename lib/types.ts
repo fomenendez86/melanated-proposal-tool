@@ -20,6 +20,7 @@ export interface ExcursionItem {
   title: string;
   description: string;
   price: string;
+  priceNote?: string;
   imageUrl: string;
 }
 

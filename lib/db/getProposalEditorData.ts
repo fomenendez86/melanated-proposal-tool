@@ -44,6 +44,7 @@ function formatExcursionSnapshot(items: ExcursionItem[]) {
       [
         `[${item.title}]`,
         `Price: ${item.price}`,
+        ...(item.priceNote ? [`Note: ${item.priceNote}`] : []),
         `Image: ${item.imageUrl}`,
         "Description:",
         item.description,
@@ -380,7 +381,7 @@ export async function getProposalEditorData(
             value: formatExcursionSnapshot(items),
             maxLength: 30000,
             multiline: true,
-            helpText: "Use [Title], Price:, Image:, and Description: for every excursion.",
+            helpText: "Use [Title], Price:, Image:, and Description: for every excursion. Note: is optional (a short qualifier shown above the price, e.g. \"per helicopter; max. 6 pax\").",
           },
         ],
       };

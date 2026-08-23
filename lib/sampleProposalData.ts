@@ -346,7 +346,8 @@ const arushaExcursions: ExcursionItem[] = [
     title: "Scenic Helicopter Tour",
     description:
       "Take a private or shared scenic helicopter tour over the majestic Mount Meru or the Northern Circuit, offering panoramic views of Lake Natron and the stunning Oi Lidonyo Lengua. Duration: 3.5 hours. Lunch Included.",
-    price: "$13,000 (per helicopter; max. 6 pax)",
+    price: "$13,000",
+    priceNote: "per helicopter; max. 6 pax",
     imageUrl: "https://picsum.photos/seed/helicopter/600/400",
   },
 ];

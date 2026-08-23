@@ -317,3 +317,97 @@ test("rendered proposal has no measured page overflow", async ({ page }) => {
   );
   expect(overflowPages).toEqual([]);
 });
+
+const PAGE_CARD_TITLE_SELECTOR = "nav[aria-label='Proposal pages'] > div > button > div.pt-0\\.5 > p:first-child";
+
+async function draggableCardRects(page: import("playwright/test").Page) {
+  return page.evaluate((selector) => {
+    return Array.from(document.querySelectorAll(selector)).map((card) => {
+      const rect = card.getBoundingClientRect();
+      return { bottom: rect.bottom, hasHandle: !!card.querySelector(".cursor-grab") };
+    });
+  }, "nav[aria-label='Proposal pages'] > div");
+}
+
+test("dragging a page thumbnail reorders sections and persists, in both directions", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "Desktop-only drag interaction");
+  await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
+  await expect(page.locator(PAGE_CARD_TITLE_SELECTOR).first()).toBeVisible();
+
+  const initialTitles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+
+  async function dragFirstHandleTo(targetBottom: number) {
+    const handle = page.locator("nav[aria-label='Proposal pages'] .cursor-grab").first();
+    const box = await handle.boundingBox();
+    if (!box) throw new Error("drag handle not found");
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, targetBottom + 15, { steps: 15 });
+    await page.mouse.up();
+  }
+
+  const cardsBefore = await draggableCardRects(page);
+  const draggableBefore = cardsBefore.filter((card) => card.hasHandle);
+  expect(draggableBefore.length).toBeGreaterThan(2);
+
+  // Drag the first draggable section past the third draggable section.
+  await dragFirstHandleTo(draggableBefore[2].bottom);
+
+  await expect(async () => {
+    const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+    expect(titles).not.toEqual(initialTitles);
+  }).toPass({ timeout: 8000 });
+
+  const reorderedTitles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator(PAGE_CARD_TITLE_SELECTOR).first()).toBeVisible();
+  await expect(async () => {
+    const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+    expect(titles).toEqual(reorderedTitles);
+  }).toPass({ timeout: 5000 });
+
+  // Drag the SECOND draggable section up above the first one. This
+  // exercises the upward/negative-direction path with a second,
+  // independent persisted change.
+  const navBox = await page.locator("nav[aria-label='Proposal pages']").boundingBox();
+  if (!navBox) throw new Error("page navigator nav not found");
+  const handles = page.locator("nav[aria-label='Proposal pages'] .cursor-grab");
+  const upBox = await handles.nth(1).boundingBox();
+  const firstBox = await handles.nth(0).boundingBox();
+  if (!upBox || !firstBox) throw new Error("drag handle not found");
+
+  await page.mouse.move(upBox.x + upBox.width / 2, upBox.y + upBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(upBox.x + upBox.width / 2, firstBox.y - 5, { steps: 15 });
+  await page.mouse.up();
+
+  await expect(async () => {
+    const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+    expect(titles).not.toEqual(reorderedTitles);
+  }).toPass({ timeout: 8000 });
+
+  const secondReorderTitles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator(PAGE_CARD_TITLE_SELECTOR).first()).toBeVisible();
+  await expect(async () => {
+    const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+    expect(titles).toEqual(secondReorderTitles);
+  }).toPass({ timeout: 5000 });
+});
+
+test("mobile: page navigator drawer has no drag handles and keeps Document Structure buttons", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "Mobile-only responsive behavior");
+  await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
+
+  await page.getByLabel("Open page navigator").click();
+  const pagesDialog = page.getByRole("dialog", { name: "Page navigator" });
+  await expect(pagesDialog).toBeVisible();
+  await expect(pagesDialog.locator(".cursor-grab")).toHaveCount(0);
+  await pagesDialog.getByLabel("Close page navigator").click();
+
+  await page.getByLabel("Open document structure").click();
+  const structureDialog = page.getByRole("dialog", { name: "Document structure" });
+  await expect(structureDialog).toBeVisible();
+  await expect(structureDialog.getByLabel(/^Move .* down$/).first()).toBeVisible();
+  await expect(structureDialog.getByLabel(/^Move .* up$/).first()).toBeVisible();
+});

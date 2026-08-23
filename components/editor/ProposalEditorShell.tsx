@@ -15,7 +15,6 @@ import {
   Minus,
   Palette,
   Plus,
-  Search,
   Settings2,
   Sparkles,
 } from "lucide-react";
@@ -59,6 +58,7 @@ import type { ProposalPageMeta } from "@/lib/editor/proposalPageMeta";
 import ItineraryEditor from "./ItineraryEditor";
 import CatalogPanel from "./CatalogPanel";
 import CompositionPanel from "./CompositionPanel";
+import PageNavigator from "./PageNavigator";
 import PdfGenerateButton from "./PdfGenerateButton";
 import ShareProposalButton from "./ShareProposalButton";
 import {
@@ -68,7 +68,6 @@ import {
   EditorField,
   EditorInspectorSection,
   EditorNotice,
-  EditorPageCard,
   EditorPanelHeader,
   EditorSegmentedControl,
   EditorStatusBadge,
@@ -83,17 +82,6 @@ interface ProposalEditorShellProps {
   designContext: ProposalDesignContext;
   catalog: ProposalCatalogData;
   composition: ProposalCompositionData;
-}
-
-interface PageNavigatorProps {
-  pageMeta: ProposalPageMeta[];
-  pages: ReactNode[];
-  selectedPage: ProposalPageMeta;
-  filter: string;
-  onFilterChange: (value: string) => void;
-  onSelect: (page: ProposalPageMeta) => void;
-  pageSize: DocumentPageGeometry;
-  onClose?: () => void;
 }
 
 interface RegionFocusRequest {
@@ -172,103 +160,6 @@ const ZOOM_STEP = 0.05;
 
 function clampZoom(value: number) {
   return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(value.toFixed(3))));
-}
-
-function PageThumbnail({ page, pageSize }: { page: ReactNode; pageSize: DocumentPageGeometry }) {
-  const thumbnailScale = 48 / pageSize.widthPx;
-
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden bg-white" aria-hidden="true">
-      <div
-        className="origin-top-left"
-        style={{
-          width: pageSize.widthPx,
-          height: pageSize.heightPx,
-          transform: `scale(${thumbnailScale})`,
-        }}
-      >
-        {page}
-      </div>
-    </div>
-  );
-}
-
-function PageNavigator({
-  pageMeta,
-  pages,
-  selectedPage,
-  filter,
-  onFilterChange,
-  onSelect,
-  pageSize,
-  onClose,
-}: PageNavigatorProps) {
-  const filteredPages = useMemo(() => {
-    const query = filter.trim().toLowerCase();
-    if (!query) return pageMeta;
-    return pageMeta.filter((page) =>
-      `${page.pageNumber} ${page.eyebrow} ${page.title} ${page.description}`
-        .toLowerCase()
-        .includes(query)
-    );
-  }, [filter, pageMeta]);
-
-  return (
-    <div className="flex h-full min-h-0 flex-col bg-editor-panel-muted">
-      <EditorPanelHeader
-        icon={<Layers3 className="size-4" />}
-        label="Pages"
-        count={pageMeta.length}
-        onClose={onClose}
-        closeLabel="Close page navigator"
-      />
-
-      <div className="p-3">
-        <label className="flex h-11 items-center gap-2 rounded-lg border border-editor-border bg-editor-raised px-3 text-editor-text-muted focus-within:border-editor-border-strong focus-within:ring-2 focus-within:ring-editor-border-strong/20">
-          <Search className="size-4" aria-hidden="true" />
-          <span className="sr-only">Search proposal pages</span>
-          <input
-            value={filter}
-            onChange={(event) => onFilterChange(event.target.value)}
-            placeholder="Find a page"
-            className="min-w-0 flex-1 bg-transparent text-sm text-editor-text-strong outline-none placeholder:text-editor-text-subtle"
-          />
-        </label>
-      </div>
-
-      <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-2.5 pb-3" aria-label="Proposal pages">
-        {filteredPages.map((page) => {
-          const active = page.id === selectedPage.id;
-          return (
-            <EditorPageCard
-              key={page.id}
-              active={active}
-              pageNumber={page.pageNumber}
-              title={page.title}
-              description={page.description}
-              eyebrow={page.eyebrow}
-              thumbnail={<PageThumbnail page={pages[page.pageNumber - 1]} pageSize={pageSize} />}
-              thumbnailHeight={(48 * pageSize.heightPx) / pageSize.widthPx}
-              status={page.status}
-              onSelect={() => onSelect(page)}
-            />
-          );
-        })}
-        {filteredPages.length === 0 ? (
-          <EditorEmptyState
-            compact
-            title="No matching pages"
-            description="Try a page number, title, or section name."
-            icon={<Search className="size-5" />}
-          />
-        ) : null}
-      </nav>
-
-      <div className="border-t border-editor-border-subtle px-4 py-3 text-xs text-editor-text-muted">
-        {pageMeta.length} rendered pages
-      </div>
-    </div>
-  );
 }
 
 function fieldValues(config: ProposalEditorPageConfig) {
@@ -1569,6 +1460,8 @@ export default function ProposalEditorShell({
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[252px_minmax(0,1fr)] xl:grid-cols-[252px_minmax(0,1fr)_304px]">
         <aside className="hidden min-h-0 border-r border-editor-border-subtle lg:block">
           <PageNavigator
+            proposalId={proposal.id}
+            composition={composition}
             pageMeta={pageMeta}
             pages={pages}
             selectedPage={selectedPage}
@@ -1576,6 +1469,8 @@ export default function ProposalEditorShell({
             onFilterChange={setFilter}
             onSelect={selectPage}
             pageSize={pageSize}
+            enableDrag
+            announce={setRegionAnnouncement}
           />
         </aside>
 
@@ -1811,6 +1706,8 @@ export default function ProposalEditorShell({
           panelClassName="w-[min(88vw,340px)]"
         >
           <PageNavigator
+            proposalId={proposal.id}
+            composition={composition}
             pageMeta={pageMeta}
             pages={pages}
             selectedPage={selectedPage}
@@ -1819,6 +1716,7 @@ export default function ProposalEditorShell({
             onSelect={selectPage}
             pageSize={pageSize}
             onClose={() => setPagesOpen(false)}
+            announce={setRegionAnnouncement}
           />
         </EditorDrawer>
       ) : null}

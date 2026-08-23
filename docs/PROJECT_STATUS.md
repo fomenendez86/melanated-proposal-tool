@@ -42,6 +42,46 @@ inline o un popover de imagen sigue abierto. Cubierto por 11 tests e2e
 nuevos entre 10.2, 10.3 y 10.4 (22/22 en desktop y mobile, verificado en
 corridas separadas por proyecto).
 
+La Fase 11.1 del plan de expansión (reordenar secciones arrastrando
+miniaturas en el panel Pages — `docs/STUDIO_EXPANSION_PLAN.md`) está
+**completa**. `PageNavigator`/`PageThumbnail` se extrajeron de
+`ProposalEditorShell.tsx` (que ya superaba 1900 líneas) a
+`components/editor/PageNavigator.tsx`, junto con un hook nuevo y reusable
+`usePointerReorder.ts` que implementa la mecánica de drag con pointer events
+propios (umbral de activación, auto-scroll, cancelación con Escape) sin
+ninguna librería de DnD, tal como pedía el plan. El reorden por drag reusa
+100% la action existente `moveProposalSection` (la misma que ya usaban los
+botones Move up/down de Document Structure) — no hubo cambio de servidor.
+Solo la primera página de cada sección (`sourceSectionId`) es arrastrable;
+las páginas de continuación de paginación se mueven con su sección. El
+algoritmo que traduce una posición de drop visible a la cantidad de
+llamadas `moveProposalSection` necesarias tiene una sutileza real: el
+orden visible (`pageMeta`, solo secciones visibles) y el orden raw que la
+action manipula (`composition.items`, incluye ocultas/borradas) pueden
+divergir, así que el índice de destino se calcula sobre el array raw *sin*
+la sección arrastrada, no sobre el array completo — calcularlo mal desplaza
+la sección una posición de más cuando hay secciones ocultas de por medio
+(validado con un subagente antes de implementar, y confirmado end-to-end
+con drags reales contra la base de datos). El drag es desktop-only a
+propósito (el criterio de aceptación de la fase pide que mobile conserve
+exclusivamente el camino por botones); el drawer de Pages en mobile no
+recibe `enableDrag` y no expone handles. Cubierto por 2 tests e2e nuevos
+(reorder bidireccional en desktop con persistencia verificada tras reload;
+ausencia de handles + botones intactos en mobile).
+
+**Pendiente dentro de la misma fase:** 11.2 (arrastrar ítems del catálogo al
+canvas para insertarlos) y 11.3 (affordance "+" en hover entre páginas,
+alternativa sin drag) quedaron fuera de esta sesión a propósito — a
+diferencia de 11.1, ambas requieren un cambio de servidor real: las actions
+de inserción (`addProposalSection`, `addCatalogHotelToProposal`,
+`addCatalogExcursionToProposal`) hoy solo agregan al final de la
+composición; necesitan aceptar una posición explícita (o insertar y
+reubicar transaccionalmente) antes de que cualquiera de las dos
+interacciones sea posible. Insertar un hotel además crea 2+ secciones a la
+vez (divider + detalle), que tendrían que reubicarse juntas. Este es el
+punto de partida exacto para retomar — no hace falta re-investigar el
+mapeo de `CompositionPanel`/`CatalogPanel`/actions, ya está hecho.
+
 En paralelo sigue pendiente importar el paquete de marca aprobado para
 cerrar el último criterio de Fase 9; el pipeline de import ya está listo
 (logo wordmark e íconos fijos de sección config-driven vía
@@ -179,8 +219,15 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
 ## Pendientes conocidos
 
 **Fidelidad visual (deferred desde el inicio del proyecto):**
-- La portada deja una `E` sola al envolver el subtítulo estrecho en el PDF
-  dinámico; corregir ancho/copy-fitting durante la Fase 9.
+- ~~La portada deja una letra sola al envolver el subtítulo estrecho~~ —
+  corregido: `coverSubtitle` y `clientName` en `CoverBlock.tsx` usan
+  `text-pretty` (CSS `text-wrap: pretty`, soportado por el Chromium de
+  Playwright), que rebalancea las líneas para no dejar una palabra corta
+  huérfana. Reproducido y verificado con el string real del seed
+  ("An Unforgettable Tanzanian Experience For": sin el fix la última línea
+  medía 28px de ancho — una sola palabra —; con el fix, [138, 77, 116]).
+  Como `coverSubtitle`/`clientName` son campos editables por el usuario, el
+  fix es genérico (cualquier texto futuro), no un ajuste del string default.
 - Fuentes custom del original (Prata, BankGothicBT, Muli, Gotham-Bold,
   PalmClubScript, Oswald, EBGaramond, etc.) — todo usa la fuente sans por
   defecto + serif/italic genérico como aproximación. El hook para
@@ -201,17 +248,29 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
 - `DayItineraryBlock` usa un orden fijo (título→imágenes→texto) para ambas
   columnas cuando hay 2 días por página; el original alterna el orden según
   el espacio disponible por columna — no replicado.
-- `ExcursionItem.price` es un string simple; el formato con calificador
-  arriba del precio (ej. "per helicopter; max. 6 pax" antes de "$13,000",
-  pág. 25) se resolvió concatenando todo en un solo string, no como campo
-  separado.
+- ~~`ExcursionItem.price` es un string simple con el calificador
+  concatenado~~ — corregido: `ExcursionItem` ahora tiene `priceNote?: string`
+  separado de `price`. La tabla catálogo (`excursions.priceNote`) ya era
+  estructurada; el problema estaba solo en `formatPrice()` de
+  `getProposalData.ts`, que unía todo en un string. `ExcursionListBlock.tsx`
+  renderiza el note en una línea chica arriba del precio en negrita, como en
+  pág. 25. El editor de colección explícita (formato `[Title]`/`Price:`/
+  `Image:`/`Description:` en `actions.ts`) gana una línea `Note:` opcional,
+  simétrica en parser (`parseExcursionSnapshot`) y serializador
+  (`formatExcursionSnapshot`). Snapshots ya guardados con el string viejo
+  ("$13,000 (per helicopter...)") siguen renderizando igual que antes hasta
+  que se re-guarden — sin migración de datos.
 - `sampleProposalData.ts` es representativo (32 páginas: 2 hoteles, no 3;
   Arusha únicamente, falta Karatu) — el mecanismo de ensamblado ya soporta
   agregar más secciones, solo falta cargarlas.
 
 **Proposal Studio pendiente:**
-- La cobertura de formularios del documento está completa. El siguiente
-  trabajo es el brand asset pack (ver `docs/BRAND_ASSET_PACK.md`) para
-  cerrar Fase 9, y luego las Fases 11+ del plan de expansión. El orden y
-  criterios están en `docs/EDITOR_IMPLEMENTATION_PLAN.md` y
+- La cobertura de formularios del documento está completa. Fase 10 y Fase
+  11.1 del plan de expansión están completas. El siguiente trabajo es (a)
+  el brand asset pack (ver `docs/BRAND_ASSET_PACK.md`) para cerrar Fase 9,
+  bloqueado en assets externos, y (b) Fase 11.2/11.3 (drag-insert desde
+  catálogo y affordance "+" de inserción), que requieren extender las
+  actions de inserción con una posición — ver el detalle en "Estado
+  general" arriba. Después siguen las Fases 12+. El orden y criterios
+  están en `docs/EDITOR_IMPLEMENTATION_PLAN.md` y
   `docs/STUDIO_EXPANSION_PLAN.md`.

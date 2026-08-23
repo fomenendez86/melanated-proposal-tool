@@ -161,9 +161,8 @@ async function buildDayEntries(days: (typeof proposalDays.$inferSelect)[]): Prom
   return result;
 }
 
-function formatPrice(basePrice: number, priceNote: string | null): string {
-  const amount = `$${basePrice.toLocaleString("en-US")}`;
-  return priceNote ? `${amount} (${priceNote})` : amount;
+function formatPriceAmount(basePrice: number): string {
+  return `$${basePrice.toLocaleString("en-US")}`;
 }
 
 function formatMoney(amount: number, currency: string): string {
@@ -386,7 +385,8 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
             items.push({
               title: item.title,
               description: item.description,
-              price: formatPrice(item.priceOverride ?? item.basePrice, item.priceNote),
+              price: formatPriceAmount(item.priceOverride ?? item.basePrice),
+              priceNote: item.priceNote ?? undefined,
               imageUrl: image?.url ?? "",
             });
           }

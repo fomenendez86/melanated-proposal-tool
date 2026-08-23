@@ -19,7 +19,16 @@
       "Bash(dir data *)",
       "Bash(npm run dev > /tmp/nextdev.log 2>&1 & *)",
       "Bash(python3 -c ' *)",
-      "Bash(powershell -NoProfile -Command 'Get-CimInstance Win32_Process -Filter \"Name='\\\\''node.exe'\\\\''\" | Where-Object { $_.CommandLine -like '\\\\''*next*dev*'\\\\'' } | Select-Object ProcessId,CommandLine')"
+      "Bash(powershell -NoProfile -Command 'Get-CimInstance Win32_Process -Filter \"Name='\\\\''node.exe'\\\\''\" | Where-Object { $_.CommandLine -like '\\\\''*next*dev*'\\\\'' } | Select-Object ProcessId,CommandLine')",
+      "Bash(npm test *)",
+      "Bash(node scratch-drag.mjs)",
+      "Bash(node scratch-drag2.mjs)",
+      "Bash(node scratch-drag3.mjs)",
+      "Bash(powershell -NoProfile -Command \"Stop-Process -Id 9732 -Force -ErrorAction SilentlyContinue\")",
+      "Bash(node -e \"const Database = require\\('better-sqlite3'\\); const db = new Database\\('./data/proposals.db'\\); db.prepare\\('DELETE FROM sqlite_sequence'\\).run\\(\\); console.log\\('sequence reset'\\);\")",
+      "Bash(node scratch-verify-final.mjs)",
+      "Bash(powershell -NoProfile -Command \"Stop-Process -Id 24688 -Force -ErrorAction SilentlyContinue\")",
+      "Bash(node -e \"const Database = require\\('better-sqlite3'\\); const db = new Database\\('./data/proposals.db'\\); db.prepare\\('DELETE FROM sqlite_sequence'\\).run\\(\\); console.log\\('reset'\\);\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\fomen\\OneDrive\\Development\\melanated-proposal-tool\\output",

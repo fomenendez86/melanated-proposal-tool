@@ -180,9 +180,11 @@ function parseExcursionSnapshot(text: string): ExcursionItem[] | null {
 
   const finish = () => {
     if (!current) return true;
+    const priceNote = current.priceNote?.trim();
     const item = {
       title: current.title.trim(),
       price: current.price.trim(),
+      priceNote: priceNote ? priceNote : undefined,
       imageUrl: current.imageUrl.trim(),
       description: current.description.trim(),
     };
@@ -206,6 +208,9 @@ function parseExcursionSnapshot(text: string): ExcursionItem[] | null {
     }
     if (line.startsWith("Price:")) {
       current.price = line.slice(6).trim();
+      current.readingDescription = false;
+    } else if (line.startsWith("Note:")) {
+      current.priceNote = line.slice(5).trim();
       current.readingDescription = false;
     } else if (line.startsWith("Image:")) {
       current.imageUrl = line.slice(6).trim();

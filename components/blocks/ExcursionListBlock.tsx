@@ -28,8 +28,11 @@ export default function ExcursionListBlock({ data }: ExcursionListBlockProps) {
                   {item.description}
                 </p>
               </div>
-              <div className="self-end whitespace-nowrap text-lg font-bold">
-                {item.price}
+              <div className="self-end flex max-w-[110px] flex-col items-center text-center">
+                {item.priceNote && (
+                  <p className="text-xs text-neutral-700">{item.priceNote}</p>
+                )}
+                <p className="whitespace-nowrap text-lg font-bold">{item.price}</p>
               </div>
               <div>
                 <img

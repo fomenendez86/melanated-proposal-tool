@@ -34,10 +34,10 @@ export default function CoverBlock({ data }: CoverBlockProps) {
         </div>
 
         <div className="mt-4">
-          <p {...editableRegion("coverSubtitle", "multiline")} className="text-[12px] font-bold uppercase leading-4 tracking-[0.08em]">
+          <p {...editableRegion("coverSubtitle", "multiline")} className="text-pretty text-[12px] font-bold uppercase leading-4 tracking-[0.08em]">
             {data.subtitle}
           </p>
-          <p {...editableRegion("clientName")} className="mt-3 font-serif text-2xl italic">{data.clientLine}</p>
+          <p {...editableRegion("clientName")} className="text-pretty mt-3 font-serif text-2xl italic">{data.clientLine}</p>
         </div>
       </div>
     </div>

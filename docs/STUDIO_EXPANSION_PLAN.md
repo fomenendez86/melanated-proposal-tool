@@ -2,7 +2,8 @@
 
 **Estado:** Plan aprobado; Fase 10 completa (regiones editables, selección en
 canvas/puente con el inspector, edición de texto inline para campos simples,
-interacción de imágenes con popover en canvas)
+interacción de imágenes con popover en canvas). Fase 11.1 completa (reorden
+de secciones arrastrando miniaturas en el panel Pages); 11.2/11.3 pendientes.
 **Actualizado:** 2026-08-22
 
 Este documento extiende el roadmap de
@@ -38,7 +39,7 @@ intactos:
 | Edición inline sobre el documento | **Completo (Fase 10)** | **10** |
 | Selección de bloques haciendo click en la página | **Completo (Fase 10)** | **10** |
 | Drag & drop de contenido al documento | No — botones en drawers | **11** |
-| Reordenar páginas arrastrando miniaturas | No — botones en Document Structure | **11** |
+| Reordenar páginas arrastrando miniaturas | **Completo (Fase 11.1)** — inserción por drag (11.2) y affordance "+" (11.3) siguen pendientes | **11** |
 | Pipeline de propuestas con estados (Draft/Sent/Viewed/Won/Lost) | No — una sola propuesta seed, `/` redirige a `1` | **12** |
 | Crear, duplicar, archivar propuestas | No | **12** |
 | Plantillas (guardar como / crear desde) | No | **13** |
@@ -299,6 +300,11 @@ Completa la manipulación directa: arrastrar contenido al documento y
 reordenar páginas visualmente. Reutiliza las mutaciones seguras de la Fase 6
 (composición) y la Fase 5 (catálogo) — esta fase es *interacción*, no lógica
 nueva de negocio.
+
+**Estado:** 11.1 (reorden de miniaturas) completo. 11.2 (drag-insert desde
+catálogo) y 11.3 (affordance "+" de inserción) pendientes — ambas requieren
+que las actions de inserción, hoy solo agregan al final, acepten una
+posición; ver `docs/PROJECT_STATUS.md`.
 
 **Tamaño estimado:** M.
 

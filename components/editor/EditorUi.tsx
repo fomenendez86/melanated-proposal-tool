@@ -281,6 +281,10 @@ export function EditorPageCard({
   thumbnailHeight,
   status,
   onSelect,
+  dragHandle,
+  dragging,
+  dropIndicator,
+  cardRef,
 }: {
   active: boolean;
   pageNumber: number;
@@ -291,48 +295,70 @@ export function EditorPageCard({
   thumbnailHeight?: number;
   status?: "ready" | "warning" | "error" | "hidden";
   onSelect: () => void;
+  dragHandle?: ReactNode;
+  dragging?: boolean;
+  dropIndicator?: "before" | "after";
+  cardRef?: (el: HTMLDivElement | null) => void;
 }) {
   return (
-    <button
-      type="button"
-      aria-current={active ? "page" : undefined}
-      onClick={onSelect}
-      className={cn(
-        "flex min-h-20 w-full items-start gap-3 rounded-xl border p-2.5 text-left transition",
-        editorFocusRing,
-        active
-          ? "border-editor-border-strong bg-editor-raised shadow-editor-card"
-          : "border-transparent hover:border-editor-border-subtle hover:bg-editor-raised/80"
-      )}
-    >
-      <div
+    <div ref={cardRef} className="relative">
+      {dropIndicator === "before" ? (
+        <div aria-hidden="true" className="absolute -top-1.5 inset-x-2 z-10 h-0.5 rounded-full bg-editor-brand" />
+      ) : null}
+      <button
+        type="button"
+        aria-current={active ? "page" : undefined}
+        onClick={onSelect}
         className={cn(
-          "relative w-12 shrink-0 overflow-hidden rounded border bg-editor-raised",
-          active ? "border-editor-border-strong" : "border-editor-border"
+          "flex min-h-20 w-full items-start gap-3 rounded-xl border p-2.5 text-left transition",
+          editorFocusRing,
+          dragging
+            ? "border-dashed border-editor-brand opacity-60"
+            : active
+              ? "border-editor-border-strong bg-editor-raised shadow-editor-card"
+              : "border-transparent hover:border-editor-border-subtle hover:bg-editor-raised/80"
         )}
-        style={{ height: thumbnailHeight ?? 62 }}
       >
-        {thumbnail}
-        <span className="absolute bottom-0 right-0 grid min-h-4 min-w-4 place-items-center rounded-tl bg-editor-raised/90 px-1 text-[10px] font-bold tabular-nums text-editor-text">
-          {pageNumber}
-        </span>
-      </div>
-      <div className="min-w-0 flex-1 pt-0.5">
-        <p className={cn("truncate text-sm font-semibold", active ? "text-editor-brand" : "text-editor-text")}>
-          {title}
-        </p>
-        <p className="mt-1 line-clamp-2 text-xs leading-4 text-editor-text-muted">{description}</p>
-        <p className="mt-1.5 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-editor-text-muted">
-          {eyebrow}
-        </p>
-        {status && status !== "ready" ? (
-          <span className={cn(
-            "mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize",
-            status === "error" ? "bg-editor-danger-surface text-editor-danger" : "bg-editor-warning-surface text-editor-warning"
-          )}>{status}</span>
+        {dragHandle ? (
+          <span
+            className="mt-1 shrink-0 cursor-grab touch-none text-editor-text-subtle active:cursor-grabbing"
+            aria-hidden="true"
+          >
+            {dragHandle}
+          </span>
         ) : null}
-      </div>
-    </button>
+        <div
+          className={cn(
+            "relative w-12 shrink-0 overflow-hidden rounded border bg-editor-raised",
+            active ? "border-editor-border-strong" : "border-editor-border"
+          )}
+          style={{ height: thumbnailHeight ?? 62 }}
+        >
+          {thumbnail}
+          <span className="absolute bottom-0 right-0 grid min-h-4 min-w-4 place-items-center rounded-tl bg-editor-raised/90 px-1 text-[10px] font-bold tabular-nums text-editor-text">
+            {pageNumber}
+          </span>
+        </div>
+        <div className="min-w-0 flex-1 pt-0.5">
+          <p className={cn("truncate text-sm font-semibold", active ? "text-editor-brand" : "text-editor-text")}>
+            {title}
+          </p>
+          <p className="mt-1 line-clamp-2 text-xs leading-4 text-editor-text-muted">{description}</p>
+          <p className="mt-1.5 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-editor-text-muted">
+            {eyebrow}
+          </p>
+          {status && status !== "ready" ? (
+            <span className={cn(
+              "mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize",
+              status === "error" ? "bg-editor-danger-surface text-editor-danger" : "bg-editor-warning-surface text-editor-warning"
+            )}>{status}</span>
+          ) : null}
+        </div>
+      </button>
+      {dropIndicator === "after" ? (
+        <div aria-hidden="true" className="absolute -bottom-1.5 inset-x-2 z-10 h-0.5 rounded-full bg-editor-brand" />
+      ) : null}
+    </div>
   );
 }
 
