@@ -222,7 +222,7 @@ export default function TemplateGallery({
                 {template.description ? <p className="line-clamp-2 text-xs text-editor-text-muted">{template.description}</p> : null}
                 <p className="text-xs text-editor-text-subtle">{template.designName}</p>
                 <div className="mt-auto flex items-center gap-1.5 pt-2">
-                  <EditorButton type="button" variant="secondary" size="sm" onClick={() => setManagingId(template.id)}>
+                  <EditorButton type="button" variant="secondary" size="sm" aria-label={`Manage ${template.name}`} onClick={() => setManagingId(template.id)}>
                     <PencilLine className="size-4" aria-hidden="true" />
                     Manage
                   </EditorButton>

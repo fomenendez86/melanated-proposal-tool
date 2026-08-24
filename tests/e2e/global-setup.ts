@@ -12,7 +12,7 @@ try {
   // Missing in CI/prod where STUDIO_AUTH_PASSWORD is already set in the env.
 }
 
-const BASE_URL = "http://localhost:3000";
+const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:3100";
 const STORAGE_STATE_PATH = path.join(import.meta.dirname, "..", ".auth", "session.json");
 
 // Logs in once, saved as storageState for every e2e project — matches the

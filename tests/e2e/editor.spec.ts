@@ -8,7 +8,7 @@ import { expect, test } from "playwright/test";
  * so it shows up in the catalog unselected, with a real drag handle.
  */
 function insertUnlinkedHotel(name: string): number {
-  const db = new Database("./data/proposals.db");
+  const db = new Database(process.env.DATABASE_URL ?? "./data/e2e-proposals.db");
   try {
     const city = db.prepare("select id from cities limit 1").get() as { id: number };
     const result = db
@@ -37,8 +37,7 @@ test("editor exposes document, catalog, structure, review, sharing and PDF contr
   await expect(page.getByRole("dialog", { name: "Proposal review" })).toBeVisible();
 });
 
-test("mobile editor keeps canvas primary and opens properties drawer", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "mobile", "Mobile-only responsive behavior");
+test("mobile editor keeps canvas primary and opens properties drawer", { tag: "@mobile-only" }, async ({ page }) => {
   await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
   await expect(page.getByLabel("Proposal canvas")).toBeVisible();
   await page.getByLabel("Open page properties").click();
@@ -272,9 +271,10 @@ test("image regions on explicit-save pages keep the Phase 10.2 inspector flow, w
   await expect(canvas).toBeVisible();
 
   // Hotel booking images are an explicit-save (review-then-save) form.
-  const hotelImageRegion = canvas.locator('[data-edit-field="hotelImageTopRight"]').first();
+  const hotelImageRegion = canvas.locator('[data-edit-field="hotelImageTopRight"][src]').first();
   await hotelImageRegion.scrollIntoViewIfNeeded();
   const expectedSrc = await hotelImageRegion.getAttribute("src");
+  if (!expectedSrc) throw new Error("Expected a populated hotel image fixture.");
   await hotelImageRegion.click();
 
   await expect(page.getByRole("dialog", { name: /^Replace/ })).toHaveCount(0);
@@ -285,8 +285,7 @@ test("image regions on explicit-save pages keep the Phase 10.2 inspector flow, w
   await expect(inspectorField.locator("xpath=..").locator("img")).toHaveAttribute("src", expectedSrc ?? "");
 });
 
-test("mobile: inline-eligible regions edit on the canvas without opening the properties drawer", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "mobile", "Mobile-only responsive behavior");
+test("mobile: inline-eligible regions edit on the canvas without opening the properties drawer", { tag: "@mobile-only" }, async ({ page }) => {
   await page.goto("/proposals/1/editor", { waitUntil: "networkidle" });
   const canvas = page.getByLabel("Proposal canvas");
   await expect(canvas).toBeVisible();
@@ -297,8 +296,7 @@ test("mobile: inline-eligible regions edit on the canvas without opening the pro
   await page.keyboard.press("Escape");
 });
 
-test("mobile: auto-save image regions open the canvas popover without opening the properties drawer", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "mobile", "Mobile-only responsive behavior");
+test("mobile: auto-save image regions open the canvas popover without opening the properties drawer", { tag: "@mobile-only" }, async ({ page }) => {
   await page.goto("/proposals/1/editor", { waitUntil: "networkidle" });
   const canvas = page.getByLabel("Proposal canvas");
   await expect(canvas).toBeVisible();
@@ -309,8 +307,7 @@ test("mobile: auto-save image regions open the canvas popover without opening th
   await page.keyboard.press("Escape");
 });
 
-test("mobile: clicking a canvas region opens the properties drawer focused on that field", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "mobile", "Mobile-only responsive behavior");
+test("mobile: clicking a canvas region opens the properties drawer focused on that field", { tag: "@mobile-only" }, async ({ page }) => {
   await page.goto("/proposals/1/editor", { waitUntil: "networkidle" });
   const canvas = page.getByLabel("Proposal canvas");
   await expect(canvas).toBeVisible();
@@ -349,8 +346,7 @@ async function draggableCardRects(page: import("playwright/test").Page) {
   }, "nav[aria-label='Proposal pages'] > div");
 }
 
-test("dragging a page thumbnail reorders sections and persists, in both directions", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop", "Desktop-only drag interaction");
+test("dragging a page thumbnail reorders sections and persists, in both directions", { tag: "@desktop-only" }, async ({ page }) => {
   await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
   await expect(page.locator(PAGE_CARD_TITLE_SELECTOR).first()).toBeVisible();
 
@@ -415,8 +411,7 @@ test("dragging a page thumbnail reorders sections and persists, in both directio
   }).toPass({ timeout: 5000 });
 });
 
-test("the canvas insertion affordance adds a section at the exact gap position and persists", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop", "Verification reads the desktop-only Pages panel list");
+test("the canvas insertion affordance adds a section at the exact gap position and persists", { tag: "@desktop-only" }, async ({ page }) => {
   await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
   await expect(page.locator(PAGE_CARD_TITLE_SELECTOR).first()).toBeVisible();
   const initialTitles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
@@ -448,8 +443,7 @@ test("the canvas insertion affordance adds a section at the exact gap position a
   }).toPass({ timeout: 5000 });
 });
 
-test("the insertion affordance is keyboard-reachable and Escape cancels without changes", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop", "Verification reads the desktop-only Pages panel list");
+test("the insertion affordance is keyboard-reachable and Escape cancels without changes", { tag: "@desktop-only" }, async ({ page }) => {
   await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
   await expect(page.locator(PAGE_CARD_TITLE_SELECTOR).first()).toBeVisible();
   const initialTitles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
@@ -457,9 +451,18 @@ test("the insertion affordance is keyboard-reachable and Escape cancels without 
   const gapButton = page.getByRole("button", { name: "Insert a section at the start" });
   await gapButton.focus();
   await expect(gapButton).toBeFocused();
-  await page.keyboard.press("Enter");
   const menu = page.getByRole("menu", { name: "Section to insert" });
-  await expect(menu).toBeVisible();
+  // The document shell is server-rendered, so the gap can receive focus a
+  // moment before React attaches its click handler. Retry the keyboard
+  // activation only while the menu is still absent; once hydrated, Enter
+  // must open the menu for this assertion to pass.
+  await expect(async () => {
+    if (await menu.isHidden()) {
+      await gapButton.focus();
+      await page.keyboard.press("Enter");
+    }
+    expect(await menu.isVisible()).toBe(true);
+  }).toPass({ timeout: 5000 });
 
   await page.keyboard.press("Escape");
   await expect(menu).toBeHidden();
@@ -468,8 +471,7 @@ test("the insertion affordance is keyboard-reachable and Escape cancels without 
   expect(titles).toEqual(initialTitles);
 });
 
-test("dragging a hotel from the docked catalog inserts it at the drop gap and persists", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop", "Docked catalog (2xl) and Pages panel verification are desktop-only");
+test("dragging a hotel from the docked catalog inserts it at the drop gap and persists", { tag: "@desktop-only" }, async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
 
   const hotelName = `Test Drag Hotel ${Date.now()}`;
@@ -499,7 +501,9 @@ test("dragging a hotel from the docked catalog inserts it at the drop gap and pe
 
   await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
   await page.mouse.down();
+  await expect(page.locator("[data-catalog-drag-ghost]")).toBeVisible();
   await page.mouse.move(gapBox.x + gapBox.width / 2, gapBox.y + gapBox.height / 2, { steps: 15 });
+  await expect(gap).toHaveClass(/bg-editor-brand/);
   await page.mouse.up();
 
   await expect(async () => {
@@ -523,8 +527,7 @@ test("dragging a hotel from the docked catalog inserts it at the drop gap and pe
   await expect(page.getByRole("button", { name: `Drag ${hotelName} to a position in the document` })).toHaveCount(0);
 });
 
-test("below the 2xl breakpoint the catalog stays a modal, and Escape cancels a canvas drop without changes", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop", "Verifies the docked-vs-modal breakpoint on a wide viewport");
+test("below the 2xl breakpoint the catalog stays a modal, and Escape cancels a canvas drop without changes", { tag: "@desktop-only" }, async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
 
   const hotelName = `Test Drag Cancel Hotel ${Date.now()}`;
@@ -553,8 +556,7 @@ test("below the 2xl breakpoint the catalog stays a modal, and Escape cancels a c
   await expect(page.getByRole("dialog", { name: "Contextual catalog" })).toBeVisible();
 });
 
-test("mobile: page navigator drawer has no drag handles and keeps Document Structure buttons", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "mobile", "Mobile-only responsive behavior");
+test("mobile: page navigator drawer has no drag handles and keeps Document Structure buttons", { tag: "@mobile-only" }, async ({ page }) => {
   await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
 
   await page.getByLabel("Open page navigator").click();

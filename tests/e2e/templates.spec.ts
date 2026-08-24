@@ -1,12 +1,6 @@
 import { expect, test } from "playwright/test";
 
-// Desktop-only, matching the existing precedent for dashboard/11.x tests:
-// nothing here is mobile-specific behavior worth doubling the run for.
-test.beforeEach(({}, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop", "Desktop-only: no mobile-specific template behavior to cover.");
-});
-
-test("save as template, create from it, rename, and archive", async ({ page }) => {
+test("save as template, create from it, rename, and archive", { tag: "@desktop-only" }, async ({ page }) => {
   await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
 
   await page.getByRole("button", { name: "Save as template" }).click();
@@ -38,7 +32,7 @@ test("save as template, create from it, rename, and archive", async ({ page }) =
 
   // Rename the template from the gallery.
   await page.goto("/proposals/templates", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "Manage" }).click();
+  await page.getByRole("button", { name: "Manage Playwright Template" }).click();
   const manageDialog = page.getByRole("dialog", { name: "Manage template" });
   await manageDialog.getByLabel("Template name").fill("Playwright Template Renamed");
   await manageDialog.getByRole("button", { name: "Save name & description" }).click();

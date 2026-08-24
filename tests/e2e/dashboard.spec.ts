@@ -1,14 +1,6 @@
 import { expect, test } from "playwright/test";
 
-// Desktop-only, matching the existing precedent for the 11.x structural
-// editor tests: nothing here is mobile-specific behavior worth doubling the
-// run for, and it halves how much these fixture-creating tests mutate the
-// shared dev database per full suite run.
-test.beforeEach(({}, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop", "Desktop-only: no mobile-specific dashboard behavior to cover.");
-});
-
-test("dashboard lists proposals and supports search", async ({ page }) => {
+test("dashboard lists proposals and supports search", { tag: "@desktop-only" }, async ({ page }) => {
   await page.goto("/proposals", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { level: 1, name: "Proposals" })).toBeVisible();
   await expect(page.getByRole("link", { name: "The Mainland Tour" }).first()).toBeVisible();
@@ -20,7 +12,7 @@ test("dashboard lists proposals and supports search", async ({ page }) => {
   await expect(page.getByRole("link", { name: "The Mainland Tour" }).first()).toBeVisible();
 });
 
-test("creating a blank proposal seeds only the base pages", async ({ page }) => {
+test("creating a blank proposal seeds only the base pages", { tag: "@desktop-only" }, async ({ page }) => {
   await page.goto("/proposals", { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "New proposal" }).click();
   const dialog = page.getByRole("dialog", { name: "New proposal" });
@@ -33,7 +25,7 @@ test("creating a blank proposal seeds only the base pages", async ({ page }) => 
   await expect(page.locator("[data-page-index]")).toHaveCount(3);
 });
 
-test("duplicating a proposal creates an independent copy", async ({ page }) => {
+test("duplicating a proposal creates an independent copy", { tag: "@desktop-only" }, async ({ page }) => {
   await page.goto("/proposals", { waitUntil: "domcontentloaded" });
   const row = page.locator("tr", { hasText: "DEMO-0001" });
   await row.getByRole("button", { name: /^Duplicate/ }).click();
@@ -43,7 +35,7 @@ test("duplicating a proposal creates an independent copy", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "The Mainland Tour" })).toBeVisible();
 });
 
-test("archive, restore and delete manage lifecycle from the dashboard", async ({ page }) => {
+test("archive, restore and delete manage lifecycle from the dashboard", { tag: "@desktop-only" }, async ({ page }) => {
   await page.goto("/proposals", { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "New proposal" }).click();
   const dialog = page.getByRole("dialog", { name: "New proposal" });

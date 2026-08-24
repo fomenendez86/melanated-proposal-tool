@@ -1629,6 +1629,7 @@ export default function ProposalEditorShell({
 
           {draggingItem && ghostPosition ? createPortal(
             <div
+              data-catalog-drag-ghost=""
               className="pointer-events-none fixed z-50 flex items-center gap-2 rounded-lg border border-editor-border-strong bg-editor-panel px-3 py-2 text-xs font-semibold text-editor-text shadow-2xl"
               style={{ left: ghostPosition.x + 14, top: ghostPosition.y + 14 }}
             >

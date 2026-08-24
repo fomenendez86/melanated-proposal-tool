@@ -8,6 +8,23 @@ made, or a new pendiente is found.
 
 ## Estado general
 
+**Suite E2E estabilizada y aislada.** `npm run test:e2e` ya no reutiliza
+`data/proposals.db` ni el build `.next` del servidor de desarrollo: el hook
+`pretest:e2e` recrea `data/e2e-proposals.db` desde migraciones + seed y limpia
+`.next-e2e`, mientras `scripts/runE2E.mjs` levanta Next en el puerto 3100,
+espera `/api/health`, ejecuta Playwright y termina el árbol del servidor aun
+si hay un fallo. Las respuestas de Google Fonts se simulan localmente durante
+esta corrida, por lo que no dependen de red. Las 15 omisiones generadas por
+`test.skip()` se reemplazaron por tags `@desktop-only`/`@mobile-only`
+filtrados por proyecto:
+la matriz registra solo los 43 escenarios que realmente aplican y termina con
+**43 passed, 0 skipped**. También se corrigieron los tres fallos observados:
+el test de thumbnail ahora elige una imagen seed poblada; el botón de gestión
+de plantilla tiene un nombre accesible único; y el drag desde catálogo espera
+la activación del ghost y del gap antes de soltar. El caso de inserción por
+teclado espera de forma resistente la hidratación del shell SSR, y el nuevo
+runner evita el proceso de Playwright colgado al apagar Next en Windows.
+
 **UI: selector de diseño removido de la toolbar.** El toolbar del editor
 tenía un selector de diseño duplicado (`#document-design`, junto a
 "Review"/"Share"/"Generate PDF") además del que ya existe dentro del panel
@@ -656,7 +673,7 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
   13.3 (biblioteca de imágenes) y 13.4 (biblioteca de fees) para cerrar la
   Fase 13, luego las Fases 14+. El orden y criterios están en
   `docs/EDITOR_IMPLEMENTATION_PLAN.md` y `docs/STUDIO_EXPANSION_PLAN.md`.
-- 4 tests de `editor.spec.ts` fallan de forma intermitente en el proyecto
-  `mobile` de Playwright (accesibilidad, edición inline de texto, popover de
-  imagen ×2) — preexistente, reproducido sin ningún cambio de la Fase 12.2
-  de por medio; no investigado en profundidad todavía.
+- ~~4 tests de `editor.spec.ts` fallaban de forma intermitente en mobile.~~
+  Resuelto al aislar la base y el build E2E, partir siempre del seed y ejecutar
+  únicamente los escenarios aplicables a cada proyecto; la corrida completa
+  actual termina con 43 passed y 0 skipped.
