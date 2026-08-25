@@ -34,7 +34,7 @@ export default function CityToursDividerBlock({
             {data.city}
           </h1>
           <p className="mt-2 font-serif text-4xl italic">
-            Tours &amp; Excursions <BrandIcon slot="globe" className="align-middle text-3xl" />
+            Tours &amp; Excursions <BrandIcon slot="globe" className="inline-block size-7 align-middle" />
           </p>
         </div>
       </div>

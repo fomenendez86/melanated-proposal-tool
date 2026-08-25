@@ -93,12 +93,68 @@ const designs: DocumentDesignDescriptor[] = [
     rendererId: "melanated-blocks-v1",
     editorSchemaId: "structured-proposal-v1",
   },
+  {
+    // v2, not a v1 edit: a breaking renderer change must create a new
+    // version rather than mutate a registered one (see
+    // docs/DOCUMENT_DESIGN_CONTRACT.md "Versioning rules"). v1 stays
+    // registered unchanged for any proposal/revision that already
+    // references it.
+    id: "minimal-grid",
+    version: 2,
+    name: "Minimal Grid",
+    description: "A structured, hairline-grid document design with its own block renderer — no imagery-led editorial treatment, no italics.",
+    status: "preview",
+    previewImageUrl: "/proposal-assets/design-minimal-grid-preview.svg",
+    page: { widthPx: 816, heightPx: 1056, formatLabel: "US Letter", orientation: "portrait" },
+    brand: {
+      primary: "#20252b",
+      secondary: "#68727d",
+      accent: "#d8c8a8",
+      surface: "#f7f5f0",
+      text: "#20252b",
+      headingFontFamily: "sans-serif",
+      bodyFontFamily: "sans-serif",
+    },
+    supportedSectionTypes: [...ALL_SECTION_TYPES],
+    sectionVariants: {
+      triangleDivider: [
+        { id: "clean-title", label: "Clean title", description: "Hairline rule with a left-aligned title block, no image." },
+      ],
+      sectionDivider: [
+        { id: "full-bleed", label: "Full bleed", description: "Full-bleed image with a structured label bar." },
+      ],
+    },
+    defaultVariantIds: {
+      triangleDivider: "clean-title",
+      sectionDivider: "full-bleed",
+    },
+    requiredVariablePaths: ["client.name", "trip.title"],
+    rendererId: "minimal-grid-v1",
+    editorSchemaId: "structured-proposal-v1",
+  },
 ];
 
 export const DEFAULT_DOCUMENT_DESIGN = { id: "melanated-editorial", version: 1 } as const;
 
 export function listDocumentDesigns() {
   return designs.map((design) => ({ ...design }));
+}
+
+/**
+ * Same as `listDocumentDesigns()`, deduplicated to the highest registered
+ * `version` per `id`. Older versions stay registered (for `getDocumentDesign`
+ * to resolve exact snapshots against, per the versioning rules in
+ * docs/DOCUMENT_DESIGN_CONTRACT.md) but are superseded fixtures, not
+ * something a "new proposal" or "switch design" picker should offer
+ * alongside their own newer version under the same display name.
+ */
+export function listSelectableDocumentDesigns() {
+  const latestById = new Map<string, DocumentDesignDescriptor>();
+  for (const design of designs) {
+    const current = latestById.get(design.id);
+    if (!current || design.version > current.version) latestById.set(design.id, design);
+  }
+  return [...latestById.values()].map((design) => ({ ...design }));
 }
 
 export function getDocumentDesign(id: string, version: number) {
@@ -113,7 +169,7 @@ export function getDefaultDocumentDesign() {
 
 export function getDesignChoices(sectionTypes: ProposalSectionType[]): DocumentDesignChoice[] {
   const uniqueTypes = [...new Set(sectionTypes)];
-  return designs.map((design) => {
+  return listSelectableDocumentDesigns().map((design) => {
     const supported = new Set(design.supportedSectionTypes);
     const unsupportedSectionTypes = uniqueTypes.filter((type) => !supported.has(type));
     return {

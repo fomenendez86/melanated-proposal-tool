@@ -12,5 +12,10 @@ export default function BrandIcon({ slot, className }: BrandIconProps) {
     return <img src={icon.src} alt={icon.alt} className={className} />;
   }
 
+  if (icon.kind === "component") {
+    const Icon = icon.Icon;
+    return <Icon className={className} aria-hidden="true" />;
+  }
+
   return <span className={className}>{icon.value}</span>;
 }

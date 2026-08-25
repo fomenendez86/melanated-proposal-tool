@@ -91,14 +91,30 @@ against even if the proposal's live selection changes afterward.
 
 ## Current fixtures
 
-- **Safari Editorial v1** is the active reference design.
-- **Minimal Grid v1** is a preview fixture that proves registration,
-  serialization, compatibility, selection, and persistence. It intentionally
-  reuses the current block renderer and editor schema; it is not yet a complete
-  second visual template.
+- **Safari Editorial v1** is the active reference design, `rendererId:
+  "melanated-blocks-v1"` (`components/renderers/melanatedBlocksV1.tsx`).
+- **Minimal Grid v1** is a retired preview fixture kept registered only for
+  reproducibility (versioning rule 1 below) — it proved registration,
+  serialization, compatibility, selection, and persistence, reusing Safari
+  Editorial's renderer. It is excluded from selection UIs (see
+  `listSelectableDocumentDesigns()`); nothing should route users to it.
+- **Minimal Grid v2** is a preview-status design with its own real renderer,
+  `rendererId: "minimal-grid-v1"` (`components/renderers/minimalGridV1.tsx`,
+  block components under `components/blocks/minimal-grid/`) — a structured,
+  hairline-grid layout genuinely distinct from Safari Editorial (no
+  clip-path/triangle geometry, no italics, off-white surface), not a
+  recolor. `ProposalRenderer.tsx` routes to a renderer by looking up
+  `design.rendererId` in a `RENDERERS` map, falling back to
+  `melanated-blocks-v1` for unrecognized ids (legacy snapshots, call sites
+  with no resolved design).
 
-Both fixtures support all current section types. Compatibility behavior remains
-meaningful for future partial designs and is enforced on both client and server.
+All three registered identities support every section type (Minimal Grid v2
+built its own component for each). Compatibility behavior remains meaningful
+for future partial designs and is enforced on both client and server.
+
+Registering a new renderer under an existing design `id` must bump `version`
+rather than mutate the registered entry in place (see "Versioning rules"
+below) — this is exactly how Minimal Grid v2 was added alongside v1.
 
 ## Failure and rollback
 
@@ -143,7 +159,16 @@ annotating them with `data-edit-field` and `data-edit-kind` through
 
 ## Next integration boundary
 
-Phase 3.4 should make renderer and editor-schema registries executable rather
-than identifier-only, add a visual design picker with previews, and test the
-shell at desktop/mobile sizes. A complete Minimal Grid renderer belongs after
-that contract integration, not inside the editor shell.
+Renderer registries are now executable (`RENDERERS` map in
+`ProposalRenderer.tsx`, keyed by `rendererId`) rather than identifier-only,
+and Minimal Grid v2 has a complete renderer, closing the gap this section
+used to describe. Still open: a visual design picker with previews (today's
+picker is a plain `<select>`), testing the shell at desktop/mobile sizes
+with two real designs in rotation, and making pagination
+(`lib/paginate.ts`) design-aware — it is still generic/shared across
+renderers today, so Minimal Grid v2's four dynamically-paginated block
+types (Overview, DayItinerary, ExcursionList, TermsConditions) were built
+to preserve Safari Editorial's line-height and column-width budgets rather
+than getting their own tuned constants. A design with a meaningfully
+different text density on those block types would need that work done
+first.

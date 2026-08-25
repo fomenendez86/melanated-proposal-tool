@@ -31,7 +31,7 @@ export default async function ImportantItemsBlock({
       </div>
 
       <div className="mt-8 text-center">
-        <BrandIcon slot="warning" className="text-5xl" />
+        <BrandIcon slot="warning" className="inline-block size-12" />
         <h1 className="mt-2 text-2xl font-bold uppercase tracking-wide">
           Important Items
         </h1>

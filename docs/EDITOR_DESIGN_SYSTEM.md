@@ -67,6 +67,22 @@ helpful, an icon.
 - Users requesting reduced motion receive immediate scrolling and effectively
   disabled non-essential editor transitions and animations.
 
+### Dark mode
+
+Every `editor-*` token has a dark equivalent, declared under
+`.proposal-studio[data-theme="dark"]` in `app/globals.css`, redefining the
+same custom properties rather than introducing a parallel token set — no
+component needs to branch on theme. `ProposalEditorShell.tsx` owns the
+toggle: a `theme` state initialized from `localStorage`
+(`proposal-studio-theme`) and written to the `main.proposal-studio` root's
+`data-theme` attribute, switched via a toolbar button.
+
+This is exclusively an editor-chrome concern. It must never reach the
+rendered document: `ProposalRenderer.tsx` and the proposal blocks read only
+`--design-*` custom properties (per-design brand tokens), which live in a
+completely separate namespace from `--editor-*` and are unaffected by the
+editor's theme.
+
 ## Components
 
 Core components live in `components/editor/EditorUi.tsx`.

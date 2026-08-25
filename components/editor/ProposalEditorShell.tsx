@@ -17,10 +17,12 @@ import {
   Maximize2,
   MessageSquare,
   Minus,
+  Moon,
   Palette,
   Plus,
   Settings2,
   Sparkles,
+  Sun,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type {
@@ -1109,6 +1111,10 @@ export default function ProposalEditorShell({
   const [propertiesOpen, setPropertiesOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    if (typeof window === "undefined") return "light";
+    return window.localStorage.getItem("proposal-studio-theme") === "dark" ? "dark" : "light";
+  });
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [compositionOpen, setCompositionOpen] = useState(false);
   const [saveState, setSaveState] = useState<EditorSaveState>("loaded");
@@ -1131,6 +1137,10 @@ export default function ProposalEditorShell({
   const pageRefs = useRef<Array<HTMLDivElement | null>>([]);
   const regionRequestIdRef = useRef(0);
   const highlightedElementsRef = useRef<HTMLElement[]>([]);
+
+  useEffect(() => {
+    window.localStorage.setItem("proposal-studio-theme", theme);
+  }, [theme]);
 
   const effectiveSelectedIndex = Math.min(selectedIndex, Math.max(0, pageMeta.length - 1));
   const selectedPage = pageMeta[effectiveSelectedIndex];
@@ -1534,7 +1544,7 @@ export default function ProposalEditorShell({
   }, [activityOpen, catalogOpen, closeProperties, compositionOpen, pagesOpen, propertiesOpen, reviewOpen]);
 
   return (
-    <main className="proposal-studio flex h-dvh min-h-0 flex-col overflow-hidden bg-editor-shell text-editor-text-strong">
+    <main data-theme={theme} suppressHydrationWarning className="proposal-studio flex h-dvh min-h-0 flex-col overflow-hidden bg-editor-shell text-editor-text-strong">
       <div aria-live="polite" className="sr-only">{regionAnnouncement}</div>
       <header className="z-20 flex h-16 shrink-0 items-center justify-between border-b border-editor-border-subtle bg-editor-panel px-4 shadow-editor-toolbar lg:px-5">
         <div className="flex min-w-0 items-center gap-3">
@@ -1599,6 +1609,16 @@ export default function ProposalEditorShell({
           >
             <MessageSquare className="size-4" aria-hidden="true" />
             <span className="hidden xl:inline">Activity</span>
+          </EditorButton>
+          <EditorButton
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun className="size-4" aria-hidden="true" /> : <Moon className="size-4" aria-hidden="true" />}
           </EditorButton>
           <SaveAsTemplateButton proposalId={proposal.id} />
           <SendProposalButton proposalId={proposal.id} disabled={saveState === "dirty" || saveState === "saving" || saveState === "error"} />

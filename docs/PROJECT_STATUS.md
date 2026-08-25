@@ -8,6 +8,73 @@ made, or a new pendiente is found.
 
 ## Estado general
 
+**Las tres brechas documentadas como "fuera de esta pasada" tras el
+rediseño visual están cerradas**: modo oscuro del editor, placeholder de
+íconos de mejor calidad, y renderer real y distinto para Minimal Grid (ver
+`docs/VISUAL_DESIGN_POSITIONING.md`, ahora actualizado para reflejarlo).
+
+- **Modo oscuro (Parte A)**: cada uno de los ~28 tokens `--editor-*` tiene
+  ahora un equivalente oscuro bajo `.proposal-studio[data-theme="dark"]`
+  (`app/globals.css`) — mismo nombre de variable, no un set paralelo, así
+  que ningún componente necesita ramificar por tema. `ProposalEditorShell.tsx`
+  agrega un botón de alternancia (ícono `Moon`/`Sun`) en la toolbar; el
+  estado `theme` se inicializa de forma síncrona desde `localStorage` vía
+  el inicializador perezoso de `useState` (no un `useEffect` post-mount,
+  que en desarrollo con React Strict Mode causaba una carrera real —
+  confirmada con Playwright: el efecto de escritura se disparaba con el
+  valor todavía no actualizado antes de que el efecto de lectura aplicara
+  el cambio, revirtiendo silenciosamente el tema guardado a "light" en
+  cada recarga — corregido leyendo `localStorage` en el inicializador y
+  con `suppressHydrationWarning` en el `data-theme` del `<main>`). Exclusivo
+  del chrome del editor — confirmado que `ProposalRenderer.tsx` y los
+  bloques del documento no leen ningún token `--editor-*`, cero fuga hacia
+  el documento renderizado. Documentado en `docs/EDITOR_DESIGN_SYSTEM.md`.
+- **Placeholder de íconos (Parte B)**: `lib/brand/config.ts` agrega
+  `kind: "component"` a la unión `BrandIcon`; `BRAND_ICONS.globe`/`.warning`
+  pasan de emoji (🌍/⚠️) a íconos `lucide-react` (`Globe`/`TriangleAlert`),
+  renderizados por `components/blocks/shared/BrandIcon.tsx`. Sigue siendo
+  swappable por el pipeline existente de `docs/BRAND_ASSET_PACK.md` — no
+  se tocó tipografía (sigue sin fuente serif real, cae a Geist Sans, sin
+  margen para diferenciarla artificialmente) ni los íconos de contenido
+  por fila (pasaporte/visa/clima en `lib/db/seed.ts`), que son decisión
+  editorial, no brand pack, y quedan fuera de esta pasada a propósito.
+- **Renderer real y distinto para Minimal Grid (Parte C)**: cerraba la
+  pregunta de arquitectura abierta en `docs/DOCUMENT_DESIGN_CONTRACT.md`
+  ("A complete Minimal Grid renderer belongs after that contract
+  integration") y `docs/VISUAL_DESIGN_POSITIONING.md`. `minimal-grid` se
+  registró como **v2** (`lib/designs/registry.ts`) — v1 queda intacto,
+  porque la regla de versionado del contrato prohíbe mutar una versión ya
+  registrada; v2 tiene `rendererId: "minimal-grid-v1"` en vez de reusar
+  `melanated-blocks-v1`. `ProposalRenderer.tsx` ahora rutea por
+  `design.rendererId` contra un mapa de renderers
+  (`components/renderers/melanatedBlocksV1.tsx` — extracción sin cambios
+  del switch existente — y `components/renderers/minimalGridV1.tsx`), con
+  fallback al renderer de Safari Editorial para ids desconocidos (cubre
+  `/preview/full-proposal`, que no resuelve `design`, y snapshots
+  antiguos). Se construyeron los 17 bloques de Minimal Grid
+  (`components/blocks/minimal-grid/`, más su propio
+  `shared/SectionHeader,PageFooter,PageHeader`) con un lenguaje visual
+  genuinamente distinto — grid estructurado, reglas finas, mayúsculas
+  pequeñas, sin itálicas ni clip-path — no una sustitución de color sobre
+  los mismos bloques; cada uno reutiliza el mismo tipo de dato que su
+  equivalente de Safari Editorial y repite sus llamadas a
+  `editableRegion()` (confirmado con un clic real en el canvas: el campo
+  correcto se resalta en el inspector). Como `listDocumentDesigns()` no
+  filtraba por versión, se agregó `listSelectableDocumentDesigns()`
+  (dedupe a la versión más alta por `id`) y los dos pickers
+  (`app/proposals/page.tsx`, el selector dentro del editor vía
+  `getDesignChoices`) lo usan — confirmado que "Minimal Grid" aparece una
+  sola vez, no v1 y v2 juntos. **Limitación conocida, no descubierta
+  tarde**: `lib/paginate.ts` sigue siendo genérico entre renderers; los 4
+  tipos de bloque con paginación dinámica (Overview, DayItinerary,
+  ExcursionList, TermsConditions) se construyeron preservando la altura de
+  línea y ancho de columna de Safari Editorial para que los presupuestos
+  compartidos sigan siendo válidos — verificado con Playwright midiendo
+  `scrollHeight` contra las 57 páginas de la propuesta de referencia bajo
+  Minimal Grid v2, sin overflow. Paginación consciente del diseño queda
+  como trabajo futuro si un tercer diseño necesitara densidad de texto muy
+  distinta.
+
 **Rediseño visual (editor, dashboard, documento), inspirado en el lenguaje
 visual de herramientas comerciales de propuestas** — sin tocar la mecánica
 de canvas libre (explícitamente fuera de alcance, ver `CLAUDE.md`) ni el

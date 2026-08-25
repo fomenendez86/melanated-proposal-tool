@@ -44,8 +44,16 @@ Two categories of placeholder exist, and they are handled differently:
 - Consumed by `components/blocks/shared/BrandIcon.tsx`, used in
   `CityToursDividerBlock` (globe) and `ImportantItemsBlock` (warning
   triangle) — these are fixed, one-per-section icons, not catalog content.
-- To activate: drop the icon file under `public/brand/icons/`, then change
-  the matching entry to `{ kind: "image", src: "...", alt: "..." }`.
+- Currently `{ kind: "component", Icon: ... }`, rendering a generic
+  `lucide-react` icon (`Globe`, `TriangleAlert`) instead of an emoji glyph —
+  a higher-quality placeholder, still explicitly a stand-in, not the real
+  commissioned icon.
+- To activate a real icon: drop the icon file under `public/brand/icons/`,
+  then change the matching entry to `{ kind: "image", src: "...", alt:
+  "..." }`. Note the call sites (`CityToursDividerBlock.tsx`,
+  `ImportantItemsBlock.tsx`) pass a `size-*` className sized for an SVG
+  icon; an `<img>` replacement should keep an explicit pixel size rather
+  than relying on the same class.
 - Do **not** confuse these with the per-row icons in `ImportantItemsBlock`
   (passport, visa, shell — `row.icon`) or `WeatherBlock` (`season.icon`).
   Those come from seed/catalog data, not this config, because each row is

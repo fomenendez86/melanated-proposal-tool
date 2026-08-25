@@ -91,7 +91,22 @@
       "Bash(grep -o '.\\\\{200\\\\}text-\\\\[var\\(--design-primary[^}]*\\\\}' /tmp/preview.html | head -3)",
       "Bash(grep -o '\"style\":{[^}]*design-primary[^}]*}' /tmp/preview.html | head -3 *)",
       "Bash(timeout 25 node .inspect.tmp.mjs)",
-      "Bash(echo \"exit:$?\")"
+      "Bash(echo \"exit:$?\")",
+      "Bash(node .visual-check-ab.tmp.mjs)",
+      "Bash(node .visual-check-ab2.tmp.mjs)",
+      "Bash(node .visual-check-icons.tmp.mjs)",
+      "Bash(node .visual-check-icons2.tmp.mjs)",
+      "Bash(node .visual-check-icons3.tmp.mjs)",
+      "Bash(node .visual-check-icons4.tmp.mjs)",
+      "Bash(node .visual-check-icons5.tmp.mjs)",
+      "Bash(node .visual-check-designs.tmp.mjs)",
+      "Bash(node .visual-check-switch.tmp.mjs)",
+      "Bash(node .revert-design.tmp.mjs)",
+      "Bash(node .switch-and-check.tmp.mjs)",
+      "Bash(node .mg-screens.tmp.mjs)",
+      "Bash(node .mg-cover-recheck.tmp.mjs)",
+      "Bash(node .revert2.tmp.mjs)",
+      "Bash(node .check-inline-edit.tmp.mjs)"
     ],
     "additionalDirectories": [
       "C:\\Users\\fomen\\OneDrive\\Development\\melanated-proposal-tool\\output",

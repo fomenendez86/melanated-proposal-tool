@@ -146,6 +146,45 @@
   --editor-danger-border: #e0aaa5;
 }
 
+/*
+ * Dark mode for the editor chrome only — scoped to `.proposal-studio`
+ * (the Proposal Studio shell root) via `data-theme="dark"`, toggled by
+ * ProposalEditorShell.tsx and persisted to localStorage. This never
+ * touches document rendering: ProposalRenderer.tsx and the proposal
+ * blocks read only `--design-*` vars, never `--editor-*`.
+ */
+.proposal-studio[data-theme="dark"] {
+  --editor-canvas: #14181a;
+  --editor-shell: #1a1f1d;
+  --editor-panel: #202624;
+  --editor-panel-muted: #262d2a;
+  --editor-raised: #2b332f;
+  --editor-toolbar: #1e2422;
+  --editor-inset: #1b2320;
+  --editor-overlay: rgb(0 0 0 / 60%);
+  --editor-text-strong: #f2f4f1;
+  --editor-text: #d7ddd8;
+  --editor-text-muted: #9fada4;
+  --editor-text-subtle: #7d8b82;
+  --editor-brand: #2f6b57;
+  --editor-brand-hover: #3a8069;
+  --editor-accent: #f6c85f;
+  --editor-border-subtle: #2c3330;
+  --editor-border: #3a423d;
+  --editor-border-strong: #56635b;
+  --editor-focus: #f6c85f;
+  --editor-disabled: #333a36;
+  --editor-disabled-text: #6b7770;
+  --editor-success: #6fcf9e;
+  --editor-success-surface: #16231c;
+  --editor-warning: #e8c874;
+  --editor-warning-surface: #2a2416;
+  --editor-warning-border: #4a4022;
+  --editor-danger: #f2867e;
+  --editor-danger-surface: #2b1a18;
+  --editor-danger-border: #4a2b27;
+}
+
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);

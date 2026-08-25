@@ -41,8 +41,10 @@ si esa pregunta toca diseño de documento, marca, o un segundo diseño real.
   posicionamiento premium antes de que el cliente lea una palabra.
 - **Sin logo real** — emoji/texto. El tell más visible en cualquier
   comparación directa.
-- **Iconografía en emoji** (🌍, 🛂, etc.) — se lee como prototipo, no como
-  material de venta.
+- **Iconografía en emoji** para contenido editorial (🛂, 🪪, 🐚, clima —
+  decisión de dato, no de brand pack). Los dos slots de marca fijos
+  (globo, advertencia) ya pasaron a íconos Lucide reales — ver
+  `docs/BRAND_ASSET_PACK.md`.
 
 ## El editor (Proposal Studio UI)
 
@@ -64,43 +66,40 @@ si esa pregunta toca diseño de documento, marca, o un segundo diseño real.
 - Identidad visual propia del editor deliberadamente mínima
   (`editor-accent` documentado como "solo acento de identidad pequeño") —
   funcional pero sin personalidad visual propia.
-- Sin modo oscuro para el chrome del editor.
 - Riesgo de acumulación de patrones de interacción ad hoc por fase (overlay
   10.3, popover 10.4, y lo que sume Fase 11) sin una pasada dedicada de
   consistencia — ya señalado como riesgo transversal en
   `STUDIO_EXPANSION_PLAN.md`, mencionado acá porque es también un riesgo de
   diseño visual, no solo de arquitectura de código.
 
-## Hallazgo de arquitectura: el "segundo diseño" no es un segundo diseño visual
+## Resuelto: segundo renderer real (Minimal Grid v2)
 
-Verificado en código, no solo por impresión visual: `melanated-editorial`
-(Safari Editorial) y `minimal-grid` (Minimal Grid) declaran el mismo
-`rendererId: "melanated-blocks-v1"` (`lib/designs/registry.ts:57` y `:90`).
-Ese campo `rendererId` está definido en el tipo
-(`lib/designs/types.ts:40`) pero no tiene ningún punto de lectura en el
-resto del código — confirmado por búsqueda de todas las referencias a
-`rendererId` en el repo, que solo aparecen en la declaración de tipo y en
-las dos entradas del registro.
+La pregunta de arquitectura que este documento planteaba originalmente —
+¿un segundo diseño visual real requiere un renderer separado, o alcanza con
+theming más profundo del renderer único? — está resuelta: se construyó un
+renderer separado. `minimal-grid` se registró como **v2** (no se mutó v1,
+por la regla de versionado de `docs/DOCUMENT_DESIGN_CONTRACT.md`) con
+`rendererId: "minimal-grid-v1"`, un árbol de 17 componentes propio bajo
+`components/blocks/minimal-grid/` con grid, tipografía y tratamiento
+genuinamente distintos (sin clip-path ni triángulos, sin itálicas,
+superficie off-white) — no una sustitución de tokens de color sobre los
+mismos bloques. `ProposalRenderer.tsx` rutea por `design.rendererId` contra
+un mapa de renderers, con fallback al renderer de Safari Editorial.
 
-En la práctica esto significa: los dos diseños registrados pasan por los
-mismos componentes de bloque, mismo grid, misma geometría — solo cambian
-`brand.primary/secondary/accent/headingFontFamily/bodyFontFamily` como
-sustitución de tokens. La arquitectura de contrato de diseño (compatibilidad
-de secciones, selector, validación server/cliente) sí está construida para
-múltiples diseños; **la capa de renderizado, no.**
-
-Esto deja una pregunta abierta de arquitectura, no una decisión tomada:
-¿un segundo diseño visual real requiere un renderer separado por diseño
-(un `rendererId` que efectivamente rutee a otro árbol de componentes), o un
-sistema de theming más profundo dentro del renderer único actual (grids y
-tratamientos configurables, no solo color/tipografía)? Vale resolverla
-recién cuando exista intención real de construir un segundo diseño de
-producción — hoy es una pregunta latente, no un bloqueo de nada en curso.
+Limitación conocida y documentada, no descubierta tarde: `lib/paginate.ts`
+sigue siendo genérico/compartido entre renderers (no rutea por diseño), así
+que los 4 tipos de bloque con paginación dinámica en Minimal Grid v2
+(Overview, DayItinerary, ExcursionList, TermsConditions) se construyeron
+preservando la altura de línea y ancho de columna de Safari Editorial en
+vez de tener presupuestos propios — verificado empíricamente (Playwright,
+medición de `scrollHeight` contra las 57 páginas de la propuesta de
+referencia, sin overflow). Un tercer diseño con densidad de texto muy
+distinta necesitaría paginación consciente del diseño antes de sumarse.
 
 ## Ejes de decisión
 
 | Brecha | Bloqueante si... | Prescindible si... |
 | --- | --- | --- |
 | Tipografía/logo/iconos placeholder | el documento se muestra a un cliente real | el uso sigue siendo interno/de prueba |
-| Renderer único detrás de dos diseños | se planea construir un segundo diseño de producción | el catálogo de diseños se mantiene en uno solo por ahora |
-| Sin modo oscuro / identidad propia del editor | el editor se usa muchas horas seguidas o se muestra como producto en sí | el editor sigue siendo herramienta interna de uso ocasional |
+| ~~Renderer único detrás de dos diseños~~ (resuelto: Minimal Grid v2 tiene renderer propio) | — | — |
+| ~~Sin modo oscuro / identidad propia del editor~~ (resuelto: `.proposal-studio[data-theme="dark"]` + toggle) | — | — |
