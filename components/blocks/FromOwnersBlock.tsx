@@ -9,7 +9,7 @@ interface FromOwnersBlockProps {
 
 export default function FromOwnersBlock({ data }: FromOwnersBlockProps) {
   return (
-    <div className="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-black">
+    <div className="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-[var(--design-primary,#1c202b)]">
       <div className="flex h-full gap-8">
         <div className="flex w-16 shrink-0 items-center justify-center">
           <span className="rotate-180 whitespace-nowrap text-4xl font-bold uppercase tracking-wide [writing-mode:vertical-rl]">

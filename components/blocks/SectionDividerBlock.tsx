@@ -11,7 +11,7 @@ export default function SectionDividerBlock({
   data,
 }: SectionDividerBlockProps) {
   return (
-    <div className="relative box-border h-[1056px] w-[816px] bg-white text-black">
+    <div className="relative box-border h-[1056px] w-[816px] bg-white text-[var(--design-primary,#1c202b)]">
       <div className="absolute left-[35px] top-[-12px] h-[492px] w-6 bg-green-700" />
       <div className="absolute left-[13px] top-[98px] h-[5px] w-[77px] bg-yellow-400" />
       <div className="absolute left-[98px] top-[101px] -translate-y-1/2 whitespace-nowrap text-[10px] font-semibold uppercase tracking-wide">

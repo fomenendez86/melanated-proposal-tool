@@ -45,7 +45,9 @@ import {
   proposalDayParagraphs,
   proposalDays,
   proposalExcursions,
+  proposalFlights,
   proposalHotels,
+  proposalTransport,
   proposalListLines,
   proposalListSections,
   proposalPaymentSchedule,
@@ -61,6 +63,11 @@ import {
   weatherProfiles,
   weatherSeasons,
 } from "./schema";
+
+function formatLegDateTime(value: Date | null): string {
+  if (!value) return "";
+  return value.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+}
 
 type TriangleDividerPayload = {
   sectionLabel: string;
@@ -654,6 +661,54 @@ export async function getProposalDataSnapshot(proposalId: number): Promise<Propo
             title: payload.title,
             message: payload.message,
             signers: Array.isArray(payload.signers) ? payload.signers : [],
+            pageNumber: 0,
+          },
+        });
+        break;
+      }
+      case "flightDetails": {
+        const legRows = await db
+          .select()
+          .from(proposalFlights)
+          .where(eq(proposalFlights.proposalId, proposalId))
+          .orderBy(asc(proposalFlights.sortOrder));
+        sections.push({
+          type: "flightDetails",
+          editorSource,
+          data: {
+            legs: legRows.map((leg) => ({
+              carrier: leg.carrier ?? "",
+              flightNumber: leg.flightNumber ?? "",
+              originAirport: leg.originAirport ?? "",
+              destinationAirport: leg.destinationAirport ?? "",
+              departureLabel: formatLegDateTime(leg.departureAt),
+              arrivalLabel: formatLegDateTime(leg.arrivalAt),
+              cabinClass: leg.cabinClass ?? "",
+              notes: leg.notes ?? "",
+            })),
+            pageNumber: 0,
+          },
+        });
+        break;
+      }
+      case "transportDetails": {
+        const legRows = await db
+          .select()
+          .from(proposalTransport)
+          .where(eq(proposalTransport.proposalId, proposalId))
+          .orderBy(asc(proposalTransport.sortOrder));
+        sections.push({
+          type: "transportDetails",
+          editorSource,
+          data: {
+            legs: legRows.map((leg) => ({
+              mode: leg.mode ?? "",
+              description: leg.description ?? "",
+              vehicleType: leg.vehicleType ?? "",
+              pickupLocation: leg.pickupLocation ?? "",
+              dropoffLocation: leg.dropoffLocation ?? "",
+              scheduledLabel: formatLegDateTime(leg.scheduledAt),
+            })),
             pageNumber: 0,
           },
         });

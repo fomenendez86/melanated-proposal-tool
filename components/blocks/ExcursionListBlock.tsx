@@ -9,7 +9,7 @@ interface ExcursionListBlockProps {
 
 export default function ExcursionListBlock({ data }: ExcursionListBlockProps) {
   return (
-    <div className="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-black">
+    <div className="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-[var(--design-primary,#1c202b)]">
       <div className="flex items-center justify-between text-[10px] font-sans uppercase tracking-wide">
         <div className="flex items-center gap-2">
           <div className="h-[5px] w-[77px] bg-yellow-400" />
@@ -43,7 +43,7 @@ export default function ExcursionListBlock({ data }: ExcursionListBlockProps) {
               </div>
             </div>
             {index < data.items.length - 1 && (
-              <div className="my-6 h-[3px] bg-black" />
+              <div className="my-6 h-[3px] bg-[var(--design-primary,#1c202b)]" />
             )}
           </div>
         ))}

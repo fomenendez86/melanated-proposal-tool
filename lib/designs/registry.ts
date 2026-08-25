@@ -22,6 +22,8 @@ const ALL_SECTION_TYPES: ProposalSectionType[] = [
   "termsConditions",
   "thankYou",
   "signature",
+  "flightDetails",
+  "transportDetails",
 ];
 
 const designs: DocumentDesignDescriptor[] = [

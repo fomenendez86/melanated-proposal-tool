@@ -816,8 +816,15 @@ function PropertiesPanel({
             {editorConfig?.kind === "itinerary" ? (
               <ItineraryEditor
                 key={editorConfig.pageId}
-                proposalId={proposalId}
-                config={editorConfig}
+                initialText={editorConfig.fields.find((field) => field.name === "itinerarySnapshotText")?.value ?? ""}
+                onSave={(serialized) =>
+                  updateProposalFields(proposalId, {
+                    kind: "itinerary",
+                    sourceSectionId: editorConfig.sourceSectionId,
+                    sourceRefId: editorConfig.sourceRefId,
+                    values: { itinerarySnapshotText: serialized },
+                  })
+                }
                 onSaveStateChange={onSaveStateChange}
                 focusRequestId={focusField?.requestId}
               />

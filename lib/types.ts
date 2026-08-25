@@ -219,6 +219,36 @@ export interface SignatureData {
   pageNumber: number;
 }
 
+export interface FlightLegRow {
+  carrier: string;
+  flightNumber: string;
+  originAirport: string;
+  destinationAirport: string;
+  departureLabel: string;
+  arrivalLabel: string;
+  cabinClass: string;
+  notes: string;
+}
+
+export interface FlightDetailsData {
+  legs: FlightLegRow[];
+  pageNumber: number;
+}
+
+export interface TransportLegRow {
+  mode: string;
+  description: string;
+  vehicleType: string;
+  pickupLocation: string;
+  dropoffLocation: string;
+  scheduledLabel: string;
+}
+
+export interface TransportDetailsData {
+  legs: TransportLegRow[];
+  pageNumber: number;
+}
+
 export interface CoverData {
   title: string;
   subtitle: string;
@@ -244,6 +274,8 @@ export type ProposalSection = (
   | { type: "termsConditions"; data: TermsConditionsData }
   | { type: "thankYou"; data: ThankYouData }
   | { type: "signature"; data: SignatureData }
+  | { type: "flightDetails"; data: FlightDetailsData }
+  | { type: "transportDetails"; data: TransportDetailsData }
 ) & {
   editorSource?: {
     sectionId: number;

@@ -15,7 +15,7 @@ function DayColumn({ day }: { day: DayEntry }) {
         Day {day.dayNumber}
       </h2>
       {day.subtitle && (
-        <div className="mt-3 inline-block bg-black px-3 py-1 text-sm font-bold uppercase text-white">
+        <div className="mt-3 inline-block bg-[var(--design-primary,#1c202b)] px-3 py-1 text-sm font-bold uppercase text-white">
           {day.subtitle}
         </div>
       )}
@@ -45,7 +45,7 @@ export default function DayItineraryBlock({ data }: DayItineraryBlockProps) {
   const showSidebar = Boolean(data.showWelcomeSidebar);
 
   return (
-    <div className="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-black">
+    <div className="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-[var(--design-primary,#1c202b)]">
       <PageHeader variant="proposalOnly" />
 
       <div className="mt-2">
@@ -58,7 +58,7 @@ export default function DayItineraryBlock({ data }: DayItineraryBlockProps) {
         ))}
 
         {showSidebar && (
-          <div className="relative w-16 shrink-0 self-stretch overflow-hidden bg-[#1c202b] text-white">
+          <div className="relative w-16 shrink-0 self-stretch overflow-hidden bg-[var(--design-primary,#1c202b)] text-white">
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
               <span className="whitespace-nowrap text-lg font-bold uppercase tracking-wide [writing-mode:vertical-rl]">
                 Karibu Tanzania

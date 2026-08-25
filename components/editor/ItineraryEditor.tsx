@@ -12,7 +12,6 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { updateProposalFields } from "@/app/proposals/[id]/editor/actions";
 import {
   itineraryMayOverflow,
   parseItineraryEditorText,
@@ -20,7 +19,13 @@ import {
   validateItineraryEditorDays,
 } from "@/lib/editor/itineraryEditorCodec";
 import type { ItineraryDraftActivity, ItineraryDraftDay } from "@/lib/editor/itineraryEditorCodec";
-import type { EditorSaveState, ProposalEditorPageConfig } from "@/lib/editor/proposalEditorTypes";
+import type { EditorSaveState } from "@/lib/editor/proposalEditorTypes";
+
+export interface ItineraryEditorSaveResult {
+  ok: boolean;
+  fieldErrors?: { itinerarySnapshotText?: string };
+  formError?: string;
+}
 
 import {
   EditorButton,
@@ -88,13 +93,16 @@ function moveItem<T>(items: T[], from: number, to: number) {
 const inputClass = `w-full rounded-lg border border-editor-border bg-editor-raised px-3 py-2.5 text-sm text-editor-text-strong outline-none transition placeholder:text-editor-text-subtle focus:border-editor-border-strong focus:ring-2 focus:ring-editor-border-strong/20 ${editorFocusRing}`;
 
 export default function ItineraryEditor({
-  proposalId,
-  config,
+  initialText,
+  onSave,
   onSaveStateChange,
   focusRequestId,
 }: {
-  proposalId: number;
-  config: ProposalEditorPageConfig;
+  /** The persisted itinerary text (the line-oriented day/activity DSL). */
+  initialText: string;
+  /** Persists the serialized draft. Proposal context calls updateProposalFields
+   *  under the hood; a library-level itinerary context calls updateItineraryDays. */
+  onSave: (serializedText: string) => Promise<ItineraryEditorSaveResult>;
   onSaveStateChange: (state: EditorSaveState) => void;
   /** Bumped when a canvas click activates this collection; scrolls it into view. */
   focusRequestId?: number;
@@ -109,8 +117,7 @@ export default function ItineraryEditor({
     element?.focus({ preventScroll: true });
   }, [focusRequestId]);
 
-  const sourceText = config.fields.find((field) => field.name === "itinerarySnapshotText")?.value ?? "";
-  const initialDays = useMemo(() => parseItineraryEditorText(sourceText) ?? [], [sourceText]);
+  const initialDays = useMemo(() => parseItineraryEditorText(initialText) ?? [], [initialText]);
   const [days, setDays] = useState<UiDay[]>(() => withUiKeys(initialDays));
   const [savedText, setSavedText] = useState(() => serializeItineraryEditorDays(initialDays));
   const [mode, setMode] = useState<"expanded" | "condensed">("expanded");
@@ -145,12 +152,7 @@ export default function ItineraryEditor({
     setSaving(true);
     setFormError("");
     onSaveStateChange("saving");
-    const result = await updateProposalFields(proposalId, {
-      kind: "itinerary",
-      sourceSectionId: config.sourceSectionId,
-      sourceRefId: config.sourceRefId,
-      values: { itinerarySnapshotText: serialized },
-    });
+    const result = await onSave(serialized);
     setSaving(false);
 
     if (!result.ok) {

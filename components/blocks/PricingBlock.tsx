@@ -32,7 +32,7 @@ export default function PricingBlock({ data }: PricingBlockProps) {
   const lineItems = data.lineItems;
   const totals = data.totals;
   return (
-    <div className="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-black">
+    <div className="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-[var(--design-primary,#1c202b)]">
       <PageHeader />
 
       <div className="mt-8">
@@ -49,11 +49,11 @@ export default function PricingBlock({ data }: PricingBlockProps) {
         <div {...editableRegion("pricingItemsText", "collection")} className="mt-6">
           <p className="text-sm font-bold underline">Package Pricing:</p>
           <table className="mt-2 w-full border-collapse text-left text-xs">
-            <thead><tr className="border-b-2 border-[#1c202b]"><th className="py-2 pr-2">Item</th><th className="px-2 py-2 text-right">Qty</th><th className="px-2 py-2 text-right">Unit</th><th className="py-2 pl-2 text-right">Total</th></tr></thead>
+            <thead><tr className="border-b-2 border-[var(--design-primary,#1c202b)]"><th className="py-2 pr-2">Item</th><th className="px-2 py-2 text-right">Qty</th><th className="px-2 py-2 text-right">Unit</th><th className="py-2 pl-2 text-right">Total</th></tr></thead>
             <tbody>
               {lineItems.filter((item) => item.selected).map((item) => (
-                <tr key={item.key} className="border-b border-black/15">
-                  <td className="py-2 pr-2 font-semibold">{item.description}{item.optional ? <span className="ml-1 font-normal text-black/55">(optional)</span> : null}</td>
+                <tr key={item.key} className="border-b border-[var(--design-primary,#1c202b)]/15">
+                  <td className="py-2 pr-2 font-semibold">{item.description}{item.optional ? <span className="ml-1 font-normal text-[var(--design-primary,#1c202b)]/55">(optional)</span> : null}</td>
                   <td className="px-2 py-2 text-right tabular-nums">{(item.quantityMilli / 1000).toLocaleString("en-US", { maximumFractionDigits: 3 })}</td>
                   <td className="px-2 py-2 text-right tabular-nums">{formatMinorMoney(item.unitPriceMinor, totals.currency)}</td>
                   <td className="py-2 pl-2 text-right font-semibold tabular-nums">{formatMinorMoney(item.totalMinor, totals.currency)}</td>
@@ -65,7 +65,7 @@ export default function PricingBlock({ data }: PricingBlockProps) {
             <div className="flex justify-between"><dt>Subtotal</dt><dd>{formatMinorMoney(totals.subtotalMinor, totals.currency)}</dd></div>
             {totals.discountMinor ? <div className="flex justify-between"><dt>Discount</dt><dd>−{formatMinorMoney(totals.discountMinor, totals.currency)}</dd></div> : null}
             {totals.taxMinor ? <div className="flex justify-between"><dt>Tax</dt><dd>{formatMinorMoney(totals.taxMinor, totals.currency)}</dd></div> : null}
-            <div className="flex justify-between border-t border-black pt-1 text-sm font-bold text-[#ff0000]"><dt>Total</dt><dd>{formatMinorMoney(totals.totalMinor, totals.currency)}</dd></div>
+            <div className="flex justify-between border-t border-[var(--design-primary,#1c202b)] pt-1 text-sm font-bold text-[#ff0000]"><dt>Total</dt><dd>{formatMinorMoney(totals.totalMinor, totals.currency)}</dd></div>
           </dl>
         </div>
       ) : <div className="mt-6">

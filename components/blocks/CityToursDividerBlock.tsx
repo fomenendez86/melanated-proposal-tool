@@ -12,7 +12,7 @@ export default function CityToursDividerBlock({
   data,
 }: CityToursDividerBlockProps) {
   return (
-    <div className="relative box-border h-[1056px] w-[816px] bg-white text-black">
+    <div className="relative box-border h-[1056px] w-[816px] bg-white text-[var(--design-primary,#1c202b)]">
       <div className="relative h-[610px] w-full">
         <img
           {...editableRegion("sectionImageUrl", "image")}
@@ -29,7 +29,7 @@ export default function CityToursDividerBlock({
           <div className="text-right">Proposal</div>
         </div>
 
-        <div className="absolute inset-x-0 bottom-8 bg-black px-[71px] py-6 text-white">
+        <div className="absolute inset-x-0 bottom-8 bg-[var(--design-primary,#1c202b)] px-[71px] py-6 text-white">
           <h1 className="text-6xl font-bold uppercase leading-none">
             {data.city}
           </h1>

@@ -12,7 +12,7 @@ export default function TermsConditionsBlock({
   data,
 }: TermsConditionsBlockProps) {
   return (
-    <div className="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-black">
+    <div className="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-[var(--design-primary,#1c202b)]">
       <PageHeader />
 
       <div className="mt-8">

@@ -11,7 +11,7 @@ const TORN_EDGE_CLIP_PATH =
 
 export default function CoverBlock({ data }: CoverBlockProps) {
   return (
-    <div className="relative box-border h-[1056px] w-[816px] overflow-hidden bg-white text-black">
+    <div className="relative box-border h-[1056px] w-[816px] overflow-hidden bg-white text-[var(--design-primary,#1c202b)]">
       <div className="absolute inset-y-0 right-0 w-[68%]">
         <img
           {...editableRegion("coverImageUrl", "image")}

@@ -9,7 +9,7 @@ interface ThankYouBlockProps {
 
 export default function ThankYouBlock({ data }: ThankYouBlockProps) {
   return (
-    <div className="relative box-border h-[1056px] w-[816px] overflow-hidden bg-white text-black">
+    <div className="relative box-border h-[1056px] w-[816px] overflow-hidden bg-white text-[var(--design-primary,#1c202b)]">
       <div className="px-[82px] pt-12">
         <PageHeader variant="proposalOnly" />
       </div>
@@ -27,7 +27,7 @@ export default function ThankYouBlock({ data }: ThankYouBlockProps) {
         <p {...editableRegion("thankYouMessage", "multiline")} className="font-serif text-5xl italic">{data.message}</p>
       </div>
 
-      <div className="absolute -bottom-24 -right-24 h-[420px] w-[420px] rotate-45 bg-black" />
+      <div className="absolute -bottom-24 -right-24 h-[420px] w-[420px] rotate-45 bg-[var(--design-primary,#1c202b)]" />
 
       <PageFooter pageNumber={data.pageNumber} />
     </div>

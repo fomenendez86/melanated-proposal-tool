@@ -37,7 +37,7 @@ function WeatherTableSection({ table }: { table: WeatherTable }) {
 
 export default function WeatherBlock({ data }: WeatherBlockProps) {
   return (
-    <div className="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-black">
+    <div className="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-[var(--design-primary,#1c202b)]">
       <PageHeader variant="proposalOnly" />
 
       <div {...editableRegion("weatherSnapshotText", "multiline")} className="mt-16 flex flex-col gap-16">

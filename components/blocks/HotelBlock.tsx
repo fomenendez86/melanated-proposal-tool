@@ -1,7 +1,7 @@
+import HotelBlockLayout from "@/components/blocks/shared/layouts/HotelBlockLayout";
 import PageFooter from "@/components/blocks/shared/PageFooter";
 import PageHeader from "@/components/blocks/shared/PageHeader";
 import SectionHeader from "@/components/blocks/shared/SectionHeader";
-import { editableRegion } from "@/lib/editor/editableRegions";
 import type { HotelData } from "@/lib/types";
 
 interface HotelBlockProps {
@@ -10,51 +10,25 @@ interface HotelBlockProps {
 
 export default function HotelBlock({ data }: HotelBlockProps) {
   return (
-    <div className="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-black">
-      <SectionHeader title="Accommodations" />
-
-      <div className="mt-2">
-        <PageHeader variant="proposalOnly" />
-      </div>
-
-      <div className="mt-8 flex gap-6">
-        <div className="flex w-[45%] shrink-0 flex-col gap-4">
-          <img
-            {...editableRegion("hotelImageBottomLeftTop", "image")}
-            src={data.images.bottomLeftTop || undefined}
-            alt={`${data.name} detail`}
-            className="h-[500px] w-full object-cover"
-          />
-          <img
-            {...editableRegion("hotelImageBottomLeftBottom", "image")}
-            src={data.images.bottomLeftBottom || undefined}
-            alt={`${data.name} exterior`}
-            className="h-[280px] w-full object-cover"
-          />
-        </div>
-        <div className="flex flex-1 flex-col">
-          <img
-            {...editableRegion("hotelImageTopRight", "image")}
-            src={data.images.topRight || undefined}
-            alt={`${data.name} room`}
-            className="aspect-[292/268] w-full object-cover"
-          />
-          <h3 {...editableRegion("hotelName")} className="mt-4 text-xl font-bold uppercase">{data.name}</h3>
-          <p {...editableRegion("roomCategory")} className="mt-2 text-sm">
-            <span className="font-bold">Room Category: </span>
-            {data.roomCategory}
-          </p>
-          <p {...editableRegion("mealPlan")} className="text-sm">
-            <span className="font-bold">Meal Plan: </span>
-            {data.mealPlan}
-          </p>
-          <p {...editableRegion("hotelDescription", "multiline")} className="mt-2 text-justify text-sm text-neutral-700">
-            {data.description}
-          </p>
-        </div>
-      </div>
-
-      <PageFooter pageNumber={data.pageNumber} />
-    </div>
+    <HotelBlockLayout
+      data={data}
+      pageClassName="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-[var(--design-primary,#1c202b)]"
+      header={
+        <>
+          <SectionHeader title="Accommodations" />
+          <div className="mt-2">
+            <PageHeader variant="proposalOnly" />
+          </div>
+        </>
+      }
+      bottomLeftTopImageClassName="h-[500px] w-full object-cover"
+      bottomLeftBottomImageClassName="h-[280px] w-full object-cover"
+      topRightImageClassName="aspect-[292/268] w-full object-cover"
+      nameClassName="mt-4 text-xl font-bold uppercase"
+      roomCategoryClassName="mt-2 text-sm"
+      mealPlanClassName="text-sm"
+      descriptionClassName="mt-2 text-justify text-sm text-neutral-700"
+      PageFooter={PageFooter}
+    />
   );
 }

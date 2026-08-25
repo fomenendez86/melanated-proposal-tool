@@ -286,6 +286,153 @@ export const libraryFees = sqliteTable(
 );
 
 // ---------------------------------------------------------------------------
+// Itineraries — reusable, design-independent trip skeletons a user builds
+// before any client or document exists. Days are the single source of truth
+// shared by every tier; hotel/excursion/flight/transport rows carry a
+// nullable `tierId` — null means "applies to every tier" (shared/default),
+// a value means "only shown/copied when that specific tier is selected".
+// "Generate proposal" deep-copies an itinerary (filtered to one tier) into
+// a brand-new real `proposals` row via copyItineraryGraphInto — see
+// lib/db/copyItineraryGraphInto.ts. Deliberately separate from `proposals`
+// rather than another `isTemplate`-style flag: itineraries have no client,
+// no status pipeline, no real money (only a reference price per tier), and
+// need per-row tier cardinality that would otherwise leak tier semantics
+// into every real proposal's booking tables forever.
+// ---------------------------------------------------------------------------
+
+export const itineraries = sqliteTable("itineraries", {
+  ...id,
+  name: text("name").notNull(),
+  description: text("description"),
+  thumbnailUrl: text("thumbnail_url"),
+  destinationLabel: text("destination_label"),
+  archivedAt: integer("archived_at", { mode: "timestamp" }),
+  ...timestamps,
+});
+
+export const itineraryTiers = sqliteTable("itinerary_tiers", {
+  ...id,
+  itineraryId: integer("itinerary_id")
+    .notNull()
+    .references(() => itineraries.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  // Reference/comparison price shown in the itinerary UI only — NOT the
+  // real pricing engine, which only exists per-proposal (proposalPricing).
+  priceMinor: integer("price_minor"),
+  currency: text("currency"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const itineraryDays = sqliteTable("itinerary_days", {
+  ...id,
+  itineraryId: integer("itinerary_id")
+    .notNull()
+    .references(() => itineraries.id, { onDelete: "cascade" }),
+  dayNumber: integer("day_number").notNull(),
+  date: text("date"),
+  subtitle: text("subtitle"),
+  highlightLine: text("highlight_line"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const itineraryDayActivities = sqliteTable("itinerary_day_activities", {
+  ...id,
+  dayId: integer("day_id")
+    .notNull()
+    .references(() => itineraryDays.id, { onDelete: "cascade" }),
+  timeRange: text("time_range"),
+  description: text("description").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const itineraryDayParagraphs = sqliteTable("itinerary_day_paragraphs", {
+  ...id,
+  dayId: integer("day_id")
+    .notNull()
+    .references(() => itineraryDays.id, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const itineraryDayImages = sqliteTable("itinerary_day_images", {
+  ...id,
+  dayId: integer("day_id")
+    .notNull()
+    .references(() => itineraryDays.id, { onDelete: "cascade" }),
+  url: text("url").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const itineraryHotels = sqliteTable("itinerary_hotels", {
+  ...id,
+  itineraryId: integer("itinerary_id")
+    .notNull()
+    .references(() => itineraries.id, { onDelete: "cascade" }),
+  tierId: integer("tier_id").references(() => itineraryTiers.id, { onDelete: "cascade" }),
+  hotelId: integer("hotel_id")
+    .notNull()
+    .references(() => hotels.id, { onDelete: "restrict" }),
+  roomCategory: text("room_category").notNull(),
+  mealPlan: text("meal_plan").notNull(),
+  nights: integer("nights").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const itineraryExcursions = sqliteTable("itinerary_excursions", {
+  ...id,
+  itineraryId: integer("itinerary_id")
+    .notNull()
+    .references(() => itineraries.id, { onDelete: "cascade" }),
+  tierId: integer("tier_id").references(() => itineraryTiers.id, { onDelete: "cascade" }),
+  excursionId: integer("excursion_id")
+    .notNull()
+    .references(() => excursions.id, { onDelete: "restrict" }),
+  priceOverride: real("price_override"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+// Flights — structured per itinerary, deliberately no reusable global
+// catalog (unlike hotels/excursions): a specific flight leg rarely repeats
+// identically across different trips.
+export const itineraryFlights = sqliteTable("itinerary_flights", {
+  ...id,
+  itineraryId: integer("itinerary_id")
+    .notNull()
+    .references(() => itineraries.id, { onDelete: "cascade" }),
+  tierId: integer("tier_id").references(() => itineraryTiers.id, { onDelete: "cascade" }),
+  carrier: text("carrier"),
+  flightNumber: text("flight_number"),
+  originAirport: text("origin_airport"),
+  destinationAirport: text("destination_airport"),
+  departureAt: integer("departure_at", { mode: "timestamp" }),
+  arrivalAt: integer("arrival_at", { mode: "timestamp" }),
+  cabinClass: text("cabin_class"),
+  costMinor: integer("cost_minor"),
+  currency: text("currency"),
+  notes: text("notes"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+// Ground transportation — same treatment as flights: structured, no catalog.
+export const itineraryTransport = sqliteTable("itinerary_transport", {
+  ...id,
+  itineraryId: integer("itinerary_id")
+    .notNull()
+    .references(() => itineraries.id, { onDelete: "cascade" }),
+  tierId: integer("tier_id").references(() => itineraryTiers.id, { onDelete: "cascade" }),
+  mode: text("mode"),
+  description: text("description"),
+  vehicleType: text("vehicle_type"),
+  pickupLocation: text("pickup_location"),
+  dropoffLocation: text("dropoff_location"),
+  scheduledAt: integer("scheduled_at", { mode: "timestamp" }),
+  costMinor: integer("cost_minor"),
+  currency: text("currency"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+// ---------------------------------------------------------------------------
 // Clients & proposals — transactional data, one row set per client engagement.
 // ---------------------------------------------------------------------------
 
@@ -423,6 +570,46 @@ export const proposalExcursions = sqliteTable("proposal_excursions", {
     .notNull()
     .references(() => excursions.id, { onDelete: "restrict" }),
   priceOverride: real("price_override"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+// Flights/transportation are proposal-scoped, structured, catalog-less rows
+// (same treatment as their itinerary_flights/itinerary_transport source —
+// see the "Itineraries" section above) rendered by dedicated flightDetails/
+// transportDetails document blocks via a proposalSections row with a null
+// refId (there's nothing narrower than "this proposal" to point at, unlike
+// hotel/weather rows which point at a specific booking/destination).
+export const proposalFlights = sqliteTable("proposal_flights", {
+  ...id,
+  proposalId: integer("proposal_id")
+    .notNull()
+    .references(() => proposals.id, { onDelete: "cascade" }),
+  carrier: text("carrier"),
+  flightNumber: text("flight_number"),
+  originAirport: text("origin_airport"),
+  destinationAirport: text("destination_airport"),
+  departureAt: integer("departure_at", { mode: "timestamp" }),
+  arrivalAt: integer("arrival_at", { mode: "timestamp" }),
+  cabinClass: text("cabin_class"),
+  costMinor: integer("cost_minor"),
+  currency: text("currency"),
+  notes: text("notes"),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const proposalTransport = sqliteTable("proposal_transport", {
+  ...id,
+  proposalId: integer("proposal_id")
+    .notNull()
+    .references(() => proposals.id, { onDelete: "cascade" }),
+  mode: text("mode"),
+  description: text("description"),
+  vehicleType: text("vehicle_type"),
+  pickupLocation: text("pickup_location"),
+  dropoffLocation: text("dropoff_location"),
+  scheduledAt: integer("scheduled_at", { mode: "timestamp" }),
+  costMinor: integer("cost_minor"),
+  currency: text("currency"),
   sortOrder: integer("sort_order").notNull().default(0),
 });
 

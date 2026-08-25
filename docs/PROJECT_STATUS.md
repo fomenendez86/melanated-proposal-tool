@@ -8,6 +8,212 @@ made, or a new pendiente is found.
 
 ## Estado general
 
+**Biblioteca de Itinerarios — Fase 2, cierre de los pendientes dejados
+explícitamente afuera de la Fase 1 (2026-08-25).** A pedido del usuario
+("termina el resto"), se completaron los 4 puntos que habían quedado
+fuera de la Fase 1 a propósito:
+
+- **Reordenar hoteles/excursiones/vuelos/transporte dentro de un
+  itinerario**: botones mover arriba/abajo en los 4 paneles del editor de
+  itinerario, mismo patrón swap-y-renormalizar que ya usa
+  `moveProposalSection` (`app/proposals/itineraries/[id]/actions.ts`,
+  helper genérico `moveScopedRow` + `visibleForTier`). El reordenamiento
+  es por tier visible (compartido + el tier activo), no global — mover
+  bajo un tier no descoloca el orden que ven otros tiers. **Bug real
+  encontrado al implementar esto**: `copyItineraryGraphInto.ts` copiaba
+  hoteles/excursiones sin `orderBy(sortOrder)` — el reordenamiento se
+  hubiera guardado en la base pero nunca se hubiera reflejado en la
+  propuesta generada. Corregido agregando el `orderBy` que faltaba
+  (vuelos/transporte ya lo hacían bien vía `.sort()` antes de insertar).
+- **Panel de excursiones en el editor de itinerario**: nuevo
+  `ExcursionsPanel` en `ItineraryEditorShell.tsx`, calco exacto de
+  `HotelsPanel` (mismo picker de catálogo, mismo scope compartido/tier,
+  mismo reordenamiento). El esquema y las server actions ya existían
+  desde la Fase 1, solo faltaba la UI.
+- **Páginas de documento dedicadas para vuelos/transporte**: se agregaron
+  tablas nuevas `proposal_flights`/`proposal_transport` (migración
+  `0008_slow_shocker.sql`, mismo shape que `itinerary_flights`/
+  `itinerary_transport` pero sin `tierId`, escopeadas a `proposalId`),
+  dos tipos de sección nuevos `flightDetails`/`transportDetails`
+  (`lib/types.ts`, `lib/designs/registry.ts::ALL_SECTION_TYPES` — al
+  estar en `ALL_SECTION_TYPES` los heredan automáticamente los 3 diseños
+  registrados, sin romper la regla de versionado porque
+  `supportedSectionTypes` es solo una señal de compatibilidad para los
+  pickers, no lo que gatea qué puede renderizar cada switch de renderer)
+  y bloques de documento reales en **ambos** diseños
+  (`components/blocks/{FlightDetailsBlock,TransportDetailsBlock}.tsx` y
+  sus pares en `components/blocks/minimal-grid/`, registrados en
+  `melanatedBlocksV1.tsx`/`minimalGridV1.tsx`). Cada tipo es una sola
+  página que lista todos los tramos del proposal (mismo patrón que
+  `importantItems`/`weather`: agregación, no una página por fila).
+  `copyItineraryGraphInto.ts` ahora copia los tramos a las tablas reales
+  (no más prosa serializada en Incluye/No incluye) y **crea la fila
+  `proposalSections` él mismo** cuando hay al menos un tramo — la única
+  excepción a "la propuesta nueva arranca con composición vacía", porque
+  a propósito no se construyó un picker manual para insertar estas
+  páginas (no hay catálogo de vuelos/transporte con qué poblar uno).
+  **Decisión de alcance explícita**: estas páginas son de **solo
+  vista/revisión**, sin `editableRegion` — el panel Properties del editor
+  ya maneja esto con gracia sola (mensaje "Preview only — This page is
+  available for review but has no editable fields", verificado en vivo,
+  no hubo que construir nada para ese estado). Editar contenido de
+  vuelos/transporte de una propuesta ya generada se hace todavía desde el
+  itinerario de origen, no desde la propuesta.
+- **Workstream 2, parte 1 (CSS-vars) completa.** Los 18 bloques de
+  Safari Editorial que hardcodeaban `text-black`/
+  `border-black`/`bg-black` (`CoverBlock.tsx` ya tenía 1 uso de
+  antes) ahora usan `[var(--design-primary,#1c202b)]` con el hex actual
+  como fallback — mecánico, mismo patrón ya validado por `CoverBlock` y
+  por los bloques de Minimal Grid. **Alcance recortado a propósito
+  durante la implementación**: el plan original decía "llevar las
+  variables a los 16 bloques", pero solo existen vars para
+  `primary/secondary/accent` (colores de marca), no para
+  `surface`/`text` neutro — así que **solo se tocó texto/borde/fondo que
+  ya actuaba como "color de tinta principal"** (`text-black`,
+  `border-black`, barras `bg-black` de acento). Los `text-neutral-600/700`
+  (texto gris atenuado) se dejaron intactos a propósito: el secondary de
+  Safari Editorial es `#566b4d` (verde oliva, un color de marca, no un
+  gris neutro) — mapearlo ahí hubiera sido un cambio visual real y
+  notorio, no el "cero cambio visual" que pedía el plan. Verificado sin
+  regresión visual contra la propuesta seed real.
+
+**Workstream 2, parte 2 (layouts compartidos por tipo de bloque) —
+completa, con el alcance recortado a Hotel + Overview.** A pedido
+explícito del usuario tras la pausa de confirmación. Al leer los 3
+candidatos del plan en detalle (no solo el resumen del research previo)
+se encontró que **Cover no es un buen candidato**: Safari Editorial usa
+posicionamiento absoluto con texto rotado verticalmente
+(`[writing-mode:vertical-rl]`) y un `clip-path` de borde irregular;
+Minimal Grid usa un flex horizontal simple sin rotación — casi nada del
+layout interno es realmente compartido más allá del tamaño del wrapper,
+así que extraerlo hubiera dado un shell casi vacío con puro overhead de
+indirección, sin ahorrar boilerplate real. Se dejó **Cover sin tocar** y
+se hizo el piloto solo con los otros 2:
+- `components/blocks/shared/layouts/HotelBlockLayout.tsx` — dueño del
+  grid de 2 columnas, las 6 llamadas a `editableRegion()` en orden fijo,
+  y el `PageFooter`. Cada diseño pasa su propio `header` (arreglo
+  PageHeader/SectionHeader, que difiere en orden y margen entre los dos),
+  un `imageWrap` opcional (Minimal Grid envuelve cada imagen en un marco
+  con borde; Safari Editorial no envuelve nada), y tokens de clase por
+  campo. **Bug evitado durante la extracción, no introducido**: el
+  original tenía `roomCategory` con `mt-2`/`mt-3` pero `mealPlan` sin
+  margen (para no duplicar espacio) — un primer borrador del layout
+  compartido colapsaba ambos en un solo `fieldClassName`, lo que hubiera
+  agregado margen de más a Meal Plan; corregido con
+  `roomCategoryClassName`/`mealPlanClassName` separados antes de
+  verificar visualmente.
+- `components/blocks/shared/layouts/OverviewBlockLayout.tsx` — dueño del
+  wrapper, el único `editableRegion("itinerarySnapshotText")`, y la
+  iteración de días. El markup por día/actividad queda como render-prop
+  (`renderDay`) porque genuinamente difiere entre diseños (Safari
+  Editorial: "Day N:" + prefijo "- ", sin separador; Minimal Grid:
+  "Day N" + línea divisoria entre días, hora en negrita) — forzarlo a una
+  sola forma hubiera sido el mismo error que se evitó con Cover.
+- `HotelBlock.tsx`/`OverviewBlock.tsx` en ambos diseños (`components/blocks/`
+  y `components/blocks/minimal-grid/`) ahora son ~25-30 líneas de
+  configuración (tokens de tema) en vez de 45-60 líneas de JSX
+  duplicado. **Verificado sin regresión visual** contra la propuesta seed
+  real, en los dos diseños (capturas de Overview y Hotel en Safari
+  Editorial y Minimal Grid, cambiando el diseño activo en la base
+  temporalmente y revirtiendo después) y contra la generación de PDF real
+  (`GET /api/proposals/1/pdf`, 200 OK, 6.1MB, 45 páginas, header
+  `%PDF` válido).
+
+**Biblioteca de Itinerarios (2026-08-25) — nueva funcionalidad, Fase 1
+completa.** El usuario pidió poder crear itinerarios reutilizables,
+independientes del diseño de documento y del cliente, con variaciones por
+Tier (ej. Classic/Premium), y recién después "generar" un documento real
+para personalizar/descargar/enviar — al estilo elegir una plantilla y
+llenarla, no al revés. Investigado con 3 agentes de exploración + 1 de
+diseño antes de implementar (ver el plan completo en
+`C:\Users\fomen\.claude\plans\el-objetivo-es-que-modular-lollipop.md`).
+Decisiones confirmadas con el usuario: los Tiers comparten el mismo plan
+día a día (los días son la única fuente de verdad, nunca varían por tier)
+— solo hotel(es)/vuelo(s)/transporte y precio varían por tier; vuelos y
+transporte NO tienen catálogo global reutilizable (a diferencia de
+hoteles/excursiones), son estructurados por itinerario; en el documento
+generado, vuelos/transporte se vuelcan como texto en Incluye/No incluye
+por ahora (sin bloques de página dedicados) — decisión explícita para no
+construir ~17 componentes de bloque × 2 diseños en esta pasada.
+
+- **Esquema nuevo** (`lib/db/schema.ts`, migración
+  `0007_eager_wildside.sql`): `itineraries`, `itineraryTiers`,
+  `itineraryDays`/`itineraryDayActivities`/`itineraryDayParagraphs`/
+  `itineraryDayImages`, `itineraryHotels`, `itineraryExcursions`,
+  `itineraryFlights`, `itineraryTransport` — un set de tablas
+  **genuinamente nuevo**, no otro flag tipo `isTemplate` sobre
+  `proposals` (razón: `proposals` ya carga CRM/sharing/template y sumarle
+  un 4to concepto ortogonal hubiera seguido el mismo patrón de
+  sobrecarga ya identificado; además hoteles/vuelos/transporte de un
+  itinerario necesitan cardinalidad por tier que `proposalHotels` no
+  puede expresar sin filtrar semántica de tier hacia adentro de
+  propuestas reales para siempre). Todas las tablas de contenido por
+  tier (`itineraryHotels`/`Excursions`/`Flights`/`Transport`) llevan
+  `tierId` **nullable**: `null` = aplica a todos los tiers (compartido),
+  un valor = solo ese tier. Los días NO llevan `tierId` — son siempre
+  compartidos, por decisión confirmada.
+- **Reuso del patrón de copia de grafo ya existente**: `lib/db/copyItineraryGraphInto.ts`
+  (nuevo) es el molde exacto de `lib/db/copyProposalGraph.ts::copyProposalGraphInto`,
+  pero lee de tablas `itinerary*` y filtra por tier
+  (`row.tierId === null || row.tierId === tierId`) antes de copiar a
+  `proposal*`. Vuelos/transporte, sin bloque de documento propio
+  todavía, se serializan como texto dentro de una fila
+  `proposalListSections` generada ("Flights"/"Ground Transportation").
+  `lib/db/createProposalFromItinerary.ts` es el molde exacto de
+  `lib/db/createProposalFromTemplate.ts` — inserta la propuesta nueva,
+  copia el grafo filtrado por tier, y no toca `proposalSections`: la
+  propuesta nueva arranca con composición vacía, igual que el origen
+  "blank", lista para que el usuario inserte páginas.
+- **Enganche en creación de propuesta**: `CreateProposalInput.origin`
+  (`app/proposals/actions.ts`) gana un 4to caso `{ type: "itinerary",
+  itineraryId, tierId }`, con una rama en `createProposal()`
+  estructuralmente idéntica a la rama `"template"` ya existente — el
+  diseño elegido en el diálogo siempre pisa el que trae el origen,
+  confirmando que elegir diseño ya estaba desacoplado del contenido
+  antes de esta pasada. `CreateProposalDialog.tsx` pasa de 3 a 4
+  opciones en "Start from", con selector de itinerario + tier.
+- **UI nueva**: `/proposals/itineraries` (lista, clon de
+  `/proposals/templates` — `ItineraryGallery.tsx`, con Manage/Duplicate/
+  Archivar/Restaurar y, a diferencia de templates, **borrado duro real**
+  habilitado porque nada queda con FK viva hacia un itinerario después
+  de generar — la copia es totalmente independiente).
+  `/proposals/itineraries/[id]/edit` (`ItineraryEditorShell.tsx`): tabs
+  de Tier (Shared + uno por tier, agregar/borrar), el editor de días
+  reusado tal cual, y 3 paneles nuevos (Hoteles/Vuelos/Transporte) con
+  un selector "All tiers"/"This tier only" que decide el `tierId` al
+  agregar. Botón "Generate proposal" abre un diálogo (cliente, diseño,
+  tier) que llama `createProposal()` con el origen nuevo y redirige al
+  editor real — desde ahí, Personalizar/Descargar/Enviar funcionan sin
+  ningún cambio de código.
+- **Refactor mecánico en `ItineraryEditor.tsx`**: antes importaba
+  `updateProposalFields` directo y recibía `proposalId`/`config`
+  (acoplado 100% al contexto de una propuesta real). Ahora recibe
+  `initialText`/`onSave` genéricos — el caller decide si `onSave` pega
+  contra `updateProposalFields` (propuesta) o `updateItineraryDays`
+  (itinerario nuevo). El resto del componente (codec, controles,
+  aviso de overflow) no cambió. Verificado que el flujo existente
+  (itinerario dentro de una propuesta real) sigue funcionando sin
+  regresiones — mismo componente, misma validación.
+- **Verificado de punta a punta con Playwright contra un servidor real**:
+  itinerario con 2 tiers (Classic/Premium), un día con actividad+narrativa,
+  un hotel Suite/Full Board etiquetado solo Premium y otro Standard/Half
+  Board etiquetado Classic → "Generate proposal" eligiendo Premium →
+  confirmado en la propuesta nueva: el día completo (con su actividad y
+  párrafo) presente, **y el hotel de Premium presente mientras el de
+  Classic queda excluido** — el filtro por tier funciona correcto de
+  punta a punta a través de la UI real, no solo a nivel de función.
+- **Fuera de esta pasada, a propósito**: bloques de documento dedicados
+  para vuelos/transporte (fase 2, condicional a uso real); UI de
+  reordenamiento (drag/mover) para hoteles/vuelos/transporte dentro de un
+  itinerario (hoy se agregan al final, sin botones mover arriba/abajo);
+  panel de excursiones en el editor de itinerario (el esquema y las
+  server actions ya existen, siguiendo el mismo patrón que hoteles, pero
+  no se pidió explícitamente y no se construyó la UI); Workstream 2
+  (diseños de documento más baratos de agregar) — investigado y
+  diseñado en el plan, pero no implementado en esta pasada, es
+  totalmente independiente y solo importa cuando se pida un 3er diseño
+  real.
+
 **Bug real de datos corregido (no de código), fuera del alcance de
 cualquier fase (2026-08-25):** en la propuesta seed `1` ("The Mainland
 Tour", DEMO-0001), la página 4 mostraba "Thank You" en vez de "Overview"

@@ -106,7 +106,17 @@
       "Bash(node .mg-screens.tmp.mjs)",
       "Bash(node .mg-cover-recheck.tmp.mjs)",
       "Bash(node .revert2.tmp.mjs)",
-      "Bash(node .check-inline-edit.tmp.mjs)"
+      "Bash(node .check-inline-edit.tmp.mjs)",
+      "Bash(node --import ./tests/tsx-bootstrap.mjs .tmp-test-itinerary.mts)",
+      "Bash(dir /s /b \"app\\\\proposals\\\\templates\")",
+      "Bash(node .tmp-verify-itin.mjs)",
+      "Bash(node .tmp-verify-itin2.mjs)",
+      "Bash(node .tmp-verify-itin3.mjs)",
+      "Bash(node .tmp-verify-itin4.mjs)",
+      "Bash(node .tmp-debug-save.mjs)",
+      "Bash(node .tmp-verify-itin5.mjs)",
+      "Bash(rm -f .tmp-verify-itin.mjs .tmp-verify-itin2.mjs .tmp-verify-itin3.mjs .tmp-verify-itin4.mjs .tmp-verify-itin5.mjs .tmp-debug-save.mjs)",
+      "Bash(node .tmp-verify-flights.mjs)"
     ],
     "additionalDirectories": [
       "C:\\Users\\fomen\\OneDrive\\Development\\melanated-proposal-tool\\output",

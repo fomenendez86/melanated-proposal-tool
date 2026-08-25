@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, ArchiveRestore, Bell, Copy, Eye, LibraryBig, LogOut, RotateCcw, Search, Trash2, XCircle } from "lucide-react";
+import { Archive, ArchiveRestore, Bell, Copy, Eye, LibraryBig, LogOut, MapPinned, RotateCcw, Search, Trash2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -9,6 +9,7 @@ import { logout } from "@/app/login/actions";
 import { archiveProposal, deleteProposal, duplicateProposalFromDashboard, markProposalLost, reopenProposal, restoreProposal } from "@/app/proposals/actions";
 import { EditorButton, EditorEmptyState, EditorStatusBadge, editorButtonStyles, editorFocusRing } from "@/components/editor/EditorUi";
 import type { TemplateListRow } from "@/lib/db/getTemplateList";
+import type { ItineraryPickerRow } from "@/lib/db/getItineraryList";
 import type { ClientOption } from "@/lib/db/getClientOptions";
 import type { ProposalListRow } from "@/lib/db/getProposalList";
 import type { ProposalStatus } from "@/lib/db/proposalStatus";
@@ -46,12 +47,14 @@ export default function ProposalDashboard({
   clients,
   designs,
   templates,
+  itineraries,
   unreadNotifications,
 }: {
   rows: ProposalListRow[];
   clients: ClientOption[];
   designs: DocumentDesignDescriptor[];
   templates: TemplateListRow[];
+  itineraries: ItineraryPickerRow[];
   unreadNotifications: number;
 }) {
   const router = useRouter();
@@ -135,7 +138,11 @@ export default function ProposalDashboard({
             <LibraryBig className="size-4" aria-hidden="true" />
             Templates
           </Link>
-          <CreateProposalDialog clients={clients} designs={designs} existingProposals={existingProposals} templates={templateOptions} />
+          <Link href="/proposals/itineraries" prefetch={false} className={editorButtonStyles({ variant: "secondary" })}>
+            <MapPinned className="size-4" aria-hidden="true" />
+            Itineraries
+          </Link>
+          <CreateProposalDialog clients={clients} designs={designs} existingProposals={existingProposals} templates={templateOptions} itineraries={itineraries} />
           <form action={logout}>
             <EditorButton type="submit" variant="ghost" aria-label="Log out">
               <LogOut className="size-4" aria-hidden="true" />

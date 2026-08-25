@@ -14,7 +14,7 @@ export default function TriangleDividerBlock({
   data,
 }: TriangleDividerBlockProps) {
   return (
-    <div className="relative box-border h-[1056px] w-[816px] overflow-hidden bg-white text-black">
+    <div className="relative box-border h-[1056px] w-[816px] overflow-hidden bg-white text-[var(--design-primary,#1c202b)]">
       <div className="px-[82px] pt-12">
         <PageHeader variant="proposalOnly" />
         <div className="mt-2">
@@ -50,7 +50,7 @@ export default function TriangleDividerBlock({
         className="mt-10 h-[420px] w-full object-cover"
       />
 
-      <div className="absolute -bottom-24 -right-24 h-[420px] w-[420px] rotate-45 bg-[#1c202b]" />
+      <div className="absolute -bottom-24 -right-24 h-[420px] w-[420px] rotate-45 bg-[var(--design-primary,#1c202b)]" />
 
       <PageFooter pageNumber={data.pageNumber} />
     </div>

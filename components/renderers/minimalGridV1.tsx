@@ -3,6 +3,7 @@ import CoverBlock from "@/components/blocks/minimal-grid/CoverBlock";
 import DayItineraryBlock from "@/components/blocks/minimal-grid/DayItineraryBlock";
 import DetailsBlock from "@/components/blocks/minimal-grid/DetailsBlock";
 import ExcursionListBlock from "@/components/blocks/minimal-grid/ExcursionListBlock";
+import FlightDetailsBlock from "@/components/blocks/minimal-grid/FlightDetailsBlock";
 import FromOwnersBlock from "@/components/blocks/minimal-grid/FromOwnersBlock";
 import HotelBlock from "@/components/blocks/minimal-grid/HotelBlock";
 import ImportantItemsBlock from "@/components/blocks/minimal-grid/ImportantItemsBlock";
@@ -12,6 +13,7 @@ import SectionDividerBlock from "@/components/blocks/minimal-grid/SectionDivider
 import SignatureBlock from "@/components/blocks/minimal-grid/SignatureBlock";
 import TermsConditionsBlock from "@/components/blocks/minimal-grid/TermsConditionsBlock";
 import ThankYouBlock from "@/components/blocks/minimal-grid/ThankYouBlock";
+import TransportDetailsBlock from "@/components/blocks/minimal-grid/TransportDetailsBlock";
 import TriangleDividerBlock from "@/components/blocks/minimal-grid/TriangleDividerBlock";
 import TwoColumnListBlock from "@/components/blocks/minimal-grid/TwoColumnListBlock";
 import WeatherBlock from "@/components/blocks/minimal-grid/WeatherBlock";
@@ -59,5 +61,9 @@ export function renderMinimalGridV1Section(section: ProposalSection) {
       return <ThankYouBlock data={section.data} />;
     case "signature":
       return <SignatureBlock data={section.data} />;
+    case "flightDetails":
+      return <FlightDetailsBlock data={section.data} />;
+    case "transportDetails":
+      return <TransportDetailsBlock data={section.data} />;
   }
 }

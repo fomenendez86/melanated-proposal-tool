@@ -3,6 +3,7 @@ import CoverBlock from "@/components/blocks/CoverBlock";
 import DayItineraryBlock from "@/components/blocks/DayItineraryBlock";
 import DetailsBlock from "@/components/blocks/DetailsBlock";
 import ExcursionListBlock from "@/components/blocks/ExcursionListBlock";
+import FlightDetailsBlock from "@/components/blocks/FlightDetailsBlock";
 import FromOwnersBlock from "@/components/blocks/FromOwnersBlock";
 import HotelBlock from "@/components/blocks/HotelBlock";
 import ImportantItemsBlock from "@/components/blocks/ImportantItemsBlock";
@@ -12,6 +13,7 @@ import SectionDividerBlock from "@/components/blocks/SectionDividerBlock";
 import SignatureBlock from "@/components/blocks/SignatureBlock";
 import TermsConditionsBlock from "@/components/blocks/TermsConditionsBlock";
 import ThankYouBlock from "@/components/blocks/ThankYouBlock";
+import TransportDetailsBlock from "@/components/blocks/TransportDetailsBlock";
 import TriangleDividerBlock from "@/components/blocks/TriangleDividerBlock";
 import TwoColumnListBlock from "@/components/blocks/TwoColumnListBlock";
 import WeatherBlock from "@/components/blocks/WeatherBlock";
@@ -54,5 +56,9 @@ export function renderMelanatedBlocksV1Section(section: ProposalSection) {
       return <ThankYouBlock data={section.data} />;
     case "signature":
       return <SignatureBlock data={section.data} />;
+    case "flightDetails":
+      return <FlightDetailsBlock data={section.data} />;
+    case "transportDetails":
+      return <TransportDetailsBlock data={section.data} />;
   }
 }

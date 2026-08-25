@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { createProposal } from "@/app/proposals/actions";
 import { EditorButton, EditorNotice, EditorSegmentedControl, editorFocusRing } from "@/components/editor/EditorUi";
 import type { ClientOption } from "@/lib/db/getClientOptions";
+import type { ItineraryPickerRow } from "@/lib/db/getItineraryList";
 import type { DocumentDesignDescriptor } from "@/lib/designs/types";
 
 const inputClass = `h-11 w-full rounded-lg border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`;
@@ -16,11 +17,13 @@ export default function CreateProposalDialog({
   designs,
   existingProposals,
   templates,
+  itineraries,
 }: {
   clients: ClientOption[];
   designs: DocumentDesignDescriptor[];
   existingProposals: { id: number; title: string }[];
   templates: { id: number; title: string }[];
+  itineraries: ItineraryPickerRow[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -30,9 +33,12 @@ export default function CreateProposalDialog({
   const [newClientEmail, setNewClientEmail] = useState("");
   const [tripName, setTripName] = useState("");
   const [designChoice, setDesignChoice] = useState(designs[0] ? `${designs[0].id}:${designs[0].version}` : "");
-  const [origin, setOrigin] = useState<"blank" | "duplicate" | "template">("blank");
+  const [origin, setOrigin] = useState<"blank" | "duplicate" | "template" | "itinerary">("blank");
   const [sourceProposalId, setSourceProposalId] = useState(existingProposals[0]?.id ?? 0);
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? 0);
+  const [itineraryId, setItineraryId] = useState(itineraries[0]?.id ?? 0);
+  const [tierId, setTierId] = useState<number | null>(itineraries[0]?.tiers[0]?.id ?? null);
+  const selectedItinerary = itineraries.find((itinerary) => itinerary.id === itineraryId) ?? null;
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -89,6 +95,10 @@ export default function CreateProposalDialog({
       setError("Choose a template.");
       return;
     }
+    if (origin === "itinerary" && !itineraryId) {
+      setError("Choose an itinerary.");
+      return;
+    }
     setLoading(true);
     const result = await createProposal({
       tripName,
@@ -103,7 +113,9 @@ export default function CreateProposalDialog({
           ? { type: "blank" }
           : origin === "duplicate"
             ? { type: "duplicate", sourceProposalId }
-            : { type: "template", templateId },
+            : origin === "template"
+              ? { type: "template", templateId }
+              : { type: "itinerary", itineraryId, tierId },
     });
     setLoading(false);
     if (!result.ok || !result.id) {
@@ -196,6 +208,7 @@ export default function CreateProposalDialog({
                       { value: "blank", label: "Blank" },
                       { value: "duplicate", label: "Duplicate existing" },
                       { value: "template", label: "From template" },
+                      { value: "itinerary", label: "From itinerary" },
                     ]}
                   />
                 </div>
@@ -224,6 +237,37 @@ export default function CreateProposalDialog({
                       <option key={template.id} value={template.id}>{template.title}</option>
                     ))}
                   </select>
+                ) : null}
+                {origin === "itinerary" ? (
+                  <div className="mt-2 space-y-2">
+                    <select
+                      aria-label="Itinerary"
+                      className={inputClass}
+                      value={itineraryId}
+                      onChange={(event) => {
+                        const nextId = Number(event.target.value);
+                        setItineraryId(nextId);
+                        setTierId(itineraries.find((itinerary) => itinerary.id === nextId)?.tiers[0]?.id ?? null);
+                      }}
+                    >
+                      {itineraries.length === 0 ? <option value={0}>No itineraries yet</option> : null}
+                      {itineraries.map((itinerary) => (
+                        <option key={itinerary.id} value={itinerary.id}>{itinerary.name}</option>
+                      ))}
+                    </select>
+                    {selectedItinerary && selectedItinerary.tiers.length > 0 ? (
+                      <select
+                        aria-label="Tier"
+                        className={inputClass}
+                        value={tierId ?? ""}
+                        onChange={(event) => setTierId(Number(event.target.value))}
+                      >
+                        {selectedItinerary.tiers.map((tier) => (
+                          <option key={tier.id} value={tier.id}>{tier.name}</option>
+                        ))}
+                      </select>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
 

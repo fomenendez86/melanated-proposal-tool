@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { hasValidSession } from "@/lib/auth/session";
+import { createProposalFromItinerary } from "@/lib/db/createProposalFromItinerary";
 import { createProposalFromTemplate } from "@/lib/db/createProposalFromTemplate";
 import { db } from "@/lib/db/client";
 import { duplicateProposal } from "@/lib/db/duplicateProposal";
@@ -19,7 +20,8 @@ export interface CreateProposalInput {
   origin:
     | { type: "blank" }
     | { type: "duplicate"; sourceProposalId: number }
-    | { type: "template"; templateId: number };
+    | { type: "template"; templateId: number }
+    | { type: "itinerary"; itineraryId: number; tierId: number | null };
 }
 
 export interface ProposalMutationResult {
@@ -85,6 +87,25 @@ export async function createProposal(input: CreateProposalInput): Promise<Propos
     if (!Number.isInteger(input.origin.templateId)) return { ok: false, formError: "Choose a template." };
     const result = await createProposalFromTemplate(input.origin.templateId, { leadClientId: clientId });
     if (!result.ok || !result.id) return { ok: false, formError: result.formError ?? "The proposal could not be created from the template." };
+    const newProposalId = result.id;
+    try {
+      db.transaction((tx) => {
+        tx.update(proposals)
+          .set({ designId: design.id, designVersion: design.version, packageName: tripName, coverTitle: tripName, updatedAt: new Date() })
+          .where(eq(proposals.id, newProposalId))
+          .run();
+      });
+    } catch {
+      return { ok: false, formError: "The proposal was created but could not be renamed. Open it from the list to fix it." };
+    }
+    revalidateDashboard();
+    return { ok: true, id: newProposalId };
+  }
+
+  if (input.origin.type === "itinerary") {
+    if (!Number.isInteger(input.origin.itineraryId)) return { ok: false, formError: "Choose an itinerary." };
+    const result = await createProposalFromItinerary(input.origin.itineraryId, input.origin.tierId, { leadClientId: clientId });
+    if (!result.ok || !result.id) return { ok: false, formError: result.formError ?? "The proposal could not be created from the itinerary." };
     const newProposalId = result.id;
     try {
       db.transaction((tx) => {

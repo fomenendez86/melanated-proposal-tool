@@ -55,6 +55,10 @@ function pageStatus(section: ProposalSection): ProposalPageStatus {
     case "overview":
     case "pricing":
       return "ready";
+    case "flightDetails":
+      return section.data.legs.length > 0 ? "ready" : "warning";
+    case "transportDetails":
+      return section.data.legs.length > 0 ? "ready" : "warning";
   }
 }
 
@@ -102,6 +106,10 @@ function pageCopy(
       return { eyebrow: "Closing", title: "Thank You", description: section.data.message };
     case "signature":
       return { eyebrow: "Agreement", title: section.data.title, description: `${section.data.signers.length} signer${section.data.signers.length === 1 ? "" : "s"}` };
+    case "flightDetails":
+      return { eyebrow: "Logistics", title: "Flights", description: `${section.data.legs.length} flight leg${section.data.legs.length === 1 ? "" : "s"}` };
+    case "transportDetails":
+      return { eyebrow: "Logistics", title: "Ground Transportation", description: `${section.data.legs.length} leg${section.data.legs.length === 1 ? "" : "s"}` };
   }
 }
 

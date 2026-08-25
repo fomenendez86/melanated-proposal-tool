@@ -50,6 +50,20 @@
       "when": 1787623618551,
       "tag": "0006_rich_mauler",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1787688612360,
+      "tag": "0007_eager_wildside",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1787691405564,
+      "tag": "0008_slow_shocker",
+      "breakpoints": true
     }
   ]
 }

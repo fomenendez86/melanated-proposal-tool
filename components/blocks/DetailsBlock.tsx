@@ -10,7 +10,7 @@ interface DetailsBlockProps {
 
 export default function DetailsBlock({ data }: DetailsBlockProps) {
   return (
-    <div className="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-black">
+    <div className="relative box-border h-[1056px] w-[816px] bg-white px-[82px] py-12 text-[var(--design-primary,#1c202b)]">
       <PageHeader variant="proposalOnly" />
 
       <div className="mt-2">
@@ -20,7 +20,7 @@ export default function DetailsBlock({ data }: DetailsBlockProps) {
       <div className="mt-8 flex flex-col">
         {data.rows.map((row, index) => (
           <div key={index}>
-            <div className="bg-black px-4 py-2 text-sm font-bold uppercase text-white">
+            <div className="bg-[var(--design-primary,#1c202b)] px-4 py-2 text-sm font-bold uppercase text-white">
               {row.label}
             </div>
             <div className="bg-neutral-100 px-4 py-3">
