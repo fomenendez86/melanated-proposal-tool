@@ -8,6 +8,88 @@ made, or a new pendiente is found.
 
 ## Estado general
 
+**Bug real de datos corregido (no de código), fuera del alcance de
+cualquier fase (2026-08-25):** en la propuesta seed `1` ("The Mainland
+Tour", DEMO-0001), la página 4 mostraba "Thank You" en vez de "Overview"
+— reportado por el usuario como "la página 4 no es el diseño que debe ir
+ahí". Investigado contra `reference/pdf-pages/page-04.png` (confirma que
+la página 4 real es el resumen día a día "Overview") y contra
+`lib/db/seed.ts:993` (el `sortOrder` original de `overview` es `10`, el
+más bajo de `proposal_sections`, o sea la primera sección después de
+Cover/From the Owners/Details). En la base de datos de dev, la fila
+`overview` tenía `sortOrder: 80` (después de los 3 hoteles) y existía una
+fila `thankYou` duplicada y huérfana con `sortOrder: 1` (payload
+`imageUrl: ""`, la causa del badge "Warning" ya visible en el panel de
+páginas) — probablemente de una prueba manual anterior con la
+funcionalidad "insertar al principio" (Fase 11.3, `afterSectionId: null`).
+Corregido directamente en `data/proposals.db` (no en código, no hay
+migración): la fila duplicada se marcó `hidden`/`deleted` con el mismo
+mecanismo que usa `setProposalSectionDeleted` (recuperable, no un borrado
+duro), y `overview` volvió a `sortOrder: 10`. Verificado con
+`getProposalData(1)`: 46→45 páginas (exactamente -1, la fila duplicada),
+página 4 = `overview`, sin huecos en la numeración. **Mismo bug
+encontrado en la propuesta `32`** (también "The Mainland Tour", mismo
+patrón exacto: `thankYou` huérfano en `sortOrder 1`, `overview` en
+`sortOrder 80`) — consistente con haber sido creada por "Duplicar" a
+partir de la propuesta `1` ya corrupta (`duplicateProposal.ts` copia
+`proposal_sections` tal cual). **No corregida a propósito** — se le avisó
+al usuario y queda pendiente de que confirme si también hay que
+arreglarla. Las propuestas `26`/`66` no muestran el mismo patrón.
+
+**Limpieza de pendientes de fidelidad visual/contenido (2026-08-25).** Tres
+ítems sueltos de la sección "Pendientes conocidos":
+
+- **Íconos de clima/requisitos de viaje (`lib/db/seed.ts`)**: los 4 estados
+  del tiempo (Summer/Fall/Winter/Spring) solo tenían ícono en "Fall"
+  (🌧️) — Summer/Winter/Spring quedaban sin emoji en `weatherSeasons`,
+  para ambos perfiles (mainland y Zanzibar). Se agregaron ☀️/🌤️/🌦️
+  para consistencia. El ícono de "Zanzibar Travel Insurance" en
+  `travelRequirementItems` pasó de 🐚 (concha, temática de playa sin
+  relación con seguros) a 🛡️. **Decisión explícita, a pedido del
+  usuario:** no se migró esto a un set cerrado de íconos `lucide-react`
+  (como sí se hizo para `BrandIcon` globe/warning) — investigado y
+  confirmado que `travelRequirementItems.icon`/`weatherSeasons.icon` son
+  campos de **texto libre editables por el usuario** (línea `Icon:` en el
+  editor de colección, `app/proposals/[id]/editor/actions.ts:396`), no un
+  vocabulario fijo de marca. Cerrar eso a lucide requeriría un picker y
+  perder la edición libre — cambio de UI/schema real, fuera de alcance de
+  esta pasada. Solo se tocó el contenido del seed.
+- **`lib/sampleProposalData.ts` completado**: era el dataset legado de
+  referencia para previews aislados (`/preview/full-proposal`), y quedaba
+  incompleto contra `reference/pdf-pages/`: le faltaba el 3er hotel
+  (págs. 11-12, "Serengeti Signature Safari Lodge") y la sección completa
+  de excursiones de Karatu (pág. 26-29, divisor "Karatu Tours &
+  Excursions" + 10 ítems). Se agregaron ambos, transcritos del PDF
+  original — 3 de los 10 ítems de Karatu son excursiones únicas (Hadza +
+  Datoga, Olduvai Gorge + Shifting Sands, Sunrise Hot Air Balloon), el
+  resto se solapa con el catálogo de Arusha pero con precio propio en
+  algunos casos (ej. Mosquito River Cultural Tour: $80 desde Arusha, $200
+  desde Karatu — confirmado que el PDF realmente lista precios distintos
+  por ciudad de partida, no es un error de transcripción). No hizo falta
+  ajustar números de página a mano: `renumberSections()` ya renumera toda
+  la lista al final por orden de array, así que insertar las secciones
+  nuevas en el lugar correcto del array alcanza. **Nota:** esto es solo el
+  dataset legado aislado — no es el seed real (`lib/db/seed.ts`), que
+  nunca tuvo 3 hoteles ni excursiones de Karatu y queda fuera de esta
+  pasada (cambiarlo afectaría la propuesta seed real `1` usada en toda la
+  suite e2e).
+- **Orden alternado en `DayItineraryBlock` — investigado y descartado a
+  pedido del usuario, no es un simple reorden.** Comparando
+  `page-14/15/16.png` se confirmó que el original usa un **flujo continuo
+  tipo revista**: el contenido de un día puede partirse entre columnas y
+  páginas (ej. pág. 16: las 2 imágenes de Día 4 terminan arriba de la
+  columna derecha, *después* de que ya empezó el título de Día 5 en esa
+  misma columna). El sistema actual asigna un día completo y autocontenido
+  a una columna (regla mecánica documentada en `CLAUDE.md`: día 1 solo con
+  sidebar, resto en pares, sobrante solo) — replicar el flujo original
+  requeriría un rediseño real del motor de paginación de itinerario
+  (`lib/paginate.ts`, presupuestos compartidos con Overview/ExcursionList/
+  TermsConditions, tests, PDF), no un cambio acotado. **Se decide no
+  implementarlo**: queda como limitación de arquitectura permanente y
+  aceptada, no como pendiente activo — coherente con la regla de
+  `CLAUDE.md` de priorizar consistencia del sistema sobre replicar el
+  original cuando entran en conflicto.
+
 **Las tres brechas documentadas como "fuera de esta pasada" tras el
 rediseño visual están cerradas**: modo oscuro del editor, placeholder de
 íconos de mejor calidad, y renderer real y distinto para Minimal Grid (ver
@@ -841,10 +923,13 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
   `--font-brand-heading` en `app/globals.css`); ver `docs/BRAND_ASSET_PACK.md`.
 - Logo real como imagen — sigue siendo texto placeholder (config-driven,
   ver arriba).
-- Iconos e ilustraciones hechas a mano (pasaporte, visa, conchas, clima,
-  bandera de Tanzania) — contenido por-registro en `lib/db/seed.ts`, todo
-  con emoji; no son brand-pack, son un pendiente de contenido/catálogo
-  separado.
+- ~~Iconos e ilustraciones hechas a mano (pasaporte, visa, conchas,
+  clima)~~ — parcialmente atendido (ver "Limpieza de pendientes" arriba):
+  emoji del seed mejorados/completados donde faltaban (clima, seguro de
+  Zanzibar). Sigue siendo contenido por-registro en `lib/db/seed.ts` con
+  emoji, no íconos vectoriales — decisión explícita de mantenerlo así
+  porque el campo es texto libre editable por el usuario, no un
+  vocabulario cerrado tipo brand-pack.
 
 **Estructural:**
 - Overview/ExcursionList/TermsConditions se dividen primero con presupuestos
@@ -853,7 +938,12 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
   genera 34 páginas sin texto fuera del área imprimible.
 - `DayItineraryBlock` usa un orden fijo (título→imágenes→texto) para ambas
   columnas cuando hay 2 días por página; el original alterna el orden según
-  el espacio disponible por columna — no replicado.
+  el espacio disponible por columna en un flujo continuo tipo revista, que
+  puede partir un día entre columnas/páginas — **investigado en detalle,
+  decisión explícita de no replicarlo** (ver "Limpieza de pendientes"
+  arriba): requeriría rediseñar el motor de paginación de itinerario, no
+  un reorden acotado. Queda como limitación de arquitectura permanente,
+  no como pendiente activo.
 - ~~`ExcursionItem.price` es un string simple con el calificador
   concatenado~~ — corregido: `ExcursionItem` ahora tiene `priceNote?: string`
   separado de `price`. La tabla catálogo (`excursions.priceNote`) ya era
@@ -866,19 +956,20 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
   (`formatExcursionSnapshot`). Snapshots ya guardados con el string viejo
   ("$13,000 (per helicopter...)") siguen renderizando igual que antes hasta
   que se re-guarden — sin migración de datos.
-- `sampleProposalData.ts` es representativo (32 páginas: 2 hoteles, no 3;
-  Arusha únicamente, falta Karatu) — el mecanismo de ensamblado ya soporta
-  agregar más secciones, solo falta cargarlas.
+- ~~`sampleProposalData.ts` es representativo (32 páginas: 2 hoteles, no 3;
+  Arusha únicamente, falta Karatu)~~ — completado (ver "Limpieza de
+  pendientes" arriba): se agregó el 3er hotel (Serengeti Signature Safari
+  Lodge) y la sección de excursiones de Karatu, transcritos de
+  `reference/pdf-pages/page-11/12/26-29.png`.
 
 **Proposal Studio pendiente:**
-- La cobertura de formularios del documento está completa. La Fase 11
-  (**11.1–11.3**), la Fase 12 entera (**12.1–12.3**: promoción de esquema,
-  dashboard de propuestas, autenticación mínima) y la Fase 13 entera
-  (plantillas + biblioteca de contenido) del plan de expansión están
-  completas. Pendiente: el brand
-  asset pack (ver `docs/BRAND_ASSET_PACK.md`) para cerrar Fase 9, bloqueado
-  en assets externos. Después siguen las Fases 14–17. El orden y criterios están en
-  `docs/EDITOR_IMPLEMENTATION_PLAN.md` y `docs/STUDIO_EXPANSION_PLAN.md`.
+- La cobertura de formularios del documento está completa. Las Fases 10–17
+  enteras del plan de expansión están completas (ver "Fases 14–17 del plan
+  de expansión completas" arriba). Pendiente: el brand asset pack (ver
+  `docs/BRAND_ASSET_PACK.md`) para cerrar Fase 9, bloqueado en assets
+  externos — es el único criterio abierto de todo `STUDIO_EXPANSION_PLAN.md`.
+  El orden y criterios están en `docs/EDITOR_IMPLEMENTATION_PLAN.md` y
+  `docs/STUDIO_EXPANSION_PLAN.md`.
 - ~~4 tests de `editor.spec.ts` fallaban de forma intermitente en mobile.~~
   Resuelto al aislar la base y el build E2E, partir siempre del seed y ejecutar
   únicamente los escenarios aplicables a cada proyecto; la corrida completa

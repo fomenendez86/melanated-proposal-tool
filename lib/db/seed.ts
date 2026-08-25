@@ -388,14 +388,14 @@ async function seedWeather(mainlandId: number, zanzibarId: number) {
     .returning();
 
   await db.insert(weatherSeasons).values([
-    { weatherProfileId: mainlandProfile.id, name: "Summer", months: "Dec, Jan, Feb", tempFRange: "73.4°F - 84.2°F", tempCRange: "23°C - 29°C", sortOrder: 0 },
+    { weatherProfileId: mainlandProfile.id, name: "Summer", icon: "☀️", months: "Dec, Jan, Feb", tempFRange: "73.4°F - 84.2°F", tempCRange: "23°C - 29°C", sortOrder: 0 },
     { weatherProfileId: mainlandProfile.id, name: "Fall", icon: "🌧️", months: "March, Apr, May", tempFRange: "68.0°F - 77.0°F", tempCRange: "20°C - 25°C", sortOrder: 1 },
-    { weatherProfileId: mainlandProfile.id, name: "Winter", months: "June, July, August", tempFRange: "62.6°F - 75.2°F", tempCRange: "17°C - 24°C", sortOrder: 2 },
-    { weatherProfileId: mainlandProfile.id, name: "Spring", months: "Sep, Oct, Nov", tempFRange: "69.8°F - 80.6°F", tempCRange: "21°C - 27°C", sortOrder: 3 },
-    { weatherProfileId: zanzibarProfile.id, name: "Summer", months: "Dec, Jan, Feb", tempFRange: "79°F - 90°F", tempCRange: "26°C - 32°C", sortOrder: 0 },
+    { weatherProfileId: mainlandProfile.id, name: "Winter", icon: "🌤️", months: "June, July, August", tempFRange: "62.6°F - 75.2°F", tempCRange: "17°C - 24°C", sortOrder: 2 },
+    { weatherProfileId: mainlandProfile.id, name: "Spring", icon: "🌦️", months: "Sep, Oct, Nov", tempFRange: "69.8°F - 80.6°F", tempCRange: "21°C - 27°C", sortOrder: 3 },
+    { weatherProfileId: zanzibarProfile.id, name: "Summer", icon: "☀️", months: "Dec, Jan, Feb", tempFRange: "79°F - 90°F", tempCRange: "26°C - 32°C", sortOrder: 0 },
     { weatherProfileId: zanzibarProfile.id, name: "Fall", icon: "🌧️", months: "March, Apr, May", tempFRange: "75°F - 86°F", tempCRange: "24°C - 30°C", sortOrder: 1 },
-    { weatherProfileId: zanzibarProfile.id, name: "Winter", months: "June, July, August", tempFRange: "72°F - 82°F", tempCRange: "22°C - 28°C", sortOrder: 2 },
-    { weatherProfileId: zanzibarProfile.id, name: "Spring", months: "Sep, Oct, Nov", tempFRange: "73°F - 86°F", tempCRange: "23°C - 30°C", sortOrder: 3 },
+    { weatherProfileId: zanzibarProfile.id, name: "Winter", icon: "🌤️", months: "June, July, August", tempFRange: "72°F - 82°F", tempCRange: "22°C - 28°C", sortOrder: 2 },
+    { weatherProfileId: zanzibarProfile.id, name: "Spring", icon: "🌦️", months: "Sep, Oct, Nov", tempFRange: "73°F - 86°F", tempCRange: "23°C - 30°C", sortOrder: 3 },
   ]);
 }
 
@@ -412,7 +412,7 @@ async function seedTravelRequirements(mainlandId: number, zanzibarId: number) {
     .insert(travelRequirementItems)
     .values({
       destinationId: zanzibarId,
-      icon: "🐚",
+      icon: "🛡️",
       swatchColor: "#b0b0b0",
       heading: "Zanzibar Travel Insurance",
       qrCodeUrl: "https://visitzanzibar.go.tz",

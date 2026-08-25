@@ -352,6 +352,79 @@ const arushaExcursions: ExcursionItem[] = [
   },
 ];
 
+const karatuExcursions: ExcursionItem[] = [
+  {
+    title: "Day Safari to Ngorongoro Crater",
+    description:
+      "Explore the Ngorongoro Crater on a day safari, where you'll witness a unique ecosystem teeming with wildlife, from herds of elephants to prides of lions, all set within the world's largest intact volcanic caldera.",
+    price: "$300",
+    imageUrl: "https://picsum.photos/seed/karatu-ngorongoro/600/400",
+  },
+  {
+    title: "Day Safari to Tarangire National Park",
+    description:
+      "Tarangire National Park, renowned for its large elephant herds and iconic baobab trees, offering an authentic safari experience in a picturesque setting.",
+    price: "$200",
+    imageUrl: "https://picsum.photos/seed/karatu-tarangire/600/400",
+  },
+  {
+    title: "Day Safari to Lake Manyara National Park",
+    description:
+      "Explore the diverse ecosystems of Lake Manyara, known for its tree-climbing lions, vibrant birdlife, and breathtaking views of the Great Rift Valley, making it a must-visit for nature lovers.",
+    price: "$200",
+    imageUrl: "https://picsum.photos/seed/karatu-manyara/600/400",
+  },
+  {
+    title: "Night Game Drive",
+    description:
+      "Experience the thrill of a night game drive in Tarangire or Lake Manyara, where you'll spot nocturnal wildlife like leopards, hyenas, and owls under the stars in the heart of Tanzania's wilderness.",
+    price: "$300",
+    imageUrl: "https://picsum.photos/seed/karatu-night-drive/600/400",
+  },
+  {
+    title: "Hadza + Datoga Tribe Cultural Experience",
+    description:
+      "The Hadza tribe, one of the last hunter-gatherer societies in the world, offer a fascinating glimpse into ancient traditions, living off the land through foraging and hunting. The Datoga tribe, known for their skilled metalworking and distinct traditions, provide an insightful look into their pastoral lifestyle.",
+    price: "$90",
+    imageUrl: "https://picsum.photos/seed/karatu-hadza-datoga/600/400",
+  },
+  {
+    title: "Mosquito River Cultural Tour",
+    description:
+      "The Mosquito River Cultural Tour offers a rich experience where you'll explore local traditions, take a fascinating banana farm tour, enjoy authentic local dishes, discover the artistry of wood carving, and visit a thriving rice plantation to learn about the area's agricultural heritage.",
+    price: "$200",
+    imageUrl: "https://picsum.photos/seed/karatu-mosquito-river/600/400",
+  },
+  {
+    title: "Local Maasai Village",
+    description:
+      "This tour provides an immersive experience into the vibrant culture of the Maasai people, where you'll visit traditional homes, learn about their customs and way of life.",
+    price: "$80",
+    imageUrl: "https://picsum.photos/seed/karatu-maasai-village/600/400",
+  },
+  {
+    title: "Zipline Adventure",
+    description:
+      "Located at the base of the Great Rift Valley, this zipline adventure offers stunning views of lakes, wetlands, and the Maasai steppe. Just off the main safari route, the eco-course features four zips and six platforms around majestic baobab trees, with a scenic transfer through Maasai land and a fun adventure for all.",
+    price: "$80",
+    imageUrl: "https://picsum.photos/seed/karatu-zipline/600/400",
+  },
+  {
+    title: "Olduvai Gorge + Shifting Sands",
+    description:
+      "Olduvai Gorge, a UNESCO World Heritage site, is an archaeological treasure where some of the earliest human fossils were discovered, offering a glimpse into humanity's distant past. Shifting Sands, a natural wonder, is a unique volcanic phenomenon where the sands continually move, creating an ever-changing landscape in the heart of Tanzania's stunning terrain.",
+    price: "$80",
+    imageUrl: "https://picsum.photos/seed/karatu-olduvai/600/400",
+  },
+  {
+    title: "Sunrise Hot Air Balloon Experience (Tarangire)",
+    description:
+      "Experience the magic of a sunrise hot air balloon ride over Tarangire National Park, where you'll float above the breathtaking landscapes, spotting wildlife below as the sun rises over the African savannah.",
+    price: "$599",
+    imageUrl: "https://picsum.photos/seed/karatu-balloon/600/400",
+  },
+];
+
 const termsSections: TermsSection[] = [
   {
     heading: "Reservation and Payment Policy",
@@ -537,6 +610,34 @@ const sections: ProposalSection[] = [
   {
     type: "triangleDivider",
     data: {
+      sectionLabel: "Accommodations",
+      titleLines: [
+        { text: "Serengeti Signature", style: "bold" },
+        { text: "Safari Lodge", style: "script" },
+      ],
+      imageUrl: "https://picsum.photos/seed/serengeti-signature-exterior/900/600",
+      pageNumber: 11,
+    },
+  },
+  {
+    type: "hotel",
+    data: {
+      pageNumber: 12,
+      name: "Serengeti Signature Safari Lodge",
+      roomCategory: "Standard Tent",
+      mealPlan: "Half Board",
+      description:
+        "Signature Serengeti, by Into Wild Africa is a New Luxury Tented Safari Camp, deep in the heart of the Serengeti. The magical location of Signature Serengeti has all luxury tents facing due-west for unforgettable sunsets. Communal spaces include large dining and lounge tents, both raised on wooden platforms for optimal animal sighting and views of the landscape, with large viewing decks and wheelchair access.",
+      images: {
+        topRight: "https://picsum.photos/seed/serengeti-signature-tent/700/450",
+        bottomLeftTop: "https://picsum.photos/seed/serengeti-signature-detail/500/300",
+        bottomLeftBottom: "https://picsum.photos/seed/serengeti-signature-lounge/500/700",
+      },
+    },
+  },
+  {
+    type: "triangleDivider",
+    data: {
       sectionLabel: "Itinerary",
       titleLines: [
         { text: "The", style: "script" },
@@ -569,6 +670,19 @@ const sections: ProposalSection[] = [
     },
   },
   ...paginateExcursionList({ items: arushaExcursions, pageNumber: 0 }, 22),
+  {
+    type: "cityToursDivider",
+    data: {
+      city: "Karatu",
+      intro:
+        "Karatu is an ideal base for exploring Tanzania's top natural and cultural sites. Visit Ngorongoro Crater for unmatched wildlife viewing, explore the peaceful Mosquito River, and venture into the vast Serengeti plains. Along the way, connect with the Hadza hunter-gatherers and the vibrant Maasai tribe, making Karatu the perfect spot to experience Tanzania's rich nature and culture.",
+      priceNote:
+        "Prices are per adult(Ages 13+); children 5-12 years are 50% off ***HOT AIR BALLOON IS SAME PRICE FOR ADULT AND CHILDREN***",
+      imageUrl: "https://picsum.photos/seed/karatu-tours/900/700",
+      pageNumber: 26,
+    },
+  },
+  ...paginateExcursionList({ items: karatuExcursions, pageNumber: 0 }, 27),
   {
     type: "twoColumnList",
     data: {
