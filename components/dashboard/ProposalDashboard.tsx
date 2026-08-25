@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, ArchiveRestore, Bell, Copy, Eye, FileEdit, LibraryBig, LogOut, RotateCcw, Search, Trash2, XCircle } from "lucide-react";
+import { Archive, ArchiveRestore, Bell, Copy, Eye, LibraryBig, LogOut, RotateCcw, Search, Trash2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -173,68 +173,60 @@ export default function ProposalDashboard({
       {visibleRows.length === 0 ? (
         <EditorEmptyState title="No proposals match" description="Try a different search or status filter." />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-editor-border-subtle">
-          <table className="w-full min-w-[880px] border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-editor-border-subtle bg-editor-panel-muted text-left text-xs font-bold uppercase tracking-[0.08em] text-editor-text-muted">
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Client</th>
-                <th className="px-4 py-3">Value</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Design</th>
-                <th className="px-4 py-3">Pages</th>
-                <th className="px-4 py-3">Last activity</th>
-                <th className="px-4 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleRows.map((row) => (
-                <tr key={row.id} className="border-b border-editor-border-subtle last:border-b-0 hover:bg-editor-raised/60">
-                  <td className="px-4 py-3">
-                    <Link href={`/proposals/${row.id}/editor`} prefetch={false} className="font-semibold text-editor-text-strong hover:text-editor-brand">{row.title}</Link>
-                    <p className="text-xs text-editor-text-subtle">{row.proposalNumber}</p>
-                  </td>
-                  <td className="px-4 py-3 text-editor-text">{row.clientName}</td>
-                  <td className="px-4 py-3 tabular-nums text-editor-text">{row.value}</td>
-                  <td className="px-4 py-3">
-                    <EditorStatusBadge tone={STATUS_TONE[row.status]} className="capitalize">{row.status}</EditorStatusBadge>
-                  </td>
-                  <td className="px-4 py-3 text-editor-text-muted">{row.designName}</td>
-                  <td className="px-4 py-3 tabular-nums text-editor-text-muted">{row.pageCount}</td>
-                  <td className="px-4 py-3 text-editor-text-muted">{new Date(row.lastActivityAt).toLocaleDateString()}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1.5">
-                      <Link href={`/proposals/${row.id}/editor`} prefetch={false} aria-label={`Open ${row.title} in editor`} className={editorButtonStyles({ variant: "ghost", size: "icon" })}>
-                        <FileEdit className="size-4" aria-hidden="true" />
-                      </Link>
-                      <Link href={`/proposals/${row.id}/preview`} prefetch={false} aria-label={`Preview ${row.title}`} className={editorButtonStyles({ variant: "ghost", size: "icon" })}>
-                        <Eye className="size-4" aria-hidden="true" />
-                      </Link>
-                      <EditorButton type="button" variant="ghost" size="icon" aria-label={`Duplicate ${row.title}`} disabled={pendingId === row.id} onClick={() => void handleDuplicate(row.id)}>
-                        <Copy className="size-4" aria-hidden="true" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {visibleRows.map((row) => (
+            <article key={row.id} className="group flex flex-col overflow-hidden rounded-xl border border-editor-border-subtle bg-editor-panel shadow-editor-card transition hover:border-editor-border-strong">
+              <Link href={`/proposals/${row.id}/editor`} prefetch={false} className="relative block aspect-[4/3] overflow-hidden bg-editor-panel-muted">
+                {row.coverImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={row.coverImageUrl} alt="" className="size-full object-cover transition duration-300 group-hover:scale-[1.04]" />
+                ) : (
+                  <div className="flex size-full items-center justify-center bg-gradient-to-br from-editor-brand to-editor-brand-hover">
+                    <span className="px-4 text-center text-sm font-semibold uppercase tracking-wide text-white/90">{row.designName}</span>
+                  </div>
+                )}
+                <span className="absolute right-2 top-2">
+                  <EditorStatusBadge tone={STATUS_TONE[row.status]} className="capitalize shadow-editor-toolbar">{row.status}</EditorStatusBadge>
+                </span>
+              </Link>
+              <div className="flex flex-1 flex-col gap-1 p-4">
+                <Link href={`/proposals/${row.id}/editor`} prefetch={false} className="font-semibold text-editor-text-strong hover:text-editor-brand">{row.title}</Link>
+                <p className="text-xs text-editor-text-subtle">{row.proposalNumber}</p>
+                <p className="text-sm text-editor-text">{row.clientName}</p>
+                <div className="mt-1 flex items-center justify-between text-xs text-editor-text-muted">
+                  <span className="tabular-nums text-sm font-semibold text-editor-text-strong">{row.value}</span>
+                  <span>{new Date(row.lastActivityAt).toLocaleDateString()}</span>
+                </div>
+                <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">
+                  <span className="text-xs text-editor-text-subtle">{row.pageCount} pages · {row.designName}</span>
+                  <div className="flex items-center gap-1">
+                    <Link href={`/proposals/${row.id}/preview`} prefetch={false} aria-label={`Preview ${row.title}`} className={editorButtonStyles({ variant: "ghost", size: "icon" })}>
+                      <Eye className="size-4" aria-hidden="true" />
+                    </Link>
+                    <EditorButton type="button" variant="ghost" size="icon" aria-label={`Duplicate ${row.title}`} disabled={pendingId === row.id} onClick={() => void handleDuplicate(row.id)}>
+                      <Copy className="size-4" aria-hidden="true" />
+                    </EditorButton>
+                    {!["draft", "lost", "won", "archived"].includes(row.status) ? <EditorButton type="button" variant="ghost" size="icon" aria-label={`Mark ${row.title} lost`} disabled={pendingId === row.id} onClick={() => handleLost(row.id)}><XCircle className="size-4" aria-hidden="true" /></EditorButton> : null}
+                    {["lost", "won", "approved"].includes(row.status) ? <EditorButton type="button" variant="ghost" size="icon" aria-label={`Reopen ${row.title}`} disabled={pendingId === row.id} onClick={() => void handleReopen(row.id)}><RotateCcw className="size-4" aria-hidden="true" /></EditorButton> : null}
+                    {row.status === "archived" ? (
+                      <EditorButton type="button" variant="ghost" size="icon" aria-label={`Restore ${row.title}`} disabled={pendingId === row.id} onClick={() => void runAction(row.id, () => restoreProposal(row.id))}>
+                        <ArchiveRestore className="size-4" aria-hidden="true" />
                       </EditorButton>
-                      {!["draft", "lost", "won", "archived"].includes(row.status) ? <EditorButton type="button" variant="ghost" size="icon" aria-label={`Mark ${row.title} lost`} disabled={pendingId === row.id} onClick={() => handleLost(row.id)}><XCircle className="size-4" aria-hidden="true" /></EditorButton> : null}
-                      {["lost", "won", "approved"].includes(row.status) ? <EditorButton type="button" variant="ghost" size="icon" aria-label={`Reopen ${row.title}`} disabled={pendingId === row.id} onClick={() => void handleReopen(row.id)}><RotateCcw className="size-4" aria-hidden="true" /></EditorButton> : null}
-                      {row.status === "archived" ? (
-                        <EditorButton type="button" variant="ghost" size="icon" aria-label={`Restore ${row.title}`} disabled={pendingId === row.id} onClick={() => void runAction(row.id, () => restoreProposal(row.id))}>
-                          <ArchiveRestore className="size-4" aria-hidden="true" />
-                        </EditorButton>
-                      ) : (
-                        <EditorButton type="button" variant="ghost" size="icon" aria-label={`Archive ${row.title}`} disabled={pendingId === row.id} onClick={() => void runAction(row.id, () => archiveProposal(row.id))}>
-                          <Archive className="size-4" aria-hidden="true" />
-                        </EditorButton>
-                      )}
-                      {row.status === "draft" ? (
-                        <EditorButton type="button" variant="ghost" size="icon" aria-label={`Delete ${row.title}`} disabled={pendingId === row.id} onClick={() => handleDelete(row.id, row.title)}>
-                          <Trash2 className="size-4" aria-hidden="true" />
-                        </EditorButton>
-                      ) : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    ) : (
+                      <EditorButton type="button" variant="ghost" size="icon" aria-label={`Archive ${row.title}`} disabled={pendingId === row.id} onClick={() => void runAction(row.id, () => archiveProposal(row.id))}>
+                        <Archive className="size-4" aria-hidden="true" />
+                      </EditorButton>
+                    )}
+                    {row.status === "draft" ? (
+                      <EditorButton type="button" variant="ghost" size="icon" aria-label={`Delete ${row.title}`} disabled={pendingId === row.id} onClick={() => handleDelete(row.id, row.title)}>
+                        <Trash2 className="size-4" aria-hidden="true" />
+                      </EditorButton>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </article>
+          ))}
         </div>
       )}
     </div>

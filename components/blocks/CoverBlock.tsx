@@ -22,8 +22,8 @@ export default function CoverBlock({ data }: CoverBlockProps) {
         />
       </div>
 
-      <div className="absolute left-0 top-0 h-full w-[32%] px-10 py-10">
-        <p className="text-[10px] font-semibold uppercase tracking-wide">
+      <div className="absolute left-0 top-0 h-full w-[32%] px-10 py-10 text-[var(--design-primary,#1c202b)]">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em]">
           <BrandWordmark />
         </p>
 
@@ -34,7 +34,7 @@ export default function CoverBlock({ data }: CoverBlockProps) {
         </div>
 
         <div className="mt-4">
-          <p {...editableRegion("coverSubtitle", "multiline")} className="text-pretty text-[12px] font-bold uppercase leading-4 tracking-[0.08em]">
+          <p {...editableRegion("coverSubtitle", "multiline")} className="text-pretty text-[12px] font-bold uppercase leading-4 tracking-[0.1em]">
             {data.subtitle}
           </p>
           <p {...editableRegion("clientName")} className="text-pretty mt-3 font-serif text-2xl italic">{data.clientLine}</p>

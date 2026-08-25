@@ -42,7 +42,6 @@ export default function PdfGenerateButton({ proposalId, disabled }: { proposalId
   return (
     <EditorButton
       type="button"
-      variant="primary"
       disabled={disabled || state === "generating"}
       onClick={() => void generate()}
       aria-label={error || "Generate and download PDF"}

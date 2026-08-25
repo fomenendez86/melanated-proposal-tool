@@ -39,7 +39,7 @@ export default async function ProposalEditorPage({ params }: ProposalEditorPageP
   const composition = await getProposalCompositionData(proposalId);
   const activity = await getProposalActivity(proposalId);
   const pages = data.sections.map((section, index) => (
-    <ProposalSectionView key={`${section.type}-${index}`} section={section} />
+    <ProposalSectionView key={`${section.type}-${index}`} section={section} design={designContext.active} />
   ));
 
   return (

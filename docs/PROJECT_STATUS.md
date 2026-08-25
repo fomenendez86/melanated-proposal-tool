@@ -8,6 +8,57 @@ made, or a new pendiente is found.
 
 ## Estado general
 
+**Rediseño visual (editor, dashboard, documento), inspirado en el lenguaje
+visual de herramientas comerciales de propuestas** — sin tocar la mecánica
+de canvas libre (explícitamente fuera de alcance, ver `CLAUDE.md`) ni el
+modo oscuro/tipografía-logo-íconos reales del documento (bloqueado en
+`docs/BRAND_ASSET_PACK.md`). Ver `docs/COMPETITIVE_POSITIONING.md` y
+`docs/VISUAL_DESIGN_POSITIONING.md` para el análisis previo que motivó esta
+pasada.
+
+- **Editor**: `docs/EDITOR_DESIGN_SYSTEM.md` actualizado — `editor-accent`
+  pasa de "acento decorativo mínimo" a un uso funcional único (marcador de
+  la página seleccionada en `PageNavigator`, vía `border-l-editor-accent`
+  en `EditorPageCard`). Se estableció jerarquía real de botón primario en
+  la toolbar: "Share" queda como la única acción `variant="primary"` de la
+  región; "Send" y "Generate PDF" ya usaban `primary` de antes (hallazgo
+  al hacer el cambio, no introducido por él) y se bajaron a `secondary`
+  para que la regla "una acción primaria por región" sea real, no solo
+  documentada. `EditorDrawer` usa `shadow-editor-page` en vez del
+  `shadow-2xl` genérico de Tailwind.
+- **Dashboard y plantillas**: `getProposalListSummaries()` expone
+  `coverImageUrl` (columna ya existente, no expuesta antes).
+  `ProposalDashboard.tsx` reemplaza la tabla por una grilla de tarjetas
+  con imagen de portada (fallback a gradiente de marca cuando no hay
+  imagen) — mismo patrón que ya usaba `TemplateGallery.tsx`, que ahora
+  usa miniatura vertical `aspect-[3/4]` en vez de una caja achatada de
+  128px, y `shadow-editor-card` en ambas.
+- **Documento**: hallazgo de arquitectura — `design.brand.primary/
+  secondary/accent` (`lib/designs/registry.ts`) estaba definido pero
+  **nunca leído** por ningún bloque de render (confirmado por grep en
+  todo el repo). `ProposalSectionView` (`components/ProposalRenderer.tsx`)
+  ahora recibe `design` opcional y expone `--design-primary/-secondary/
+  -accent` como CSS custom properties a sus hijos; `SectionHeader.tsx` y
+  `PageFooter.tsx` los consumen en vez de `neutral-800`/`neutral-600`
+  hardcodeados (con fallback inline al valor de `melanated-editorial` por
+  si algún preview aislado no envuelve con el `design`). Esto es lo que
+  finalmente hace que "Minimal Grid" se diferencie de "Safari Editorial"
+  sin escribir un segundo renderer — aunque el efecto visual es sutil hoy,
+  porque los valores de marca registrados para ambos diseños son
+  deliberadamente cercanos (`#1c202b` vs `#20252b` de primario, etc.), no
+  porque el mecanismo no funcione. Los 4 call sites de
+  `ProposalSectionView`/`ProposalRenderer` que ya tenían el `design`
+  resuelto en scope lo pasan (editor, share, share/print, preview
+  dinámico); `/preview/full-proposal` (dataset legado aislado) se dejó en
+  el fallback por defecto a propósito. `CoverBlock.tsx` recibió un ajuste
+  tipográfico acotado (tracking del wordmark/subtítulo) dentro de la
+  fuente Geist Sans actual — no se tocó tipografía real, logo ni íconos,
+  bloqueados por `docs/BRAND_ASSET_PACK.md`.
+- **Explícitamente fuera de esta pasada**: modo oscuro del chrome del
+  editor (requiere infraestructura de theming nueva que no existe hoy) y
+  un segundo renderer real por diseño (pregunta de arquitectura abierta en
+  `docs/VISUAL_DESIGN_POSITIONING.md`, no resuelta acá).
+
 **Bug real corregido, fuera del alcance de cualquier fase:** `lib/db/schema.ts`
 tenía 5 tablas (`proposalNotificationSettings`, `proposalNotifications`,
 `proposalCommentThreads`, `proposalComments`, `proposalInternalNotes`) y un

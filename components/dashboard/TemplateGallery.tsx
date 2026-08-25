@@ -205,13 +205,13 @@ export default function TemplateGallery({
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {templates.map((template) => (
-            <div key={template.id} className="flex flex-col overflow-hidden rounded-xl border border-editor-border-subtle bg-editor-panel">
-              <div className="flex h-32 items-center justify-center overflow-hidden bg-editor-panel-muted">
+            <div key={template.id} className="flex flex-col overflow-hidden rounded-xl border border-editor-border-subtle bg-editor-panel shadow-editor-card transition hover:border-editor-border-strong">
+              <div className="relative flex aspect-[3/4] items-center justify-center overflow-hidden bg-gradient-to-br from-editor-brand to-editor-brand-hover">
                 {template.thumbnailUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={template.thumbnailUrl} alt="" className="size-full object-cover" />
                 ) : (
-                  <LibraryBig className="size-8 text-editor-text-subtle" aria-hidden="true" />
+                  <LibraryBig className="size-8 text-white/80" aria-hidden="true" />
                 )}
               </div>
               <div className="flex flex-1 flex-col gap-2 p-4">

@@ -69,7 +69,7 @@ export default function ShareProposalButton({ proposalId, disabled }: { proposal
 
   return (
     <>
-      <EditorButton ref={triggerRef} type="button" disabled={disabled} onClick={() => setOpen(true)} aria-label="Share proposal" title={disabled ? "Save the proposal before sharing" : "Share proposal"}>
+      <EditorButton ref={triggerRef} type="button" variant="primary" disabled={disabled} onClick={() => setOpen(true)} aria-label="Share proposal" title={disabled ? "Save the proposal before sharing" : "Share proposal"}>
         <Share2 className="size-4" aria-hidden="true" />
         <span className="hidden xl:inline">Share</span>
       </EditorButton>

@@ -310,13 +310,13 @@ export function EditorPageCard({
         aria-current={active ? "page" : undefined}
         onClick={onSelect}
         className={cn(
-          "flex min-h-20 w-full items-start gap-3 rounded-xl border p-2.5 text-left transition",
+          "flex min-h-20 w-full items-start gap-3 rounded-xl border border-l-[3px] p-2.5 text-left transition",
           editorFocusRing,
           dragging
             ? "border-dashed border-editor-brand opacity-60"
             : active
-              ? "border-editor-border-strong bg-editor-raised shadow-editor-card"
-              : "border-transparent hover:border-editor-border-subtle hover:bg-editor-raised/80"
+              ? "border-editor-border-strong border-l-editor-accent bg-editor-raised shadow-editor-card"
+              : "border-transparent border-l-transparent hover:border-editor-border-subtle hover:bg-editor-raised/80"
         )}
       >
         {dragHandle ? (
@@ -404,7 +404,7 @@ export const EditorDrawer = forwardRef<
       />
       <aside
         className={cn(
-          "absolute inset-y-0 w-[min(90vw,360px)] border-editor-border bg-editor-panel shadow-2xl",
+          "absolute inset-y-0 w-[min(90vw,360px)] border-editor-border bg-editor-panel shadow-editor-page",
           side === "left" ? "left-0 border-r" : "right-0 border-l",
           panelClassName
         )}

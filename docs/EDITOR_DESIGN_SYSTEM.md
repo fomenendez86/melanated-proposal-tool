@@ -34,9 +34,12 @@ Tokens are declared in `app/globals.css` and exposed to Tailwind through
 | `editor-text-subtle` | Help text, counters, and placeholders |
 | `editor-brand` | Primary editor action and selected mode |
 | `editor-brand-hover` | Primary action hover |
-| `editor-accent` | Small Proposal Studio identity accent only |
+| `editor-accent` | Active-state indicator only (e.g. the selected page card's marker) |
 
-Document brand colors must never replace editor brand tokens.
+Document brand colors must never replace editor brand tokens. The accent
+is deliberately scoped to a single job — marking the current selection —
+not a general-purpose decorative color; `editor-brand` remains the only
+color used for primary actions (see `EditorButton` variants above).
 
 ### Borders and focus
 

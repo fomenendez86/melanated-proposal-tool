@@ -12,7 +12,7 @@ export default function SectionHeader({ title, titleRegionProps }: SectionHeader
       <h2 {...titleRegionProps} className="whitespace-nowrap text-sm font-bold uppercase tracking-wide">
         {title}
       </h2>
-      <div className="mt-px h-px flex-1 bg-neutral-800" />
+      <div className="mt-px h-px flex-1 bg-[var(--design-primary,#1c202b)]" />
     </div>
   );
 }

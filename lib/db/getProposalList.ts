@@ -18,6 +18,7 @@ export interface ProposalListRow {
   value: string;
   valueRaw: number | null;
   lastActivityAt: string;
+  coverImageUrl: string | null;
 }
 
 // Computes accurate page counts (post-pagination) by running getProposalData
@@ -30,6 +31,7 @@ export async function getProposalListSummaries(): Promise<ProposalListRow[]> {
       proposalNumber: proposals.proposalNumber,
       packageName: proposals.packageName,
       coverTitle: proposals.coverTitle,
+      coverImageUrl: proposals.coverImageUrl,
       status: proposals.status,
       pipelineStage: proposals.pipelineStage,
       designId: proposals.designId,
@@ -76,6 +78,7 @@ export async function getProposalListSummaries(): Promise<ProposalListRow[]> {
         value: valueRaw != null ? formatMoney(valueRaw, currency) : "—",
         valueRaw,
         lastActivityAt: lastActivity.toISOString(),
+        coverImageUrl: row.coverImageUrl,
       };
     })
   );
