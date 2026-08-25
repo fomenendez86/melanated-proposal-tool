@@ -37,6 +37,8 @@ export interface DocumentDesignDescriptor {
   supportedSectionTypes: ProposalSectionType[];
   sectionVariants: Partial<Record<ProposalSectionType, DocumentDesignVariant[]>>;
   defaultVariantIds: Partial<Record<ProposalSectionType, string>>;
+  /** Merge fields which must resolve before a revision can be shared. */
+  requiredVariablePaths: string[];
   rendererId: string;
   editorSchemaId: string;
 }

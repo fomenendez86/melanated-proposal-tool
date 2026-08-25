@@ -23,6 +23,7 @@ export async function getProposalSummary(
       id: proposals.id,
       proposalNumber: proposals.proposalNumber,
       status: proposals.status,
+      pipelineStage: proposals.pipelineStage,
       packageName: proposals.packageName,
       coverTitle: proposals.coverTitle,
       clientName: clients.fullName,
@@ -38,7 +39,7 @@ export async function getProposalSummary(
   return {
     id: row.id,
     proposalNumber: row.proposalNumber,
-    status: row.status,
+    status: row.pipelineStage === "won" ? "won" : row.status,
     title: row.packageName ?? row.coverTitle,
     clientName: row.clientName ?? "Client not assigned",
     travelDates: row.travelDates ?? "Dates not assigned",

@@ -1,12 +1,12 @@
 "use client";
 
-import { Archive, ArchiveRestore, Copy, Eye, FileEdit, LibraryBig, LogOut, Search, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, Bell, Copy, Eye, FileEdit, LibraryBig, LogOut, RotateCcw, Search, Trash2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { logout } from "@/app/login/actions";
-import { archiveProposal, deleteProposal, duplicateProposalFromDashboard, restoreProposal } from "@/app/proposals/actions";
+import { archiveProposal, deleteProposal, duplicateProposalFromDashboard, markProposalLost, reopenProposal, restoreProposal } from "@/app/proposals/actions";
 import { EditorButton, EditorEmptyState, EditorStatusBadge, editorButtonStyles, editorFocusRing } from "@/components/editor/EditorUi";
 import type { TemplateListRow } from "@/lib/db/getTemplateList";
 import type { ClientOption } from "@/lib/db/getClientOptions";
@@ -22,6 +22,7 @@ const STATUS_OPTIONS: { value: ProposalStatus | "all"; label: string }[] = [
   { value: "sent", label: "Sent" },
   { value: "viewed", label: "Viewed" },
   { value: "approved", label: "Approved" },
+  { value: "won", label: "Won" },
   { value: "lost", label: "Lost" },
   { value: "archived", label: "Archived" },
 ];
@@ -31,6 +32,7 @@ const STATUS_TONE: Record<ProposalStatus, "neutral" | "warning" | "success" | "d
   sent: "neutral",
   viewed: "warning",
   approved: "success",
+  won: "success",
   lost: "danger",
   archived: "neutral",
 };
@@ -44,11 +46,13 @@ export default function ProposalDashboard({
   clients,
   designs,
   templates,
+  unreadNotifications,
 }: {
   rows: ProposalListRow[];
   clients: ClientOption[];
   designs: DocumentDesignDescriptor[];
   templates: TemplateListRow[];
+  unreadNotifications: number;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -102,6 +106,17 @@ export default function ProposalDashboard({
     void runAction(id, () => deleteProposal(id));
   }
 
+  function handleLost(id: number) {
+    const reason = window.prompt("Optional reason this proposal was lost:") ?? undefined;
+    if (reason === undefined) return;
+    void runAction(id, () => markProposalLost(id, reason));
+  }
+
+  async function handleReopen(id: number) {
+    const result = await runAction(id, () => reopenProposal(id));
+    if (result?.ok && result.id) router.push(`/proposals/${result.id}/editor`);
+  }
+
   const existingProposals = rows.map((row) => ({ id: row.id, title: row.title }));
   const templateOptions = templates
     .filter((template) => template.status !== "archived")
@@ -115,6 +130,7 @@ export default function ProposalDashboard({
           <p className="mt-1 text-sm text-editor-text-muted">{rows.length} proposal{rows.length === 1 ? "" : "s"} total</p>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/proposals/notifications" prefetch={false} aria-label={`${unreadNotifications} unread notifications`} className={editorButtonStyles({ variant: "ghost" })}><Bell className="size-4" aria-hidden="true" />{unreadNotifications > 0 ? <span className="rounded-full bg-editor-danger px-1.5 py-0.5 text-[10px] text-white">{unreadNotifications}</span> : null}</Link>
           <Link href="/proposals/templates" prefetch={false} className={editorButtonStyles({ variant: "secondary" })}>
             <LibraryBig className="size-4" aria-hidden="true" />
             Templates
@@ -197,6 +213,8 @@ export default function ProposalDashboard({
                       <EditorButton type="button" variant="ghost" size="icon" aria-label={`Duplicate ${row.title}`} disabled={pendingId === row.id} onClick={() => void handleDuplicate(row.id)}>
                         <Copy className="size-4" aria-hidden="true" />
                       </EditorButton>
+                      {!["draft", "lost", "won", "archived"].includes(row.status) ? <EditorButton type="button" variant="ghost" size="icon" aria-label={`Mark ${row.title} lost`} disabled={pendingId === row.id} onClick={() => handleLost(row.id)}><XCircle className="size-4" aria-hidden="true" /></EditorButton> : null}
+                      {["lost", "won", "approved"].includes(row.status) ? <EditorButton type="button" variant="ghost" size="icon" aria-label={`Reopen ${row.title}`} disabled={pendingId === row.id} onClick={() => void handleReopen(row.id)}><RotateCcw className="size-4" aria-hidden="true" /></EditorButton> : null}
                       {row.status === "archived" ? (
                         <EditorButton type="button" variant="ghost" size="icon" aria-label={`Restore ${row.title}`} disabled={pendingId === row.id} onClick={() => void runAction(row.id, () => restoreProposal(row.id))}>
                           <ArchiveRestore className="size-4" aria-hidden="true" />

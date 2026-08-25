@@ -8,6 +8,75 @@ made, or a new pendiente is found.
 
 ## Estado general
 
+**Bug real corregido, fuera del alcance de cualquier fase:** `lib/db/schema.ts`
+tenía 5 tablas (`proposalNotificationSettings`, `proposalNotifications`,
+`proposalCommentThreads`, `proposalComments`, `proposalInternalNotes`) y un
+`proposalEvents.type` con más valores permitidos que nunca se habían
+convertido en migración — no una migración fallida, una que **nunca se
+generó**. `npm run db:migrate` reportaba éxito sin hacer nada (no había
+migración pendiente que aplicar) y tanto `tsc` como `npm test` pasaban
+limpio, porque ninguno de los dos toca el esquema real de SQLite; solo una
+query en tiempo de ejecución contra esas tablas lo exponía
+(`SqliteError: no such table: proposal_notification_settings`). Corregido
+generando `lib/db/migrations/0006_rich_mauler.sql` con
+`npm run db:generate` y aplicándola. Queda como recordatorio: correr
+`npm run db:generate` (esperando "No schema changes, nothing to migrate")
+después de cualquier edición a `schema.ts`, no solo `db:migrate` — un
+snapshot de migración (`meta/*_snapshot.json`) tampoco sirve como chequeo de
+completitud porque queda congelado al momento en que esa migración se
+generó.
+
+**Fases 14–17 del plan de expansión completas, cerrando `STUDIO_EXPANSION_PLAN.md`
+entero.** Una auditoría encontró que gran parte de las Fases 14 (variables +
+pricing interactivo) y 15 (envío, firma electrónica, cierre de pipeline) ya
+estaba construida en el working tree sin documentar: catálogo cerrado de
+variables `{{path}}` (`lib/variables/catalog.ts`) resuelto server-side y
+bloqueando compartir si falta una requerida; tabla de precios con
+cantidad/impuesto/descuento/opcionales calculada server-side
+(`lib/pricing/calculate.ts`) e interactiva desde el share
+(`/api/share/[token]/pricing`), congelada al aprobar; envío por email con
+proveedor configurable (`lib/email/send.ts`, fallback a archivo `.eml` en
+dev); firma tipeada o dibujada con hash SHA-256 + certificado en el PDF
+(`lib/signatures/hash.ts`, `SignatureCertificatePage.tsx`); y cierre
+Won/Lost con reapertura que duplica en vez de mutar una propuesta ya
+firmada. Esta sesión cerró los tres huecos reales que quedaban en la Fase
+16 (analytics/notificaciones) y la Fase 17 (comentarios):
+
+- **Panel "Activity" en el editor** (`components/editor/ActivityPanel.tsx`,
+  nuevo botón de toolbar junto a "Review"): `lib/db/getProposalActivity.ts`
+  ya calculaba timeline, duración por sección, hilos de comentarios y notas
+  internas, pero nada lo renderizaba — era código muerto desde la UI.
+  Sigue el mismo patrón que el resto del editor: datos fetched eager en
+  `app/proposals/[id]/editor/page.tsx` y pasados como prop (ningún panel de
+  este editor hace fetch propio en el cliente), mutaciones vía el helper
+  `run()` ya usado por `ContentLibraryPanel.tsx`. El panel Review ahora
+  muestra un aviso informativo (no bloqueante) con el conteo de hilos
+  abiertos antes de volver a compartir.
+- **Comentarios del cliente en el share** (`app/api/share/[token]/comments/route.ts`,
+  `components/sharing/ShareComments.tsx`): la mitad vendedor de Fase 17
+  (`replyToComment`, `setCommentThreadStatus`, notas internas en
+  `activityActions.ts`) ya funcionaba, pero el cliente no tenía ninguna
+  forma de crear un hilo — la ruta API no existía. Se optó por un selector
+  de sección (reusando `buildProposalPageMeta` para los títulos humanos) en
+  vez de overlays anclados al canvas escalado del share, que hubiera sido
+  una adición arquitectónica real sin beneficio funcional extra: la columna
+  `sectionKey` es lo que "por sección" significa a nivel de dato, y un
+  `<select>` la satisface igual. Un segundo comentario del cliente en una
+  sección con hilo abierto se agrega a ese hilo en vez de crear uno
+  paralelo. `lib/db/commentThreads.ts::syncCommentThreadsForRevision` corre
+  dentro de la misma transacción que `createProposalShare` y marca
+  `orphaned` en los hilos abiertos cuya sección ya no existe en la revisión
+  nueva (por `sourceSectionId` o `sectionKey`); si la sección vuelve a
+  aparecer, se desmarca automáticamente.
+- **Chequeo programado de shares por vencer**
+  (`scripts/checkExpiringShares.ts`, `npm run notifications:check-expiring`):
+  `ensureExpiringShareNotifications()` ya existía y ya se llamaba desde
+  `/proposals` en cada carga del dashboard (dedupe por `dedupeKey`, así que
+  es inofensivo llamarla seguido), pero no tenía un disparador real — un
+  share podía vencer sin que nadie abriera el dashboard. Documentado en
+  `docs/OPERATIONS.md` junto al backup, para correr cada 4-6 horas vía Task
+  Scheduler/cron, sin reemplazar el trigger de la carga del dashboard.
+
 **Suite E2E estabilizada y aislada.** `npm run test:e2e` ya no reutiliza
 `data/proposals.db` ni el build `.next` del servidor de desarrollo: el hook
 `pretest:e2e` recrea `data/e2e-proposals.db` desde migraciones + seed y limpia
@@ -69,6 +138,26 @@ previas de la suite e2e completa contra la propuesta seed — esas 2 filas se
 borraron; sigue habiendo una sección `hotel` extra (id 273, con imagen real,
 sin bug asociado) de otro test de persistencia de la misma corrida, sin
 limpiar a propósito por ahora.
+
+La Fase 13.2–13.4 del plan de expansión está **completa, cerrando la Fase 13
+entera**. La nueva pestaña Library del catálogo reúne cuatro activos globales:
+secciones guardadas como snapshots independientes de payload+variante,
+snippets insertables en el cursor (inspector e inline), imágenes subidas y
+fees reutilizables. Las secciones pasan por la compatibilidad del diseño y se
+insertan por botón o drag; editar/archivar luego el original de biblioteca no
+modifica propuestas ya creadas. Los uploads aceptan PNG/JPEG/WebP/GIF hasta 8
+MB, verifican magic bytes, usan SHA-256 como clave y se sirven con caché
+inmutable desde `/api/library/images/[key]`; archivar no borra el archivo para
+no romper propuestas/revisiones históricas. El adapter actual usa
+`LIBRARY_UPLOAD_DIRECTORY` o un volumen junto al SQLite, pero la base guarda
+solo claves estables: `docs/OPERATIONS.md` deja object storage S3-compatible
+como decisión de despliegue a revisitar. Backup/restore ahora copia y recupera
+el directorio hermano `<backup.db>.uploads`, con swap y recovery del volumen
+anterior. Los fees almacenan centavos/basis points enteros para evitar floats
+y exponen CRUD completo. Migración `0003_fearless_maria_hill.sql`; el E2E de
+biblioteca cubre guardar/reinsertar sección, snippet inline, upload+selección
+de imagen y fee de $125.50. La suite usa además `data/e2e-uploads` desechable,
+separado del volumen de desarrollo.
 
 La Fase 13.1 del plan de expansión (plantillas de propuesta —
 `docs/STUDIO_EXPANSION_PLAN.md`) está **completa**. "Guardar como plantilla"
@@ -666,12 +755,11 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
 **Proposal Studio pendiente:**
 - La cobertura de formularios del documento está completa. La Fase 11
   (**11.1–11.3**), la Fase 12 entera (**12.1–12.3**: promoción de esquema,
-  dashboard de propuestas, autenticación mínima) y la Fase 13.1 (plantillas
-  de propuesta) del plan de expansión están completas. Pendiente: el brand
+  dashboard de propuestas, autenticación mínima) y la Fase 13 entera
+  (plantillas + biblioteca de contenido) del plan de expansión están
+  completas. Pendiente: el brand
   asset pack (ver `docs/BRAND_ASSET_PACK.md`) para cerrar Fase 9, bloqueado
-  en assets externos. Después siguen 13.2 (secciones guardadas/snippets),
-  13.3 (biblioteca de imágenes) y 13.4 (biblioteca de fees) para cerrar la
-  Fase 13, luego las Fases 14+. El orden y criterios están en
+  en assets externos. Después siguen las Fases 14–17. El orden y criterios están en
   `docs/EDITOR_IMPLEMENTATION_PLAN.md` y `docs/STUDIO_EXPANSION_PLAN.md`.
 - ~~4 tests de `editor.spec.ts` fallaban de forma intermitente en mobile.~~
   Resuelto al aislar la base y el build E2E, partir siempre del seed y ejecutar

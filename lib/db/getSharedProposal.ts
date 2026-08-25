@@ -1,10 +1,11 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import type { SharedProposalRecord } from "@/lib/sharing/types";
 
 import { db } from "./client";
 import { nextProposalStatus } from "./proposalStatus";
 import { proposalEvents, proposalRevisions, proposalShares, proposals } from "./schema";
+import { createProposalNotification } from "@/lib/notifications/service";
 
 export function shareCookieName(token: string) {
   return `proposal_share_${token.slice(0, 16)}`;
@@ -35,6 +36,7 @@ export async function recordShareEvent(
   event: "opened" | "approved",
   metadata?: Record<string, unknown>
 ) {
+  const [priorOpen] = event === "opened" ? await db.select({ id: proposalEvents.id }).from(proposalEvents).where(and(eq(proposalEvents.shareId, shareId), eq(proposalEvents.type, "opened"))).limit(1) : [];
   await db.insert(proposalEvents).values({
     proposalId,
     shareId,
@@ -42,6 +44,7 @@ export async function recordShareEvent(
     metadata: metadata ?? null,
   });
   if (event === "opened") {
+    if (!priorOpen) await createProposalNotification({ proposalId, shareId, type: "first_open", title: "Proposal opened", body: `A client opened share ${shareId} for proposal ${proposalId}.`, dedupeKey: `first-open:${shareId}` });
     const [proposal] = await db.select({ status: proposals.status }).from(proposals).where(eq(proposals.id, proposalId));
     const nextStatus = proposal ? nextProposalStatus(proposal.status, "viewed") : null;
     if (nextStatus) {

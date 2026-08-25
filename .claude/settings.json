@@ -72,7 +72,10 @@
       "Bash(rm .tmp-run-check4.mjs)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:3000/proposals/1/editor\" --cookie \"studio_session=test\")",
       "Bash(STUDIO_AUTH_PASSWORD=\"dev-password\" node .tmp-run-check5.mjs)",
-      "Bash(rm .tmp-run-check5.mjs)"
+      "Bash(rm .tmp-run-check5.mjs)",
+      "Bash(node --import ./tests/tsx-bootstrap.mjs -e ' *)",
+      "Bash(cd \"c:\\\\Users\\\\fomen\\\\OneDrive\\\\Development\\\\melanated-proposal-tool\" && grep -i \"error\" /tmp/dev3.log | grep -v \"MaxListenersExceededWarning\" | tail -30)",
+      "Bash(curl -s -o /tmp/editor.html -w 'status:%{http_code}\\\\n' -b studio_session=eyJleHAiOjE3ODc2Mjc1ODM2NDR9.f085960775bbfe9751e70f6795bcfef872be0a867d4fc75213cacf59686db49e http://localhost:3000/proposals/1/editor)"
     ],
     "additionalDirectories": [
       "C:\\Users\\fomen\\OneDrive\\Development\\melanated-proposal-tool\\output",

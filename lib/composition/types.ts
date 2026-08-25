@@ -7,6 +7,7 @@ export interface ProposalCompositionItem {
   label: string;
   hidden: boolean;
   deleted: boolean;
+  reusable: boolean;
   variantId?: string;
 }
 

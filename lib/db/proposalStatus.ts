@@ -1,4 +1,4 @@
-export type ProposalStatus = "draft" | "sent" | "viewed" | "approved" | "lost" | "archived";
+export type ProposalStatus = "draft" | "sent" | "viewed" | "approved" | "won" | "lost" | "archived";
 
 const LIFECYCLE_RANK: Record<"draft" | "sent" | "viewed" | "approved", number> = {
   draft: 0,
@@ -17,7 +17,7 @@ const LIFECYCLE_RANK: Record<"draft" | "sent" | "viewed" | "approved", number> =
 export function nextProposalStatus(
   current: ProposalStatus,
   target: "sent" | "viewed" | "approved"
-): ProposalStatus | null {
-  if (current === "lost" || current === "archived") return null;
+): "sent" | "viewed" | "approved" | null {
+  if (current === "won" || current === "lost" || current === "archived") return null;
   return LIFECYCLE_RANK[target] > LIFECYCLE_RANK[current] ? target : null;
 }

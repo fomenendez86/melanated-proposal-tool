@@ -5,6 +5,8 @@ import { db } from "@/lib/db/client";
 import { getSharedProposal, isSharedProposalExpired, recordShareEvent, shareCookieName } from "@/lib/db/getSharedProposal";
 import { nextProposalStatus } from "@/lib/db/proposalStatus";
 import { proposals } from "@/lib/db/schema";
+import { proposalSharePricingSelections } from "@/lib/db/schema";
+import { getSharedPricingState } from "@/lib/db/getSharedPricing";
 
 export async function POST(request: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -25,7 +27,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
   if (!name || name.length > 120 || (email && !/^\S+@\S+\.\S+$/.test(email))) {
     return Response.json({ error: "Enter your name and a valid email address." }, { status: 400 });
   }
-  await recordShareEvent(record.share.proposalId, record.share.id, "approved", { name, email: email || null });
+  const approvedAt = new Date();
+  const pricingState = await getSharedPricingState(record.share.id, record.revision.data);
+  if (pricingState) {
+    db.transaction((tx) => {
+      for (const item of pricingState.items) {
+        tx.insert(proposalSharePricingSelections).values({ shareId: record.share.id, itemPublicId: item.key, selected: item.selected, quantityMilli: item.quantityMilli, frozenAt: approvedAt })
+          .onConflictDoUpdate({ target: [proposalSharePricingSelections.shareId, proposalSharePricingSelections.itemPublicId], set: { selected: item.selected, quantityMilli: item.quantityMilli, frozenAt: approvedAt, updatedAt: approvedAt } }).run();
+      }
+    });
+  }
+  await recordShareEvent(record.share.proposalId, record.share.id, "approved", {
+    name,
+    email: email || null,
+    pricing: pricingState ? { selections: pricingState.items.map((item) => ({ key: item.key, selected: item.selected, quantityMilli: item.quantityMilli })), totals: pricingState.totals } : null,
+  });
   const [proposal] = await db.select({ status: proposals.status }).from(proposals).where(eq(proposals.id, record.share.proposalId));
   const nextStatus = proposal ? nextProposalStatus(proposal.status, "approved") : null;
   if (nextStatus) {

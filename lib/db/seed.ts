@@ -23,6 +23,7 @@ import {
   proposalListSections,
   proposalPaymentSchedule,
   proposalPricing,
+  proposalPricingItems,
   proposalSections,
   proposals,
   termsParagraphs,
@@ -40,6 +41,7 @@ async function clearAll() {
     proposalListLines,
     proposalListSections,
     proposalPaymentSchedule,
+    proposalPricingItems,
     proposalPricing,
     proposalExcursions,
     proposalHotels,
@@ -966,6 +968,19 @@ async function main() {
     amountDue: 10688.65,
     currency: "USD",
     bankAccountId: bankAccount?.id,
+  });
+
+  await db.insert(proposalPricingItems).values({
+    publicId: "seed-package-total",
+    proposalId: proposal.id,
+    description: "Safari package",
+    quantityMilli: 1000,
+    unitPriceMinor: 1184235,
+    currency: "USD",
+    unit: "flat",
+    discountType: "amount",
+    discountValue: 115335,
+    sortOrder: 0,
   });
 
   await db.insert(proposalPaymentSchedule).values([

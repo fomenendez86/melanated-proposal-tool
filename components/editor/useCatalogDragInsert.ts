@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 
 import { addCatalogExcursionToProposal, addCatalogHotelToProposal } from "@/app/proposals/[id]/editor/catalogActions";
+import { insertLibrarySection } from "@/app/proposals/[id]/editor/libraryActions";
 import type { SectionRun } from "@/lib/editor/sectionRuns";
 
 const ACTIVATION_THRESHOLD_PX = 6;
@@ -12,7 +13,7 @@ const AUTO_SCROLL_EDGE_PX = 40;
 const AUTO_SCROLL_SPEED_PX = 12;
 
 export interface CatalogDragItem {
-  kind: "hotel" | "excursion";
+  kind: "hotel" | "excursion" | "savedSection";
   id: number;
   label: string;
 }
@@ -94,7 +95,9 @@ export function useCatalogDragInsert({
 
       const result = item.kind === "hotel"
         ? await addCatalogHotelToProposal(proposalId, item.id, afterSectionId)
-        : await addCatalogExcursionToProposal(proposalId, item.id, afterSectionId);
+        : item.kind === "excursion"
+          ? await addCatalogExcursionToProposal(proposalId, item.id, afterSectionId)
+          : await insertLibrarySection(proposalId, item.id, afterSectionId);
       if (!result.ok) {
         announce(result.formError ?? `${item.label} could not be added.`);
         return;

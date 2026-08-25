@@ -9,11 +9,13 @@ import {
   ClipboardCheck,
   Compass,
   Eye,
+  FileText,
   ImagePlus,
   Layers3,
   LibraryBig,
   ListTree,
   Maximize2,
+  MessageSquare,
   Minus,
   Palette,
   Plus,
@@ -35,10 +37,17 @@ import { createPortal } from "react-dom";
 import { updateProposalFields } from "@/app/proposals/[id]/editor/actions";
 import { updateProposalDesign } from "@/app/proposals/[id]/editor/designActions";
 import { updateProposalSectionVariant } from "@/app/proposals/[id]/editor/compositionActions";
+import type { ProposalActivityData } from "@/lib/activity/types";
 import type { ProposalSummary } from "@/lib/db/getProposalSummary";
 import type { DocumentPageGeometry, ProposalDesignContext } from "@/lib/designs/types";
 import type { ProposalCatalogData } from "@/lib/catalog/types";
 import type { ProposalCompositionData } from "@/lib/composition/types";
+import type { ContentLibraryData } from "@/lib/library/types";
+import {
+  PROPOSAL_VARIABLES,
+  variableToken,
+  type ProposalVariableIssue,
+} from "@/lib/variables/catalog";
 import {
   EDITABLE_REGION_ACTIVE_CLASS,
   EDITABLE_REGION_EDITING_CLASS,
@@ -58,7 +67,9 @@ import type {
 import type { ProposalPageMeta } from "@/lib/editor/proposalPageMeta";
 import { computeSectionRuns } from "@/lib/editor/sectionRuns";
 
+import ActivityPanel from "./ActivityPanel";
 import ItineraryEditor from "./ItineraryEditor";
+import PricingItemsEditor from "./PricingItemsEditor";
 import CatalogPanel from "./CatalogPanel";
 import CompositionPanel from "./CompositionPanel";
 import InsertionGap from "./InsertionGap";
@@ -66,6 +77,7 @@ import PageNavigator from "./PageNavigator";
 import PdfGenerateButton from "./PdfGenerateButton";
 import SaveAsTemplateButton from "./SaveAsTemplateButton";
 import ShareProposalButton from "./ShareProposalButton";
+import SendProposalButton from "./SendProposalButton";
 import { useCatalogDragInsert } from "./useCatalogDragInsert";
 import {
   EditorButton,
@@ -87,7 +99,10 @@ interface ProposalEditorShellProps {
   editorPages: ProposalEditorPageMap;
   designContext: ProposalDesignContext;
   catalog: ProposalCatalogData;
+  library: ContentLibraryData;
   composition: ProposalCompositionData;
+  activity: ProposalActivityData;
+  variableIssues: ProposalVariableIssue[];
 }
 
 interface RegionFocusRequest {
@@ -119,6 +134,7 @@ interface PropertiesPanelProps {
   onFieldFocus: (field: ProposalEditorFieldName) => void;
   /** Escape inside a field returns focus to this page's canvas region. */
   onEscapeToCanvas: () => void;
+  library: ContentLibraryData;
 }
 
 interface ReviewPanelProps {
@@ -127,6 +143,8 @@ interface ReviewPanelProps {
   designContext: ProposalDesignContext;
   saveState: EditorSaveState;
   designError: string;
+  variableIssues: ProposalVariableIssue[];
+  openThreadCount: number;
   onClose: () => void;
 }
 
@@ -135,6 +153,7 @@ const STATUS_COPY: Record<ProposalSummary["status"], string> = {
   sent: "Sent",
   viewed: "Viewed",
   approved: "Approved",
+  won: "Won",
   lost: "Lost",
   archived: "Archived",
 };
@@ -152,6 +171,7 @@ const STATUS_TONE: Record<ProposalSummary["status"], "neutral" | "warning" | "su
   sent: "neutral",
   viewed: "neutral",
   approved: "success",
+  won: "success",
   lost: "danger",
   archived: "neutral",
 };
@@ -279,6 +299,8 @@ function EditableFieldsForm({
   focusField,
   onFieldFocus,
   onEscapeToCanvas,
+  snippets,
+  images,
 }: {
   config: ProposalEditorPageConfig;
   instanceId: PropertiesPanelProps["instanceId"];
@@ -286,12 +308,27 @@ function EditableFieldsForm({
   focusField?: RegionFocusRequest;
   onFieldFocus: (field: ProposalEditorFieldName) => void;
   onEscapeToCanvas: () => void;
+  snippets: ContentLibraryData["snippets"];
+  images: ContentLibraryData["images"];
 }) {
   const { values, fieldErrors, formError, isDirty, setFieldValue, saveDraft } = draft;
 
   function handleFormBlur(event: FocusEvent<HTMLFormElement>) {
     if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return;
     if (isDirty && config.saveMode !== "explicit") void saveDraft(values);
+  }
+
+  function insertText(field: ProposalEditorFieldName, body: string) {
+    const element = document.getElementById(fieldElementId(instanceId, config.pageId, field)) as HTMLTextAreaElement | null;
+    const current = values[field] ?? "";
+    const start = element?.selectionStart ?? current.length;
+    const end = element?.selectionEnd ?? start;
+    const next = `${current.slice(0, start)}${body}${current.slice(end)}`;
+    setFieldValue(field, next);
+    window.requestAnimationFrame(() => {
+      element?.focus();
+      element?.setSelectionRange(start + body.length, start + body.length);
+    });
   }
 
   useEffect(() => {
@@ -329,16 +366,35 @@ function EditableFieldsForm({
       {config.fields.map((field) => {
         const error = fieldErrors[field.name];
         return (
-          <EditorField
-            key={field.name}
-            field={field}
-            id={fieldElementId(instanceId, config.pageId, field.name)}
-            value={values[field.name] ?? ""}
-            error={error}
-            rows={config.saveMode === "explicit" ? 10 : 3}
-            onChange={(event) => setFieldValue(field.name, event.target.value)}
-            onFocus={() => onFieldFocus(field.name)}
-          />
+          <div key={field.name}>
+            <EditorField
+              field={field}
+              id={fieldElementId(instanceId, config.pageId, field.name)}
+              value={values[field.name] ?? ""}
+              error={error}
+              rows={config.saveMode === "explicit" ? 10 : 3}
+              onChange={(event) => setFieldValue(field.name, event.target.value)}
+              onFocus={() => onFieldFocus(field.name)}
+            />
+            {field.multiline && snippets.length ? (
+              <select aria-label={`Insert snippet into ${field.label}`} defaultValue="" onChange={(event) => { const selected = snippets.find((item) => item.id === Number(event.target.value)); if (selected) insertText(field.name, selected.body); event.currentTarget.value = ""; }} className={`mt-1 h-9 w-full rounded-lg border border-editor-border bg-editor-raised px-2 text-xs text-editor-text ${editorFocusRing}`}>
+                <option value="">Insert text snippet…</option>
+                {snippets.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              </select>
+            ) : null}
+            {!field.isImage && !["invoiceTotal", "commission", "amountDue", "nights", "currency"].includes(field.name) ? (
+              <select aria-label={`Insert variable into ${field.label}`} defaultValue="" onChange={(event) => { const selected = PROPOSAL_VARIABLES.find((item) => item.path === event.target.value); if (selected) insertText(field.name, variableToken(selected.path)); event.currentTarget.value = ""; }} className={`mt-1 h-9 w-full rounded-lg border border-editor-border bg-editor-raised px-2 text-xs text-editor-text ${editorFocusRing}`}>
+                <option value="">{"{{}}"} Insert variable…</option>
+                {PROPOSAL_VARIABLES.map((item) => <option key={item.path} value={item.path}>{item.group} · {item.label}</option>)}
+              </select>
+            ) : null}
+            {field.isImage && images.length ? (
+              <select aria-label={`Choose library image for ${field.label}`} defaultValue="" onChange={(event) => { const selected = images.find((item) => item.id === Number(event.target.value)); if (selected) setFieldValue(field.name, selected.url); event.currentTarget.value = ""; }} className={`mt-1 h-9 w-full rounded-lg border border-editor-border bg-editor-raised px-2 text-xs text-editor-text ${editorFocusRing}`}>
+                <option value="">Choose from image library…</option>
+                {images.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              </select>
+            ) : null}
+          </div>
         );
       })}
 
@@ -394,17 +450,20 @@ function InlineRegionEditor({
   field,
   draft,
   onClose,
+  snippets,
 }: {
   pageRefs: RefObject<Array<HTMLDivElement | null>>;
   pageIndex: number;
   field: ProposalEditorFieldName;
   draft: PageFieldDraft;
   onClose: () => void;
+  snippets: ContentLibraryData["snippets"];
 }) {
   const [geometry, setGeometry] = useState<InlineEditorGeometry | null>(null);
   const [contentElement, setContentElement] = useState<HTMLElement | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
   const draftRef = useRef(draft);
 
   // Keep the ref used by the unmount-save cleanup current every render,
@@ -497,32 +556,54 @@ function InlineRegionEditor({
     ...geometry.style,
   };
   const className = `proposal-studio-inline-editor${error ? " proposal-studio-inline-editor-error" : ""}`;
+  function insertSnippet(body: string) {
+    const control = inputRef.current ?? textareaRef.current;
+    const current = draft.values[field] ?? "";
+    const start = control?.selectionStart ?? current.length;
+    const end = control?.selectionEnd ?? start;
+    draft.setFieldValue(field, `${current.slice(0, start)}${body}${current.slice(end)}`);
+    window.requestAnimationFrame(() => {
+      control?.focus();
+      control?.setSelectionRange(start + body.length, start + body.length);
+    });
+  }
 
   return createPortal(
-    geometry.multiline ? (
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(event) => draft.setFieldValue(field, event.target.value)}
-        onKeyDown={handleKeyDown}
-        onBlur={onClose}
-        aria-label={geometry.ariaLabel ?? undefined}
-        className={className}
-        style={style}
-      />
-    ) : (
-      <input
-        ref={inputRef}
-        type="text"
-        value={value}
-        onChange={(event) => draft.setFieldValue(field, event.target.value)}
-        onKeyDown={handleKeyDown}
-        onBlur={onClose}
-        aria-label={geometry.ariaLabel ?? undefined}
-        className={className}
-        style={style}
-      />
-    ),
+    <>
+      {geometry.multiline ? (
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(event) => draft.setFieldValue(field, event.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={(event) => { if (!toolbarRef.current?.contains(event.relatedTarget as Node | null)) onClose(); }}
+          aria-label={geometry.ariaLabel ?? undefined}
+          className={className}
+          style={style}
+        />
+      ) : (
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(event) => draft.setFieldValue(field, event.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={(event) => { if (!toolbarRef.current?.contains(event.relatedTarget as Node | null)) onClose(); }}
+          aria-label={geometry.ariaLabel ?? undefined}
+          className={className}
+          style={style}
+        />
+      )}
+      {(geometry.multiline && snippets.length) || PROPOSAL_VARIABLES.length ? (
+        <div ref={toolbarRef} className="absolute z-20 flex max-w-[82%] gap-1 overflow-hidden rounded-lg border border-editor-border bg-editor-panel p-1 shadow-lg" style={{ left: geometry.rect.left, top: Math.max(0, geometry.rect.top - 36) }} aria-label="Inline insert tools">
+          {snippets.slice(0, 3).map((snippet) => <button key={snippet.id} type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => insertSnippet(snippet.body)} className="h-7 truncate rounded px-2 text-[10px] font-semibold text-editor-text hover:bg-editor-inset" aria-label={`Insert snippet ${snippet.name}`}>{snippet.name}</button>)}
+          <select aria-label="Insert variable" defaultValue="" onChange={(event) => { const selected = PROPOSAL_VARIABLES.find((item) => item.path === event.target.value); if (selected) insertSnippet(variableToken(selected.path)); event.currentTarget.value = ""; }} className="h-7 max-w-40 rounded border-0 bg-editor-raised px-2 text-[10px] font-semibold text-editor-text">
+            <option value="">{"{{}}"} Variable…</option>
+            {PROPOSAL_VARIABLES.map((item) => <option key={item.path} value={item.path}>{item.label}</option>)}
+          </select>
+        </div>
+      ) : null}
+    </>,
     contentElement
   );
 }
@@ -547,6 +628,7 @@ function ImageRegionPopover({
   label,
   draft,
   onClose,
+  images,
 }: {
   pageRefs: RefObject<Array<HTMLDivElement | null>>;
   pageIndex: number;
@@ -554,6 +636,7 @@ function ImageRegionPopover({
   label: string;
   draft: PageFieldDraft;
   onClose: () => void;
+  images: ContentLibraryData["images"];
 }) {
   const [geometry, setGeometry] = useState<{ left: number; top: number } | null>(null);
   const [contentElement, setContentElement] = useState<HTMLElement | null>(null);
@@ -658,6 +741,12 @@ function ImageRegionPopover({
         aria-invalid={Boolean(error)}
         className={`mt-1.5 w-full rounded-lg border bg-editor-raised px-3 py-2 text-sm text-editor-text-strong outline-none transition placeholder:text-editor-text-subtle focus:border-editor-border-strong focus:ring-2 focus:ring-editor-border-strong/20 ${error ? "border-editor-danger" : "border-editor-border"}`}
       />
+      {images.length ? (
+        <select aria-label={`Choose library image for ${label}`} defaultValue="" onChange={(event) => { const selected = images.find((item) => item.id === Number(event.target.value)); if (selected) draft.setFieldValue(field, selected.url); event.currentTarget.value = ""; }} className="mt-2 h-9 w-full rounded-lg border border-editor-border bg-editor-raised px-2 text-xs text-editor-text">
+          <option value="">Choose from library…</option>
+          {images.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+        </select>
+      ) : null}
       <p className={`mt-1 text-[11px] ${error ? "text-editor-danger" : "text-editor-text-subtle"}`}>
         {error ?? "Use a local /path or an https:// URL."}
       </p>
@@ -686,6 +775,7 @@ function PropertiesPanel({
   focusField,
   onFieldFocus,
   onEscapeToCanvas,
+  library,
 }: PropertiesPanelProps) {
   const variants = designContext.active.sectionVariants[selectedPage.type] ?? [];
   const defaultVariantId = designContext.active.defaultVariantIds[selectedPage.type];
@@ -718,6 +808,9 @@ function PropertiesPanel({
 
         <div className="space-y-6 p-5">
           <div hidden={mode !== "content"}>
+            {editorConfig?.kind === "pricing" ? (
+              <PricingItemsEditor proposalId={proposalId} items={editorConfig.pricingItems ?? []} fees={library.fees} />
+            ) : null}
             {editorConfig?.kind === "itinerary" ? (
               <ItineraryEditor
                 key={editorConfig.pageId}
@@ -734,6 +827,8 @@ function PropertiesPanel({
                 focusField={focusField}
                 onFieldFocus={onFieldFocus}
                 onEscapeToCanvas={onEscapeToCanvas}
+                snippets={library.snippets}
+                images={library.images}
               />
             ) : (
               <EditorEmptyState
@@ -852,11 +947,11 @@ function PropertiesPanel({
   );
 }
 
-function ReviewPanel({ pageMeta, overflowPageIndexes, designContext, saveState, designError, onClose }: ReviewPanelProps) {
+function ReviewPanel({ pageMeta, overflowPageIndexes, designContext, saveState, designError, variableIssues, openThreadCount, onClose }: ReviewPanelProps) {
   const pageIssues = pageMeta.filter((page) => page.status === "warning" || page.status === "error");
   const incompatibleDesigns = designContext.choices.filter((choice) => !choice.compatible);
   const hasUnsavedChanges = saveState === "dirty" || saveState === "saving" || saveState === "error";
-  const issueCount = pageIssues.length + overflowPageIndexes.length + incompatibleDesigns.length + (hasUnsavedChanges ? 1 : 0) + (designError ? 1 : 0);
+  const issueCount = pageIssues.length + overflowPageIndexes.length + incompatibleDesigns.length + variableIssues.length + (hasUnsavedChanges ? 1 : 0) + (designError ? 1 : 0);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-editor-panel">
@@ -892,6 +987,24 @@ function ReviewPanel({ pageMeta, overflowPageIndexes, designContext, saveState, 
 
         {designError ? (
           <EditorNotice tone="danger" title="Design change failed">{designError}</EditorNotice>
+        ) : null}
+
+        {variableIssues.length > 0 ? (
+          <EditorInspectorSection id="review-variable-issues-heading" title="Merge fields">
+            <div className="space-y-2">
+              {variableIssues.map((issue) => (
+                <EditorNotice key={issue.path} tone={issue.required ? "danger" : "warning"} title={issue.required ? "Required variable unresolved" : "Variable unresolved"}>
+                  {issue.token}{issue.required ? " must have a value before sharing." : " will remain visible until its source value is completed."}
+                </EditorNotice>
+              ))}
+            </div>
+          </EditorInspectorSection>
+        ) : null}
+
+        {openThreadCount > 0 ? (
+          <EditorNotice tone="info" title="Open client comment threads">
+            {openThreadCount} thread{openThreadCount === 1 ? "" : "s"} still open. Review and reply from Activity before re-sharing — this does not block sharing.
+          </EditorNotice>
         ) : null}
 
         {overflowPageIndexes.length > 0 ? (
@@ -983,7 +1096,10 @@ export default function ProposalEditorShell({
   editorPages,
   designContext,
   catalog,
+  library,
   composition,
+  activity,
+  variableIssues,
 }: ProposalEditorShellProps) {
   const router = useRouter();
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -992,6 +1108,7 @@ export default function ProposalEditorShell({
   const [pagesOpen, setPagesOpen] = useState(false);
   const [propertiesOpen, setPropertiesOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [compositionOpen, setCompositionOpen] = useState(false);
   const [saveState, setSaveState] = useState<EditorSaveState>("loaded");
@@ -1008,6 +1125,7 @@ export default function ProposalEditorShell({
   const pagesDialogRef = useRef<HTMLDivElement>(null);
   const propertiesDialogRef = useRef<HTMLDivElement>(null);
   const reviewDialogRef = useRef<HTMLDivElement>(null);
+  const activityDialogRef = useRef<HTMLDivElement>(null);
   const catalogDialogRef = useRef<HTMLDivElement>(null);
   const compositionDialogRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -1049,6 +1167,21 @@ export default function ProposalEditorShell({
     editorConfig?.kind === "itinerary" ? undefined : editorConfig,
     setSaveState
   );
+  useEffect(() => {
+    pageRefs.current.forEach((pageElement, pageIndex) => {
+      if (!pageElement) return;
+      const config = editorPages[pageMeta[pageIndex]?.id ?? ""];
+      const variableFields = new Set(
+        (config?.fields ?? [])
+          .filter((field) => field.value.includes("{{"))
+          .map((field) => field.name)
+      );
+      pageElement.querySelectorAll<HTMLElement>(EDITABLE_REGION_SELECTOR).forEach((region) => {
+        const field = region.getAttribute("data-edit-field") as ProposalEditorFieldName | null;
+        region.classList.toggle("proposal-studio-variable-region", Boolean(field && variableFields.has(field)));
+      });
+    });
+  }, [editorPages, pageMeta, pages]);
   const inlineEdit = activeInlineEdit && activeInlineEdit.pageId === selectedPage.id ? activeInlineEdit : null;
   const imageEdit = activeImageEdit && activeImageEdit.pageId === selectedPage.id ? activeImageEdit : null;
   const fitCanvas = useFitCanvas(canvasViewportRef, setZoom, pageSize);
@@ -1346,11 +1479,13 @@ export default function ProposalEditorShell({
         ? propertiesDialogRef.current
         : reviewOpen
           ? reviewDialogRef.current
-          : catalogOpen
-            ? catalogDialogRef.current
-            : compositionOpen
-              ? compositionDialogRef.current
-              : null;
+          : activityOpen
+            ? activityDialogRef.current
+            : catalogOpen
+              ? catalogDialogRef.current
+              : compositionOpen
+                ? compositionDialogRef.current
+                : null;
     if (!dialog) return;
 
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -1370,6 +1505,7 @@ export default function ProposalEditorShell({
         if (pagesOpen) setPagesOpen(false);
         if (propertiesOpen) closeProperties();
         if (reviewOpen) setReviewOpen(false);
+        if (activityOpen) setActivityOpen(false);
         if (catalogOpen) setCatalogOpen(false);
         if (compositionOpen) setCompositionOpen(false);
         return;
@@ -1395,7 +1531,7 @@ export default function ProposalEditorShell({
       document.removeEventListener("keydown", handleDialogKeyDown);
       previousFocus?.focus();
     };
-  }, [catalogOpen, closeProperties, compositionOpen, pagesOpen, propertiesOpen, reviewOpen]);
+  }, [activityOpen, catalogOpen, closeProperties, compositionOpen, pagesOpen, propertiesOpen, reviewOpen]);
 
   return (
     <main className="proposal-studio flex h-dvh min-h-0 flex-col overflow-hidden bg-editor-shell text-editor-text-strong">
@@ -1451,7 +1587,21 @@ export default function ProposalEditorShell({
             <ClipboardCheck className="size-4" aria-hidden="true" />
             <span className="hidden xl:inline">Review</span>
           </EditorButton>
+          <EditorButton
+            type="button"
+            onClick={() => {
+              setPagesOpen(false);
+              setPropertiesOpen(false);
+              setReviewOpen(false);
+              setActivityOpen(true);
+            }}
+            aria-label="Open activity and comments"
+          >
+            <MessageSquare className="size-4" aria-hidden="true" />
+            <span className="hidden xl:inline">Activity</span>
+          </EditorButton>
           <SaveAsTemplateButton proposalId={proposal.id} />
+          <SendProposalButton proposalId={proposal.id} disabled={saveState === "dirty" || saveState === "saving" || saveState === "error"} />
           <ShareProposalButton
             proposalId={proposal.id}
             disabled={saveState === "dirty" || saveState === "saving" || saveState === "error"}
@@ -1633,7 +1783,7 @@ export default function ProposalEditorShell({
               className="pointer-events-none fixed z-50 flex items-center gap-2 rounded-lg border border-editor-border-strong bg-editor-panel px-3 py-2 text-xs font-semibold text-editor-text shadow-2xl"
               style={{ left: ghostPosition.x + 14, top: ghostPosition.y + 14 }}
             >
-              {draggingItem.kind === "hotel" ? <Building2 className="size-3.5 text-editor-brand" aria-hidden="true" /> : <Compass className="size-3.5 text-editor-brand" aria-hidden="true" />}
+              {draggingItem.kind === "hotel" ? <Building2 className="size-3.5 text-editor-brand" aria-hidden="true" /> : draggingItem.kind === "excursion" ? <Compass className="size-3.5 text-editor-brand" aria-hidden="true" /> : <FileText className="size-3.5 text-editor-brand" aria-hidden="true" />}
               {draggingItem.label}
             </div>,
             document.body
@@ -1647,6 +1797,7 @@ export default function ProposalEditorShell({
               field={inlineEdit.field}
               draft={pageFieldDraft}
               onClose={closeInlineEdit}
+              snippets={library.snippets}
             />
           ) : null}
 
@@ -1659,6 +1810,7 @@ export default function ProposalEditorShell({
               label={imageEdit.label}
               draft={pageFieldDraft}
               onClose={closeImageEdit}
+              images={library.images}
             />
           ) : null}
         </section>
@@ -1683,6 +1835,7 @@ export default function ProposalEditorShell({
             focusField={focusField}
             onFieldFocus={setHighlightedField}
             onEscapeToCanvas={() => focusCanvasPage(selectedPage.id)}
+            library={library}
           />
         </aside>
 
@@ -1690,6 +1843,7 @@ export default function ProposalEditorShell({
           <CatalogPanel
             proposalId={proposal.id}
             catalog={catalog}
+            library={library}
             designContext={designContext}
             enableDrag
             onDragStart={startDrag}
@@ -1802,6 +1956,7 @@ export default function ProposalEditorShell({
             focusField={focusField}
             onFieldFocus={setHighlightedField}
             onEscapeToCanvas={() => focusCanvasPage(selectedPage.id)}
+            library={library}
           />
         </EditorDrawer>
       ) : null}
@@ -1820,8 +1975,22 @@ export default function ProposalEditorShell({
             designContext={designContext}
             saveState={saveState}
             designError={designError}
+            variableIssues={variableIssues}
+            openThreadCount={activity.threads.filter((thread) => thread.status === "open" && !thread.orphaned).length}
             onClose={() => setReviewOpen(false)}
           />
+        </EditorDrawer>
+      ) : null}
+
+      {activityOpen ? (
+        <EditorDrawer
+          ref={activityDialogRef}
+          side="right"
+          label="Proposal activity"
+          onClose={() => setActivityOpen(false)}
+          panelClassName="w-[min(92vw,420px)]"
+        >
+          <ActivityPanel proposalId={proposal.id} pageMeta={pageMeta} activity={activity} onClose={() => setActivityOpen(false)} />
         </EditorDrawer>
       ) : null}
 
@@ -1833,7 +2002,7 @@ export default function ProposalEditorShell({
           onClose={() => setCatalogOpen(false)}
           panelClassName="w-[min(96vw,440px)]"
         >
-          <CatalogPanel proposalId={proposal.id} catalog={catalog} designContext={designContext} onClose={() => setCatalogOpen(false)} />
+          <CatalogPanel proposalId={proposal.id} catalog={catalog} library={library} designContext={designContext} onClose={() => setCatalogOpen(false)} />
         </EditorDrawer>
       ) : null}
 

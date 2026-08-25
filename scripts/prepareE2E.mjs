@@ -9,9 +9,11 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 const databasePath = path.resolve("data/e2e-proposals.db");
 const databaseFiles = [databasePath, `${databasePath}-shm`, `${databasePath}-wal`];
 const distDirPath = path.resolve(".next-e2e");
+const uploadDirectoryPath = path.resolve("data/e2e-uploads");
 const env = {
   ...process.env,
   DATABASE_URL: databasePath,
+  LIBRARY_UPLOAD_DIRECTORY: uploadDirectoryPath,
   NEXT_DIST_DIR: ".next-e2e",
   NEXT_FONT_GOOGLE_MOCKED_RESPONSES: path.resolve("tests/fixtures/google-fonts.cjs"),
 };
@@ -19,6 +21,7 @@ const env = {
 mkdirSync(path.dirname(databasePath), { recursive: true });
 for (const file of databaseFiles) rmSync(file, { force: true });
 rmSync(distDirPath, { recursive: true, force: true });
+rmSync(uploadDirectoryPath, { recursive: true, force: true });
 
 const sqlite = new Database(databasePath);
 try {

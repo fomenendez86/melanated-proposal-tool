@@ -9,6 +9,7 @@ import ImportantItemsBlock from "@/components/blocks/ImportantItemsBlock";
 import OverviewBlock from "@/components/blocks/OverviewBlock";
 import PricingBlock from "@/components/blocks/PricingBlock";
 import SectionDividerBlock from "@/components/blocks/SectionDividerBlock";
+import SignatureBlock from "@/components/blocks/SignatureBlock";
 import TermsConditionsBlock from "@/components/blocks/TermsConditionsBlock";
 import ThankYouBlock from "@/components/blocks/ThankYouBlock";
 import TriangleDividerBlock from "@/components/blocks/TriangleDividerBlock";
@@ -50,6 +51,8 @@ export function ProposalSectionView({ section }: { section: ProposalSection }) {
       return <TermsConditionsBlock data={section.data} />;
     case "thankYou":
       return <ThankYouBlock data={section.data} />;
+    case "signature":
+      return <SignatureBlock data={section.data} />;
   }
 }
 

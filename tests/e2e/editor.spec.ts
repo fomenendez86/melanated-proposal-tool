@@ -556,6 +556,67 @@ test("below the 2xl breakpoint the catalog stays a modal, and Escape cancels a c
   await expect(page.getByRole("dialog", { name: "Contextual catalog" })).toBeVisible();
 });
 
+test("content library saves and inserts sections, snippets, images, and fees", { tag: "@desktop-only" }, async ({ page }) => {
+  await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
+  await expect(page.getByLabel("Proposal canvas")).toBeVisible();
+  const initialPageCount = await page.locator("[data-page-index]").count();
+
+  await page.getByLabel("Open document structure").click();
+  const structure = page.getByRole("dialog", { name: "Document structure" });
+  await structure.getByRole("button", { name: "Save Thank You to library" }).first().click();
+  await structure.getByLabel("Saved section name").fill("Reusable Thank You E2E");
+  await structure.getByLabel("Saved section tags").fill("closing, client");
+  await structure.getByRole("button", { name: "Save", exact: true }).click();
+  await structure.getByLabel("Close document structure").click();
+
+  await page.getByLabel("Open contextual catalog").click();
+  const catalog = page.getByRole("dialog", { name: "Contextual catalog" });
+  await catalog.getByRole("button", { name: "Library" }).click();
+  const savedSection = catalog.locator("article", { hasText: "Reusable Thank You E2E" });
+  await expect(savedSection).toBeVisible();
+  await savedSection.getByRole("button", { name: "Insert", exact: true }).click();
+  await expect(page.locator("[data-page-index]")).toHaveCount(initialPageCount + 1);
+
+  await catalog.getByRole("button", { name: "Text", exact: true }).click();
+  await catalog.getByLabel("Snippet name").fill("Warm welcome E2E");
+  await catalog.getByLabel("Snippet text").fill("A reusable welcome from the content library.");
+  await catalog.getByRole("button", { name: "Save snippet" }).click();
+  await expect(catalog.locator("article", { hasText: "Warm welcome E2E" })).toBeVisible();
+
+  await catalog.getByRole("button", { name: "Images", exact: true }).click();
+  await catalog.getByLabel("Image file").setInputFiles("public/proposal-assets/cover-zebras-v1.png");
+  await catalog.getByLabel("Image name").fill("Library Zebra E2E");
+  await catalog.getByRole("button", { name: "Upload image" }).click();
+  await expect(catalog.locator("article", { hasText: "Library Zebra E2E" })).toBeVisible();
+
+  await catalog.getByRole("button", { name: "Fees", exact: true }).click();
+  await catalog.getByLabel("Fee name").fill("Park permit E2E");
+  await catalog.getByLabel("Unit price").fill("125.50");
+  await catalog.getByLabel("Tax percent").fill("18");
+  await catalog.getByRole("button", { name: "Save fee" }).click();
+  await expect(catalog.locator("article", { hasText: "Park permit E2E" })).toContainText("$125.50");
+  await catalog.getByLabel("Close catalog").click();
+
+  const subtitle = page.locator('[data-page-index="0"] [data-edit-field="coverSubtitle"]');
+  await subtitle.click();
+  const inlineEditor = page.locator(".proposal-studio-inline-editor");
+  const originalSubtitle = await inlineEditor.inputValue();
+  await page.getByRole("button", { name: "Insert snippet Warm welcome E2E" }).click();
+  await expect(inlineEditor).toHaveValue(/A reusable welcome from the content library\./);
+  await inlineEditor.fill(originalSubtitle);
+  await page.keyboard.press("Escape");
+
+  const coverImage = page.locator('[data-page-index="0"] [data-edit-field="coverImageUrl"]');
+  await coverImage.click();
+  const imageDialog = page.getByRole("dialog", { name: "Replace Cover image" });
+  const imageUrl = imageDialog.locator("input");
+  const originalImageUrl = await imageUrl.inputValue();
+  await imageDialog.getByLabel("Choose library image for Cover image").selectOption({ label: "Library Zebra E2E" });
+  await expect(imageUrl).toHaveValue(/\/api\/library\/images\/[a-f0-9]{64}\.png$/);
+  await imageUrl.fill(originalImageUrl);
+  await page.keyboard.press("Escape");
+});
+
 test("mobile: page navigator drawer has no drag handles and keeps Document Structure buttons", { tag: "@mobile-only" }, async ({ page }) => {
   await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
 

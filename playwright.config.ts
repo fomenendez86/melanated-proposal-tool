@@ -3,10 +3,12 @@ import path from "node:path";
 
 const E2E_BASE_URL = "http://localhost:3100";
 const E2E_DATABASE_URL = path.resolve("data/e2e-proposals.db");
+const E2E_UPLOAD_DIRECTORY = path.resolve("data/e2e-uploads");
 
 // Keep every E2E mutation away from the developer's working database. The
 // dedicated web server recreates this file from migrations + seed per run.
 process.env.DATABASE_URL = E2E_DATABASE_URL;
+process.env.LIBRARY_UPLOAD_DIRECTORY = E2E_UPLOAD_DIRECTORY;
 process.env.E2E_BASE_URL = E2E_BASE_URL;
 process.env.NEXT_DIST_DIR = ".next-e2e";
 process.env.NEXT_FONT_GOOGLE_MOCKED_RESPONSES = path.resolve("tests/fixtures/google-fonts.cjs");

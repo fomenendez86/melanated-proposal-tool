@@ -8,7 +8,7 @@ import { createProposalFromTemplate } from "@/lib/db/createProposalFromTemplate"
 import { db } from "@/lib/db/client";
 import { duplicateProposal } from "@/lib/db/duplicateProposal";
 import { generateProposalNumber } from "@/lib/db/generateProposalNumber";
-import { clients, proposalClients, proposalShares, proposals } from "@/lib/db/schema";
+import { clients, proposalClients, proposalEvents, proposalShares, proposalSignatures, proposals } from "@/lib/db/schema";
 import { getDocumentDesign } from "@/lib/designs/registry";
 
 export interface CreateProposalInput {
@@ -179,4 +179,32 @@ export async function deleteProposal(proposalId: number): Promise<ProposalMutati
   }
   revalidateDashboard();
   return { ok: true };
+}
+
+export async function markProposalLost(proposalId: number, reason?: string): Promise<ProposalMutationResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
+  const normalizedReason = reason?.trim() || null;
+  if (!Number.isInteger(proposalId) || (normalizedReason && normalizedReason.length > 500)) return { ok: false, formError: "Invalid lost reason." };
+  const [proposal] = await db.select({ id: proposals.id, pipelineStage: proposals.pipelineStage }).from(proposals).where(eq(proposals.id, proposalId));
+  if (!proposal || proposal.pipelineStage === "won") return { ok: false, formError: proposal?.pipelineStage === "won" ? "A signed Won proposal cannot be marked Lost." : "Proposal not found." };
+  const changedAt = new Date();
+  db.transaction((tx) => { tx.update(proposals).set({ status: "lost", pipelineStage: "lost", lostReason: normalizedReason, updatedAt: changedAt }).where(eq(proposals.id, proposalId)).run(); tx.insert(proposalEvents).values({ proposalId, type: "lost", metadata: { reason: normalizedReason }, createdAt: changedAt }).run(); });
+  revalidateDashboard(); return { ok: true };
+}
+
+export async function reopenProposal(proposalId: number): Promise<ProposalMutationResult> {
+  if (!(await hasValidSession())) return { ok: false, formError: "Your session expired. Sign in again." };
+  if (!Number.isInteger(proposalId)) return { ok: false, formError: "Proposal not found." };
+  const [proposal] = await db.select({ id: proposals.id }).from(proposals).where(eq(proposals.id, proposalId));
+  if (!proposal) return { ok: false, formError: "Proposal not found." };
+  const [signature] = await db.select({ id: proposalSignatures.id }).from(proposalSignatures).where(eq(proposalSignatures.proposalId, proposalId)).limit(1);
+  if (signature) {
+    const duplicated = await duplicateProposal(proposalId);
+    if (!duplicated.ok || !duplicated.id) return duplicated;
+    await db.insert(proposalEvents).values({ proposalId, type: "reopened", metadata: { duplicatedProposalId: duplicated.id, immutableOriginal: true } });
+    revalidateDashboard(); return duplicated;
+  }
+  await db.update(proposals).set({ status: "draft", pipelineStage: "draft", lostReason: null, closedValueMinor: null, closedCurrency: null, updatedAt: new Date() }).where(eq(proposals.id, proposalId));
+  await db.insert(proposalEvents).values({ proposalId, type: "reopened", metadata: { immutableOriginal: false } });
+  revalidateDashboard(); return { ok: true, id: proposalId };
 }

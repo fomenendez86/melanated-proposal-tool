@@ -10,6 +10,7 @@ import {
   proposalListSections,
   proposalPaymentSchedule,
   proposalPricing,
+  proposalPricingItems,
   proposalSections,
   proposals,
 } from "./schema";
@@ -46,6 +47,7 @@ export async function updateTemplateFromProposal(
       tx.delete(proposalExcursions).where(eq(proposalExcursions.proposalId, templateId)).run();
       tx.delete(proposalListSections).where(eq(proposalListSections.proposalId, templateId)).run();
       tx.delete(proposalPricing).where(eq(proposalPricing.proposalId, templateId)).run();
+      tx.delete(proposalPricingItems).where(eq(proposalPricingItems.proposalId, templateId)).run();
       tx.delete(proposalPaymentSchedule).where(eq(proposalPaymentSchedule.proposalId, templateId)).run();
       tx.delete(proposalSections).where(eq(proposalSections.proposalId, templateId)).run();
 

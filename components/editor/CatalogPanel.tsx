@@ -14,7 +14,9 @@ import {
 } from "@/app/proposals/[id]/editor/catalogActions";
 import type { ProposalCatalogData } from "@/lib/catalog/types";
 import type { ProposalDesignContext, ProposalSectionType } from "@/lib/designs/types";
+import type { ContentLibraryData } from "@/lib/library/types";
 
+import ContentLibraryPanel from "./ContentLibraryPanel";
 import {
   EditorButton,
   EditorEmptyState,
@@ -25,7 +27,7 @@ import {
 } from "./EditorUi";
 import type { CatalogDragItem } from "./useCatalogDragInsert";
 
-type CatalogMode = "hotels" | "excursions";
+type CatalogMode = "hotels" | "excursions" | "library";
 
 const controlClass = `h-11 w-full rounded-lg border border-editor-border bg-editor-raised px-3 text-sm text-editor-text outline-none transition placeholder:text-editor-text-subtle focus:border-editor-border-strong focus:ring-2 focus:ring-editor-border-strong/20 ${editorFocusRing}`;
 const textAreaClass = `${controlClass} h-auto py-2.5`;
@@ -33,6 +35,7 @@ const textAreaClass = `${controlClass} h-auto py-2.5`;
 export default function CatalogPanel({
   proposalId,
   catalog,
+  library,
   onClose,
   designContext,
   enableDrag = false,
@@ -40,6 +43,7 @@ export default function CatalogPanel({
 }: {
   proposalId: number;
   catalog: ProposalCatalogData;
+  library: ContentLibraryData;
   onClose?: () => void;
   designContext: ProposalDesignContext;
   enableDrag?: boolean;
@@ -86,7 +90,7 @@ export default function CatalogPanel({
     });
   }, [catalog.excursions, catalog.hotels, cityId, countryId, destinationId, mode, query]);
 
-  const requiredTypes: ProposalSectionType[] = mode === "hotels" ? ["triangleDivider", "hotel"] : ["cityToursDivider", "excursionList"];
+  const requiredTypes: ProposalSectionType[] = mode === "hotels" ? ["triangleDivider", "hotel"] : mode === "excursions" ? ["cityToursDivider", "excursionList"] : [];
   const dragEnabledForMode = enableDrag && requiredTypes.every((type) => designContext.active.supportedSectionTypes.includes(type));
 
   async function addItem(itemId: number) {
@@ -176,32 +180,43 @@ export default function CatalogPanel({
         <EditorSegmentedControl
           label="Catalog content type"
           value={mode}
-          options={[{ value: "hotels", label: "Hotels" }, { value: "excursions", label: "Excursions" }]}
+          options={[{ value: "hotels", label: "Hotels" }, { value: "excursions", label: "Excursions" }, { value: "library", label: "Library" }]}
           onChange={(value) => { setMode(value); setCreating(false); setEditingItemId(null); setFormError(""); }}
           className="flex w-full [&>button]:flex-1"
         />
-        <label className="mt-3 flex h-11 items-center gap-2 rounded-lg border border-editor-border bg-editor-raised px-3 text-editor-text-muted focus-within:border-editor-border-strong focus-within:ring-2 focus-within:ring-editor-border-strong/20">
-          <Search className="size-4" aria-hidden="true" />
-          <span className="sr-only">Search catalog</span>
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${mode}`} className="min-w-0 flex-1 bg-transparent text-sm text-editor-text-strong outline-none placeholder:text-editor-text-subtle" />
-        </label>
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          <select aria-label="Filter by country" value={countryId} onChange={(event) => { setCountryId(Number(event.target.value)); setDestinationId(0); setCityId(0); }} className={`${controlClass} px-2 text-xs`}>
-            <option value={0}>All countries</option>
-            {countries.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-          </select>
-          <select aria-label="Filter by destination" value={destinationId} onChange={(event) => { setDestinationId(Number(event.target.value)); setCityId(0); }} className={`${controlClass} px-2 text-xs`}>
-            <option value={0}>All regions</option>
-            {destinations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-          </select>
-          <select aria-label="Filter by city" value={cityId} onChange={(event) => setCityId(Number(event.target.value))} className={`${controlClass} px-2 text-xs`}>
-            <option value={0}>All cities</option>
-            {cities.map((item) => <option key={item.cityId} value={item.cityId}>{item.cityName}</option>)}
-          </select>
-        </div>
+        {mode !== "library" ? <>
+          <label className="mt-3 flex h-11 items-center gap-2 rounded-lg border border-editor-border bg-editor-raised px-3 text-editor-text-muted focus-within:border-editor-border-strong focus-within:ring-2 focus-within:ring-editor-border-strong/20">
+            <Search className="size-4" aria-hidden="true" />
+            <span className="sr-only">Search catalog</span>
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${mode}`} className="min-w-0 flex-1 bg-transparent text-sm text-editor-text-strong outline-none placeholder:text-editor-text-subtle" />
+          </label>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <select aria-label="Filter by country" value={countryId} onChange={(event) => { setCountryId(Number(event.target.value)); setDestinationId(0); setCityId(0); }} className={`${controlClass} px-2 text-xs`}>
+              <option value={0}>All countries</option>
+              {countries.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+            <select aria-label="Filter by destination" value={destinationId} onChange={(event) => { setDestinationId(Number(event.target.value)); setCityId(0); }} className={`${controlClass} px-2 text-xs`}>
+              <option value={0}>All regions</option>
+              {destinations.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+            <select aria-label="Filter by city" value={cityId} onChange={(event) => setCityId(Number(event.target.value))} className={`${controlClass} px-2 text-xs`}>
+              <option value={0}>All cities</option>
+              {cities.map((item) => <option key={item.cityId} value={item.cityId}>{item.cityName}</option>)}
+            </select>
+          </div>
+        </> : null}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        {mode === "library" ? (
+          <ContentLibraryPanel
+            proposalId={proposalId}
+            library={library}
+            designContext={designContext}
+            enableDrag={enableDrag}
+            onDragStart={onDragStart}
+          />
+        ) : <>
         {formError ? <EditorNotice tone="danger" className="mb-3 px-3 py-2 text-xs">{formError}</EditorNotice> : null}
 
         {creating ? (
@@ -269,6 +284,7 @@ export default function CatalogPanel({
           })}
           {items.length === 0 ? <EditorEmptyState compact icon={<Search className="size-5" />} title="No catalog matches" description="Adjust the search or location filters, or create the missing item." /> : null}
         </div>
+        </>}
       </div>
     </div>
   );

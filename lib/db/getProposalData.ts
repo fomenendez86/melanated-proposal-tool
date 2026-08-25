@@ -21,6 +21,11 @@ import type {
   TwoColumnListSection,
   WeatherTable,
 } from "@/lib/types";
+import {
+  resolveProposalVariables,
+  type ProposalVariableContext,
+} from "@/lib/variables/catalog";
+import { calculatePricing, formatMinorMoney } from "@/lib/pricing/calculate";
 
 import { db } from "./client";
 import {
@@ -45,6 +50,8 @@ import {
   proposalListSections,
   proposalPaymentSchedule,
   proposalPricing,
+  proposalPricingItems,
+  proposalClients,
   proposalSections,
   proposals,
   termsParagraphs,
@@ -81,6 +88,12 @@ type TwoColumnPayload = {
 type ThankYouPayload = {
   message: string;
   imageUrl: string;
+};
+
+type SignaturePayload = {
+  title: string;
+  message: string;
+  signers: Array<{ name: string; role: string }>;
 };
 
 type FromOwnersPayload = {
@@ -177,7 +190,20 @@ export function formatMoney(amount: number, currency: string): string {
   }
 }
 
-export async function getProposalData(proposalId: number): Promise<ProposalData> {
+export interface ProposalDataSnapshot {
+  raw: ProposalData;
+  resolved: ProposalData;
+  variables: ProposalVariableContext;
+}
+
+function formatVariableDate(value: string | null | undefined) {
+  if (!value) return "";
+  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00Z`) : null;
+  if (!parsed || Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(parsed);
+}
+
+export async function getProposalDataSnapshot(proposalId: number): Promise<ProposalDataSnapshot> {
   const [proposal] = await db.select().from(proposals).where(eq(proposals.id, proposalId));
   if (!proposal) throw new Error(`Proposal ${proposalId} not found`);
 
@@ -435,6 +461,30 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
       }
       case "pricing": {
         const [pricing] = await db.select().from(proposalPricing).where(eq(proposalPricing.proposalId, proposalId));
+        const pricingItemRows = await db
+          .select()
+          .from(proposalPricingItems)
+          .where(eq(proposalPricingItems.proposalId, proposalId))
+          .orderBy(asc(proposalPricingItems.sortOrder));
+        const calculated = calculatePricing(
+          pricingItemRows.map((item) => ({
+            key: item.publicId,
+            description: item.description,
+            quantityMilli: item.quantityMilli,
+            unitPriceMinor: item.unitPriceMinor,
+            unit: item.unit,
+            taxRateBps: item.taxRateBps,
+            discountType: item.discountType,
+            discountValue: item.discountValue,
+            optional: item.optional,
+            selected: item.selectedByDefault,
+            quantityEditable: item.quantityEditable,
+          })),
+          pricing.currency
+        );
+        const effectiveTotalMinor = pricingItemRows.length > 0
+          ? calculated.totals.totalMinor
+          : Math.round(pricing.amountDue * 100);
         const schedule = await db
           .select()
           .from(proposalPaymentSchedule)
@@ -462,12 +512,28 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
           editorSource,
           data: {
             intro: pricing.introText ?? "",
-            packagePricing: [
-              { label: "Invoice Total", value: formatMoney(pricing.invoiceTotal, pricing.currency), editField: "invoiceTotal" },
-              { label: "Commission", value: formatMoney(pricing.commission, pricing.currency), editField: "commission" },
-              { label: "Amount Due", value: formatMoney(pricing.amountDue, pricing.currency), editField: "amountDue" },
-            ],
-            paymentSchedule: schedule.map((s) => ({ label: s.label, value: s.valueText })),
+            packagePricing: pricingItemRows.length > 0
+              ? [
+                  { label: "Subtotal", value: formatMinorMoney(calculated.totals.subtotalMinor, pricing.currency) },
+                  { label: "Discount", value: formatMinorMoney(calculated.totals.discountMinor, pricing.currency) },
+                  { label: "Tax", value: formatMinorMoney(calculated.totals.taxMinor, pricing.currency) },
+                  { label: "Total", value: formatMinorMoney(calculated.totals.totalMinor, pricing.currency), editField: "invoiceTotal" },
+                ]
+              : [
+                  { label: "Invoice Total", value: formatMoney(pricing.invoiceTotal, pricing.currency), editField: "invoiceTotal" },
+                  { label: "Commission", value: formatMoney(pricing.commission, pricing.currency), editField: "commission" },
+                  { label: "Amount Due", value: formatMoney(pricing.amountDue, pricing.currency), editField: "amountDue" },
+                ],
+            lineItems: pricingItemRows.length > 0 ? calculated.items : undefined,
+            totals: pricingItemRows.length > 0 ? calculated.totals : undefined,
+            paymentSchedule: schedule.map((s) => ({
+              label: s.label,
+              value: s.amountType === "percentage" && s.percentageBps != null
+                ? `${(s.percentageBps / 100).toFixed(2).replace(/\.00$/, "")}% · ${formatMinorMoney(Math.round(effectiveTotalMinor * s.percentageBps / 10000), pricing.currency)}`
+                : s.amountType === "fixed" && s.amountMinor != null
+                  ? formatMinorMoney(s.amountMinor, pricing.currency)
+                  : s.valueText,
+            })),
             bankingInfo,
             pageNumber: 0,
           },
@@ -579,10 +645,72 @@ export async function getProposalData(proposalId: number): Promise<ProposalData>
         });
         break;
       }
+      case "signature": {
+        const payload = row.payload as SignaturePayload;
+        sections.push({
+          type: "signature",
+          editorSource,
+          data: {
+            title: payload.title,
+            message: payload.message,
+            signers: Array.isArray(payload.signers) ? payload.signers : [],
+            pageNumber: 0,
+          },
+        });
+        break;
+      }
       default:
         throw new Error(`Unknown proposal_sections.sectionType: ${row.sectionType}`);
     }
   }
 
-  return { sections: renumberSections(sections, 2) };
+  const raw: ProposalData = { sections: renumberSections(sections, 2) };
+  const [pricingRow, pricingVariableItems, partyRows, hotelRows] = await Promise.all([
+    db.select().from(proposalPricing).where(eq(proposalPricing.proposalId, proposalId)).limit(1),
+    db.select().from(proposalPricingItems).where(eq(proposalPricingItems.proposalId, proposalId)),
+    db.select({ id: proposalClients.id }).from(proposalClients).where(eq(proposalClients.proposalId, proposalId)),
+    db.select({ nights: proposalHotels.nights }).from(proposalHotels).where(eq(proposalHotels.proposalId, proposalId)),
+  ]);
+  const pricing = pricingRow[0];
+  const calculatedVariablePricing = pricing && pricingVariableItems.length > 0
+    ? calculatePricing(pricingVariableItems.map((item) => ({
+        key: item.publicId,
+        description: item.description,
+        quantityMilli: item.quantityMilli,
+        unitPriceMinor: item.unitPriceMinor,
+        unit: item.unit,
+        taxRateBps: item.taxRateBps,
+        discountType: item.discountType,
+        discountValue: item.discountValue,
+        optional: item.optional,
+        selected: item.selectedByDefault,
+        quantityEditable: item.quantityEditable,
+      })), pricing.currency)
+    : null;
+  const tripNights = hotelRows.reduce((sum, hotel) => sum + hotel.nights, 0) || Math.max(0, days.length - 1);
+  const variables: ProposalVariableContext = {
+    "client.name": leadClient?.fullName ?? "",
+    "client.partySize": String(Math.max(1, partyRows.length)),
+    "trip.title": proposal.packageName ?? proposal.coverTitle,
+    "trip.startDate": formatVariableDate(days[0]?.date),
+    "trip.endDate": formatVariableDate(days.at(-1)?.date),
+    "trip.nights": String(tripNights),
+    "pricing.total": pricing
+      ? calculatedVariablePricing
+        ? formatMinorMoney(calculatedVariablePricing.totals.totalMinor, pricing.currency)
+        : formatMoney(pricing.invoiceTotal, pricing.currency)
+      : "",
+    "pricing.currency": pricing?.currency ?? "",
+    "company.legalName": companyRow.legalName,
+    "company.displayName": companyRow.displayName,
+    "company.address": companyRow.address ?? "",
+    "company.phone": companyRow.phone ?? "",
+    "company.email": companyRow.email ?? "",
+    "company.website": companyRow.website ?? "",
+  };
+  return { raw, resolved: resolveProposalVariables(raw, variables), variables };
+}
+
+export async function getProposalData(proposalId: number): Promise<ProposalData> {
+  return (await getProposalDataSnapshot(proposalId)).resolved;
 }

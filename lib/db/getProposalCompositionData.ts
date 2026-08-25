@@ -39,6 +39,7 @@ export async function getProposalCompositionData(proposalId: number): Promise<Pr
           label: sectionLabel(row.sectionType, payload),
           hidden: payload.hidden === true,
           deleted: payload.deleted === true,
+          reusable: row.refId == null,
           variantId: typeof payload.designVariantId === "string" ? payload.designVariantId : undefined,
         };
       }),

@@ -15,7 +15,7 @@ import type { ProposalEditorFieldName } from "./proposalEditorTypes";
  * without visual or behavioral effect.
  */
 
-export type EditableRegionKind = "text" | "multiline" | "image";
+export type EditableRegionKind = "text" | "multiline" | "image" | "collection";
 
 export interface EditableRegionAttributes {
   "data-edit-field": ProposalEditorFieldName;
@@ -68,7 +68,7 @@ export function isInlineEditableRegion(
   kind: EditableRegionKind,
   saveMode: "auto" | "explicit" | undefined
 ): boolean {
-  if (kind === "image") return false;
+  if (kind === "image" || kind === "collection") return false;
   if (saveMode === "explicit") return false;
   return !INLINE_EDIT_EXCLUDED_FIELDS.has(field);
 }
@@ -90,7 +90,7 @@ export function isImageEditableRegion(
 }
 
 export function isEditableRegionKind(value: string | null): value is EditableRegionKind {
-  return value === "text" || value === "multiline" || value === "image";
+  return value === "text" || value === "multiline" || value === "image" || value === "collection";
 }
 
 /**

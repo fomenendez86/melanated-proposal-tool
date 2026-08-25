@@ -50,6 +50,8 @@ function pageStatus(section: ProposalSection): ProposalPageStatus {
     case "thankYou":
       if (!section.data.message.trim()) return "error";
       return section.data.imageUrl.trim() ? "ready" : "warning";
+    case "signature":
+      return section.data.title.trim() && section.data.signers.length > 0 ? "ready" : "error";
     case "overview":
     case "pricing":
       return "ready";
@@ -98,6 +100,8 @@ function pageCopy(
       return { eyebrow: "Legal", title: section.data.showTitle ? "Terms & Conditions" : "Terms continued", description: `${section.data.sections.length} terms sections` };
     case "thankYou":
       return { eyebrow: "Closing", title: "Thank You", description: section.data.message };
+    case "signature":
+      return { eyebrow: "Agreement", title: section.data.title, description: `${section.data.signers.length} signer${section.data.signers.length === 1 ? "" : "s"}` };
   }
 }
 

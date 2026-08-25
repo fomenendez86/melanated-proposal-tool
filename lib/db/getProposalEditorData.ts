@@ -16,6 +16,7 @@ import {
   proposalListSections,
   proposalPaymentSchedule,
   proposalPricing,
+  proposalPricingItems,
   proposalSections,
   proposals,
 } from "./schema";
@@ -143,9 +144,10 @@ export async function getProposalEditorData(
   const coverPage = pageMeta.find((page) => page.type === "cover");
   const detailsPage = pageMeta.find((page) => page.type === "details");
   const result: ProposalEditorPageMap = {};
-  const [sectionRows, pricingRows, listSectionRows, scheduleRows, dayRows] = await Promise.all([
+  const [sectionRows, pricingRows, pricingItemRows, listSectionRows, scheduleRows, dayRows] = await Promise.all([
     db.select().from(proposalSections).where(eq(proposalSections.proposalId, proposalId)),
     db.select().from(proposalPricing).where(eq(proposalPricing.proposalId, proposalId)),
+    db.select().from(proposalPricingItems).where(eq(proposalPricingItems.proposalId, proposalId)).orderBy(asc(proposalPricingItems.sortOrder)),
     db
       .select()
       .from(proposalListSections)
@@ -343,6 +345,22 @@ export async function getProposalEditorData(
         sourceSectionId: page.sourceSectionId,
         heading: "Pricing",
         description: "Financial values and payment rows are stored only on this proposal.",
+        pricingItems: pricingItemRows.map((item) => ({
+          id: item.id,
+          key: item.publicId,
+          description: item.description,
+          quantityMilli: item.quantityMilli,
+          unitPriceMinor: item.unitPriceMinor,
+          currency: item.currency,
+          unit: item.unit,
+          taxRateBps: item.taxRateBps,
+          discountType: item.discountType,
+          discountValue: item.discountValue,
+          optional: item.optional,
+          selectedByDefault: item.selectedByDefault,
+          quantityEditable: item.quantityEditable,
+          sortOrder: item.sortOrder,
+        })),
         fields: [
           { name: "pricingIntro", label: "Introduction", value: pricing.introText ?? "", maxLength: 600, multiline: true },
           { name: "invoiceTotal", label: "Invoice total", value: String(pricing.invoiceTotal), required: true, maxLength: 14 },
@@ -562,6 +580,22 @@ export async function getProposalEditorData(
         fields: [
           { name: "thankYouMessage", label: "Message", value: payload.message ?? "", required: true, maxLength: 240, multiline: true },
           { name: "sectionImageUrl", label: "Image", value: payload.imageUrl ?? "", isImage: true, maxLength: 2048, helpText: "Use a local /path or an https:// URL." },
+        ],
+      };
+    }
+
+    if (page.type === "signature") {
+      const payload = sourceSection.payload as { title?: string; message?: string; signers?: Array<{ name: string; role: string }> };
+      result[page.id] = {
+        pageId: page.id,
+        kind: "signature",
+        sourceSectionId: sourceSection.id,
+        heading: "Signature page",
+        description: "Define who signs and how the agreement is introduced.",
+        fields: [
+          { name: "signatureTitle", label: "Title", value: payload.title ?? "", required: true, maxLength: 120 },
+          { name: "signatureMessage", label: "Instructions", value: payload.message ?? "", maxLength: 600, multiline: true },
+          { name: "signatureSignersText", label: "Signers", value: (payload.signers ?? []).map((signer) => `${signer.name} | ${signer.role}`).join("\n"), required: true, multiline: true, maxLength: 1200, helpText: "One signer per line using Name | Role." },
         ],
       };
     }

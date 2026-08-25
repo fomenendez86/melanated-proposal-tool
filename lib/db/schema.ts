@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { check, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import type { DocumentDesignDescriptor } from "@/lib/designs/types";
 import type { ProposalData } from "@/lib/types";
@@ -221,6 +221,71 @@ export const termsParagraphs = sqliteTable("terms_paragraphs", {
 });
 
 // ---------------------------------------------------------------------------
+// Reusable content library — global snapshots copied into proposals on use.
+// Archiving removes an item from pickers without invalidating proposals that
+// already copied it (or image URLs embedded in immutable revisions).
+// ---------------------------------------------------------------------------
+
+export const librarySections = sqliteTable("library_sections", {
+  ...id,
+  name: text("name").notNull(),
+  description: text("description"),
+  sectionType: text("section_type").notNull(),
+  payload: text("payload", { mode: "json" }).notNull().$type<Record<string, unknown>>(),
+  variantId: text("variant_id"),
+  tags: text("tags", { mode: "json" }).notNull().$type<string[]>(),
+  archivedAt: integer("archived_at", { mode: "timestamp" }),
+  ...timestamps,
+});
+
+export const librarySnippets = sqliteTable("library_snippets", {
+  ...id,
+  name: text("name").notNull(),
+  body: text("body").notNull(),
+  tags: text("tags", { mode: "json" }).notNull().$type<string[]>(),
+  archivedAt: integer("archived_at", { mode: "timestamp" }),
+  ...timestamps,
+});
+
+export const libraryImages = sqliteTable("library_images", {
+  ...id,
+  name: text("name").notNull(),
+  originalName: text("original_name").notNull(),
+  storageKey: text("storage_key").notNull().unique(),
+  mimeType: text("mime_type").notNull(),
+  sizeBytes: integer("size_bytes").notNull(),
+  tags: text("tags", { mode: "json" }).notNull().$type<string[]>(),
+  archivedAt: integer("archived_at", { mode: "timestamp" }),
+  ...timestamps,
+});
+
+export const libraryFees = sqliteTable(
+  "library_fees",
+  {
+    ...id,
+    name: text("name").notNull(),
+    description: text("description"),
+    unitPriceMinor: integer("unit_price_minor").notNull(),
+    currency: text("currency").notNull().default("USD"),
+    unit: text("unit")
+      .notNull()
+      .$type<"flat" | "per_person" | "per_night" | "per_vehicle">()
+      .default("flat"),
+    taxRateBps: integer("tax_rate_bps").notNull().default(0),
+    archivedAt: integer("archived_at", { mode: "timestamp" }),
+    ...timestamps,
+  },
+  (table) => [
+    check(
+      "library_fees_unit_check",
+      sql`${table.unit} in ('flat', 'per_person', 'per_night', 'per_vehicle')`
+    ),
+    check("library_fees_price_check", sql`${table.unitPriceMinor} >= 0`),
+    check("library_fees_tax_check", sql`${table.taxRateBps} >= 0 and ${table.taxRateBps} <= 10000`),
+  ]
+);
+
+// ---------------------------------------------------------------------------
 // Clients & proposals — transactional data, one row set per client engagement.
 // ---------------------------------------------------------------------------
 
@@ -264,6 +329,10 @@ export const proposals = sqliteTable(
     templateName: text("template_name"),
     templateDescription: text("template_description"),
     templateThumbnailUrl: text("template_thumbnail_url"),
+    pipelineStage: text("pipeline_stage").$type<"draft" | "sent" | "viewed" | "approved" | "won" | "lost" | "archived">(),
+    lostReason: text("lost_reason"),
+    closedValueMinor: integer("closed_value_minor"),
+    closedCurrency: text("closed_currency"),
     ...timestamps,
   },
   (table) => [
@@ -400,6 +469,37 @@ export const proposalPricing = sqliteTable("proposal_pricing", {
   }),
 });
 
+export const proposalPricingItems = sqliteTable(
+  "proposal_pricing_items",
+  {
+    ...id,
+    publicId: text("public_id").notNull().unique(),
+    proposalId: integer("proposal_id")
+      .notNull()
+      .references(() => proposals.id, { onDelete: "cascade" }),
+    description: text("description").notNull(),
+    quantityMilli: integer("quantity_milli").notNull().default(1000),
+    unitPriceMinor: integer("unit_price_minor").notNull(),
+    currency: text("currency").notNull().default("USD"),
+    unit: text("unit").notNull().$type<"flat" | "per_person" | "per_night" | "per_vehicle">().default("flat"),
+    taxRateBps: integer("tax_rate_bps").notNull().default(0),
+    discountType: text("discount_type").notNull().$type<"none" | "amount" | "percent">().default("none"),
+    discountValue: integer("discount_value").notNull().default(0),
+    optional: integer("optional", { mode: "boolean" }).notNull().default(false),
+    selectedByDefault: integer("selected_by_default", { mode: "boolean" }).notNull().default(true),
+    quantityEditable: integer("quantity_editable", { mode: "boolean" }).notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    ...timestamps,
+  },
+  (table) => [
+    check("proposal_pricing_items_quantity_check", sql`${table.quantityMilli} >= 1`),
+    check("proposal_pricing_items_price_check", sql`${table.unitPriceMinor} >= 0`),
+    check("proposal_pricing_items_tax_check", sql`${table.taxRateBps} >= 0 and ${table.taxRateBps} <= 10000`),
+    check("proposal_pricing_items_unit_check", sql`${table.unit} in ('flat', 'per_person', 'per_night', 'per_vehicle')`),
+    check("proposal_pricing_items_discount_type_check", sql`${table.discountType} in ('none', 'amount', 'percent')`),
+  ]
+);
+
 export const proposalPaymentSchedule = sqliteTable("proposal_payment_schedule", {
   ...id,
   proposalId: integer("proposal_id")
@@ -407,6 +507,9 @@ export const proposalPaymentSchedule = sqliteTable("proposal_payment_schedule", 
     .references(() => proposals.id, { onDelete: "cascade" }),
   label: text("label").notNull(),
   valueText: text("value_text").notNull(),
+  amountType: text("amount_type").notNull().$type<"text" | "fixed" | "percentage">().default("text"),
+  amountMinor: integer("amount_minor"),
+  percentageBps: integer("percentage_bps"),
   sortOrder: integer("sort_order").notNull().default(0),
 });
 
@@ -456,7 +559,11 @@ export const proposalRevisions = sqliteTable("proposal_revisions", {
   designId: text("design_id").notNull(),
   designVersion: integer("design_version").notNull(),
   data: text("data", { mode: "json" }).notNull().$type<ProposalData>(),
+  // Raw merge-field tokens are retained for audit/reuse while `data` is the
+  // immutable, resolved document rendered by the public share.
+  rawData: text("raw_data", { mode: "json" }).$type<ProposalData>(),
   design: text("design", { mode: "json" }).notNull().$type<DocumentDesignDescriptor>(),
+  sealedAt: integer("sealed_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
@@ -481,6 +588,109 @@ export const proposalShares = sqliteTable("proposal_shares", {
     .$defaultFn(() => new Date()),
 });
 
+export const proposalSharePricingSelections = sqliteTable(
+  "proposal_share_pricing_selections",
+  {
+    ...id,
+    shareId: integer("share_id")
+      .notNull()
+      .references(() => proposalShares.id, { onDelete: "cascade" }),
+    itemPublicId: text("item_public_id").notNull(),
+    selected: integer("selected", { mode: "boolean" }).notNull(),
+    quantityMilli: integer("quantity_milli").notNull(),
+    frozenAt: integer("frozen_at", { mode: "timestamp" }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("share_pricing_item_unique").on(table.shareId, table.itemPublicId),
+    check("share_pricing_quantity_check", sql`${table.quantityMilli} >= 1`),
+  ]
+);
+
+export const proposalSignatures = sqliteTable("proposal_signatures", {
+  ...id,
+  proposalId: integer("proposal_id").notNull().references(() => proposals.id, { onDelete: "cascade" }),
+  shareId: integer("share_id").notNull().references(() => proposalShares.id, { onDelete: "restrict" }),
+  revisionId: integer("revision_id").notNull().references(() => proposalRevisions.id, { onDelete: "restrict" }),
+  signerName: text("signer_name").notNull(),
+  signerEmail: text("signer_email"),
+  signerRole: text("signer_role").notNull(),
+  signatureType: text("signature_type").notNull().$type<"typed" | "drawn">(),
+  signatureData: text("signature_data").notNull(),
+  ipAddressTruncated: text("ip_address_truncated"),
+  userAgent: text("user_agent"),
+  payloadHash: text("payload_hash").notNull(),
+  signedAt: integer("signed_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+export const proposalEmails = sqliteTable("proposal_emails", {
+  ...id,
+  proposalId: integer("proposal_id").notNull().references(() => proposals.id, { onDelete: "cascade" }),
+  shareId: integer("share_id").references(() => proposalShares.id, { onDelete: "set null" }),
+  kind: text("kind").notNull().$type<"send" | "reminder">(),
+  recipients: text("recipients", { mode: "json" }).notNull().$type<string[]>(),
+  subject: text("subject").notNull(),
+  provider: text("provider").notNull(),
+  providerMessageId: text("provider_message_id"),
+  status: text("status").notNull().$type<"sent" | "file" | "link_only" | "failed">(),
+  error: text("error"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+export const proposalNotificationSettings = sqliteTable("proposal_notification_settings", {
+  ...id,
+  proposalId: integer("proposal_id").notNull().unique().references(() => proposals.id, { onDelete: "cascade" }),
+  recipientEmail: text("recipient_email"),
+  firstOpenEnabled: integer("first_open_enabled", { mode: "boolean" }).notNull().default(true),
+  signatureEnabled: integer("signature_enabled", { mode: "boolean" }).notNull().default(true),
+  expiryEnabled: integer("expiry_enabled", { mode: "boolean" }).notNull().default(true),
+  ...timestamps,
+});
+
+export const proposalNotifications = sqliteTable("proposal_notifications", {
+  ...id,
+  proposalId: integer("proposal_id").notNull().references(() => proposals.id, { onDelete: "cascade" }),
+  shareId: integer("share_id").references(() => proposalShares.id, { onDelete: "cascade" }),
+  type: text("type").notNull().$type<"first_open" | "signature" | "expiring" | "comment">(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  dedupeKey: text("dedupe_key").notNull().unique(),
+  readAt: integer("read_at", { mode: "timestamp" }),
+  emailedAt: integer("emailed_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+export const proposalCommentThreads = sqliteTable("proposal_comment_threads", {
+  ...id,
+  proposalId: integer("proposal_id").notNull().references(() => proposals.id, { onDelete: "cascade" }),
+  shareId: integer("share_id").notNull().references(() => proposalShares.id, { onDelete: "cascade" }),
+  revisionId: integer("revision_id").notNull().references(() => proposalRevisions.id, { onDelete: "restrict" }),
+  sectionKey: text("section_key").notNull(),
+  sourceSectionId: integer("source_section_id"),
+  status: text("status").notNull().$type<"open" | "resolved">().default("open"),
+  orphaned: integer("orphaned", { mode: "boolean" }).notNull().default(false),
+  clientName: text("client_name").notNull(),
+  ...timestamps,
+});
+
+export const proposalComments = sqliteTable("proposal_comments", {
+  ...id,
+  threadId: integer("thread_id").notNull().references(() => proposalCommentThreads.id, { onDelete: "cascade" }),
+  authorType: text("author_type").notNull().$type<"client" | "seller">(),
+  authorName: text("author_name").notNull(),
+  body: text("body").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+export const proposalInternalNotes = sqliteTable("proposal_internal_notes", {
+  ...id,
+  proposalId: integer("proposal_id").notNull().references(() => proposals.id, { onDelete: "cascade" }),
+  sectionKey: text("section_key").notNull(),
+  sourceSectionId: integer("source_section_id"),
+  body: text("body").notNull(),
+  ...timestamps,
+});
+
 export const proposalEvents = sqliteTable(
   "proposal_events",
   {
@@ -492,7 +702,7 @@ export const proposalEvents = sqliteTable(
     shareId: integer("share_id").references(() => proposalShares.id, { onDelete: "cascade" }),
     type: text("type")
       .notNull()
-      .$type<"shared" | "opened" | "approved" | "pdf_generated" | "pdf_failed">(),
+      .$type<"shared" | "sent" | "reminder" | "opened" | "approved" | "signed" | "lost" | "reopened" | "pricing_selected" | "engagement" | "comment_added" | "comment_replied" | "comment_resolved" | "notification_sent" | "pdf_generated" | "pdf_downloaded" | "pdf_failed">(),
     metadata: text("metadata", { mode: "json" }),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
@@ -501,7 +711,7 @@ export const proposalEvents = sqliteTable(
   (table) => [
     check(
       "proposal_events_type_check",
-      sql`${table.type} in ('shared', 'opened', 'approved', 'pdf_generated', 'pdf_failed')`
+      sql`${table.type} in ('shared', 'sent', 'reminder', 'opened', 'approved', 'signed', 'lost', 'reopened', 'pricing_selected', 'engagement', 'comment_added', 'comment_replied', 'comment_resolved', 'notification_sent', 'pdf_generated', 'pdf_downloaded', 'pdf_failed')`
     ),
   ]
 );

@@ -1,3 +1,5 @@
+import type { ProposalPricingEditorItem } from "@/lib/pricing/types";
+
 export type ProposalEditorFieldName =
   | "coverTitle"
   | "coverSubtitle"
@@ -20,6 +22,7 @@ export type ProposalEditorFieldName =
   | "hotelImageBottomLeftTop"
   | "hotelImageBottomLeftBottom"
   | "pricingIntro"
+  | "pricingItemsText"
   | "invoiceTotal"
   | "commission"
   | "amountDue"
@@ -34,6 +37,9 @@ export type ProposalEditorFieldName =
   | "cityIntro"
   | "priceNote"
   | "thankYouMessage"
+  | "signatureTitle"
+  | "signatureMessage"
+  | "signatureSignersText"
   | "paymentScheduleText"
   | "leftListText"
   | "rightListText"
@@ -70,6 +76,7 @@ export interface ProposalEditorPageConfig {
     | "sectionDivider"
     | "cityToursDivider"
     | "thankYou"
+    | "signature"
     | "twoColumnList"
     | "excursionSnapshot"
     | "weatherSnapshot"
@@ -83,6 +90,7 @@ export interface ProposalEditorPageConfig {
   heading: string;
   description: string;
   fields: ProposalEditorField[];
+  pricingItems?: ProposalPricingEditorItem[];
 }
 
 export type ProposalEditorPageMap = Record<string, ProposalEditorPageConfig>;

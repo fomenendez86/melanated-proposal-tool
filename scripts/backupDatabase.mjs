@@ -1,11 +1,13 @@
 import Database from "better-sqlite3";
-import { mkdir, stat } from "node:fs/promises";
+import { cp, mkdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 const databasePath = path.resolve(process.env.DATABASE_URL ?? "./data/proposals.db");
 const backupDirectory = path.resolve(process.env.BACKUP_DIRECTORY ?? "./backups");
 const timestamp = new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
 const destination = path.join(backupDirectory, `proposals-${timestamp}.db`);
+const uploadDirectory = path.resolve(process.env.LIBRARY_UPLOAD_DIRECTORY ?? path.join(path.dirname(databasePath), "uploads"));
+const uploadDestination = `${destination}.uploads`;
 
 await stat(databasePath);
 await mkdir(backupDirectory, { recursive: true });
@@ -27,4 +29,13 @@ try {
   verification.close();
 }
 
-console.info(JSON.stringify({ event: "database_backup_completed", source: databasePath, destination }));
+let uploadsBackedUp = false;
+try {
+  await stat(uploadDirectory);
+  await cp(uploadDirectory, uploadDestination, { recursive: true, errorOnExist: true });
+  uploadsBackedUp = true;
+} catch (error) {
+  if (error?.code !== "ENOENT") throw error;
+}
+
+console.info(JSON.stringify({ event: "database_backup_completed", source: databasePath, destination, uploadDirectory, uploadDestination: uploadsBackedUp ? uploadDestination : null }));

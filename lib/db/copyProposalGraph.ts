@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { asc, eq, inArray } from "drizzle-orm";
 
 import {
@@ -12,6 +13,7 @@ import {
   proposalListSections,
   proposalPaymentSchedule,
   proposalPricing,
+  proposalPricingItems,
   proposalSections,
 } from "./schema";
 import type { Transaction } from "./client";
@@ -148,9 +150,19 @@ export function copyProposalGraphInto(
       bankAccountId: pricing.bankAccountId,
     }).run();
   }
+  const pricingItems = tx.select().from(proposalPricingItems).where(eq(proposalPricingItems.proposalId, sourceProposalId)).all();
+  for (const item of pricingItems) {
+    tx.insert(proposalPricingItems).values({
+      publicId: randomUUID(), proposalId: targetProposalId, description: item.description,
+      quantityMilli: item.quantityMilli, unitPriceMinor: item.unitPriceMinor, currency: item.currency,
+      unit: item.unit, taxRateBps: item.taxRateBps, discountType: item.discountType,
+      discountValue: item.discountValue, optional: item.optional, selectedByDefault: item.selectedByDefault,
+      quantityEditable: item.quantityEditable, sortOrder: item.sortOrder,
+    }).run();
+  }
   const paymentSchedule = tx.select().from(proposalPaymentSchedule).where(eq(proposalPaymentSchedule.proposalId, sourceProposalId)).all();
   for (const payment of paymentSchedule) {
-    tx.insert(proposalPaymentSchedule).values({ proposalId: targetProposalId, label: payment.label, valueText: payment.valueText, sortOrder: payment.sortOrder }).run();
+    tx.insert(proposalPaymentSchedule).values({ proposalId: targetProposalId, label: payment.label, valueText: payment.valueText, amountType: payment.amountType, amountMinor: payment.amountMinor, percentageBps: payment.percentageBps, sortOrder: payment.sortOrder }).run();
   }
 
   const sectionRows = tx

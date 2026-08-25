@@ -22,6 +22,34 @@
       "when": 1787519647885,
       "tag": "0002_worthless_wilson_fisk",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1787616053721,
+      "tag": "0003_fearless_maria_hill",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1787617408360,
+      "tag": "0004_talented_molten_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1787618254316,
+      "tag": "0005_light_dreaming_celestial",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1787623618551,
+      "tag": "0006_rich_mauler",
+      "breakpoints": true
     }
   ]
 }

@@ -16,6 +16,7 @@ import {
   proposalListSections,
   proposalPaymentSchedule,
   proposalPricing,
+  proposalPricingItems,
   proposalSections,
   proposals,
 } from "@/lib/db/schema";
@@ -26,6 +27,7 @@ import type {
 } from "@/lib/editor/proposalEditorTypes";
 import { parseItineraryEditorText } from "@/lib/editor/itineraryEditorCodec";
 import type { ExcursionItem, ImportantItemRow, TermsSection, WeatherTable } from "@/lib/types";
+import { calculatePricing } from "@/lib/pricing/calculate";
 
 const LIMITS: Record<ProposalEditorFieldName, number> = {
   coverTitle: 80,
@@ -49,6 +51,7 @@ const LIMITS: Record<ProposalEditorFieldName, number> = {
   hotelImageBottomLeftTop: 2048,
   hotelImageBottomLeftBottom: 2048,
   pricingIntro: 600,
+  pricingItemsText: 1,
   invoiceTotal: 14,
   commission: 14,
   amountDue: 14,
@@ -63,6 +66,9 @@ const LIMITS: Record<ProposalEditorFieldName, number> = {
   cityIntro: 600,
   priceNote: 240,
   thankYouMessage: 240,
+  signatureTitle: 120,
+  signatureMessage: 600,
+  signatureSignersText: 1200,
   paymentScheduleText: 2000,
   leftListText: 5000,
   rightListText: 5000,
@@ -103,6 +109,7 @@ const FIELDS_BY_KIND = {
   sectionDivider: ["dividerTitle", "dividerSubtitle", "sectionImageUrl"],
   cityToursDivider: ["cityIntro", "priceNote", "sectionImageUrl"],
   thankYou: ["thankYouMessage", "sectionImageUrl"],
+  signature: ["signatureTitle", "signatureMessage", "signatureSignersText"],
   twoColumnList: ["leftListText", "rightListText"],
   excursionSnapshot: ["excursionSnapshotText"],
   weatherSnapshot: ["weatherSnapshotText"],
@@ -118,6 +125,7 @@ const SECTION_TYPES_BY_KIND = {
   sectionDivider: ["sectionDivider"],
   cityToursDivider: ["cityToursDivider"],
   thankYou: ["thankYou"],
+  signature: ["signature"],
   twoColumnList: ["twoColumnList"],
   excursionSnapshot: ["excursionList"],
   weatherSnapshot: ["weather"],
@@ -141,11 +149,32 @@ function parsePaymentSchedule(text: string) {
       if (separator < 1) return null;
       const label = line.slice(0, separator).trim();
       const valueText = line.slice(separator + 1).trim();
-      return label && valueText ? { label, valueText } : null;
+      if (!label || !valueText) return null;
+      const percentage = valueText.match(/^(\d+(?:\.\d{1,2})?)%$/);
+      if (percentage) {
+        const percentageBps = Math.round(Number(percentage[1]) * 100);
+        if (percentageBps < 0 || percentageBps > 10000) return null;
+        return { label, valueText, amountType: "percentage" as const, amountMinor: null, percentageBps };
+      }
+      const fixed = valueText.match(/^\$?([\d,]+(?:\.\d{1,2})?)$/);
+      if (fixed) {
+        return { label, valueText, amountType: "fixed" as const, amountMinor: Math.round(Number(fixed[1].replaceAll(",", "")) * 100), percentageBps: null };
+      }
+      return { label, valueText, amountType: "text" as const, amountMinor: null, percentageBps: null };
     });
-  return rows.every((row): row is { label: string; valueText: string } => row !== null)
+  return rows.every((row): row is NonNullable<typeof row> => row !== null)
     ? rows
     : null;
+}
+
+function parseSignatureSigners(text: string) {
+  const rows = text.split("\n").map((line) => line.trim()).filter(Boolean).map((line) => {
+    const separator = line.indexOf("|");
+    const name = line.slice(0, separator).trim();
+    const role = line.slice(separator + 1).trim();
+    return separator > 0 && name && role ? { name, role } : null;
+  });
+  return rows.length > 0 && rows.every((row): row is { name: string; role: string } => row !== null) ? rows : null;
 }
 
 function parseListColumn(text: string): ParsedListGroup[] | null {
@@ -463,12 +492,16 @@ function validateInput(input: UpdateProposalFieldsInput) {
   if (input.kind === "itinerary" && parseItineraryEditorText(values.itinerarySnapshotText ?? "") === null) {
     errors.itinerarySnapshotText = "Use sequential [Day N] blocks with at least one Activity and Paragraph per day.";
   }
+  if (input.kind === "signature" && parseSignatureSigners(values.signatureSignersText ?? "") === null) {
+    errors.signatureSignersText = "Use one signer per line in Name | Role format.";
+  }
 
   const requiredByKind: Partial<Record<UpdateProposalFieldsInput["kind"], ProposalEditorFieldName[]>> = {
     triangleDivider: ["sectionLabel", "titleLine1"],
     sectionDivider: ["dividerTitle"],
     cityToursDivider: ["cityIntro"],
     thankYou: ["thankYouMessage"],
+    signature: ["signatureTitle", "signatureSignersText"],
   };
   for (const field of requiredByKind[input.kind] ?? []) {
     if (!values[field]) errors[field] = "This field is required.";
@@ -675,13 +708,31 @@ export async function updateProposalFields(
         }
         transaction.update(proposals).set({ updatedAt: new Date() }).where(eq(proposals.id, proposalId)).run();
       } else if (input.kind === "pricing") {
+        const itemRows = transaction
+          .select()
+          .from(proposalPricingItems)
+          .where(eq(proposalPricingItems.proposalId, proposalId))
+          .all();
+        const calculated = itemRows.length > 0 ? calculatePricing(itemRows.map((item) => ({
+          key: item.publicId,
+          description: item.description,
+          quantityMilli: item.quantityMilli,
+          unitPriceMinor: item.unitPriceMinor,
+          unit: item.unit,
+          taxRateBps: item.taxRateBps,
+          discountType: item.discountType,
+          discountValue: item.discountValue,
+          optional: item.optional,
+          selected: item.selectedByDefault,
+          quantityEditable: item.quantityEditable,
+        })), values.currency!) : null;
         transaction
           .update(proposalPricing)
           .set({
             introText: values.pricingIntro || null,
-            invoiceTotal: Number(values.invoiceTotal),
-            commission: Number(values.commission),
-            amountDue: Number(values.amountDue),
+            invoiceTotal: calculated ? calculated.totals.subtotalMinor / 100 : Number(values.invoiceTotal),
+            commission: calculated ? calculated.totals.discountMinor / 100 : Number(values.commission),
+            amountDue: calculated ? calculated.totals.totalMinor / 100 : Number(values.amountDue),
             currency: values.currency!,
           })
           .where(eq(proposalPricing.proposalId, proposalId))
@@ -695,6 +746,9 @@ export async function updateProposalFields(
           transaction.insert(proposalPaymentSchedule).values(
             schedule.map((item, sortOrder) => ({ proposalId, sortOrder, ...item }))
           ).run();
+        }
+        if (itemRows.length > 0) {
+          transaction.update(proposalPricingItems).set({ currency: values.currency!, updatedAt: new Date() }).where(eq(proposalPricingItems.proposalId, proposalId)).run();
         }
         transaction.update(proposals).set({ updatedAt: new Date() }).where(eq(proposals.id, proposalId)).run();
       } else if (input.kind === "itinerary") {
@@ -832,6 +886,13 @@ export async function updateProposalFields(
             intro: values.cityIntro,
             priceNote: values.priceNote,
             imageUrl: values.sectionImageUrl,
+          };
+        } else if (input.kind === "signature") {
+          payload = {
+            ...currentPayload,
+            title: values.signatureTitle,
+            message: values.signatureMessage,
+            signers: parseSignatureSigners(values.signatureSignersText ?? "") ?? [],
           };
         } else {
           payload = {

@@ -9,6 +9,7 @@ export const ADDABLE_SECTIONS: AddableSection[] = [
   { type: "triangleDivider", label: "Image title divider" },
   { type: "sectionDivider", label: "Editorial section divider" },
   { type: "thankYou", label: "Thank-you page" },
+  { type: "signature", label: "Signature page" },
 ];
 
 // Default payloads for the section types above — the only ones that can be
@@ -20,4 +21,5 @@ export const ADDABLE_SECTION_DEFAULTS: Partial<Record<ProposalSectionType, Recor
   triangleDivider: { sectionLabel: "New section", titleLines: [{ text: "Section title", style: "bold" }], imageUrl: "" },
   sectionDivider: { title: "NEW SECTION", subtitle: "Add a supporting line", imageUrl: "" },
   thankYou: { message: "Thank you for traveling with us.", imageUrl: "" },
+  signature: { title: "Agreement and signatures", message: "Please sign below to confirm this proposal.", signers: [{ name: "Client", role: "Traveler" }, { name: "Melanated Safaris", role: "Travel advisor" }] },
 };

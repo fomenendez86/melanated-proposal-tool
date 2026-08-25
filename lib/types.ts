@@ -96,9 +96,37 @@ export interface KeyValueLine {
 export interface PricingData {
   intro: string;
   packagePricing: KeyValueLine[];
+  lineItems?: PricingLineItemData[];
+  totals?: PricingTotalsData;
   paymentSchedule: KeyValueLine[];
   bankingInfo: KeyValueLine[];
   pageNumber: number;
+}
+
+export interface PricingLineItemData {
+  key: string;
+  description: string;
+  quantityMilli: number;
+  unitPriceMinor: number;
+  unit: "flat" | "per_person" | "per_night" | "per_vehicle";
+  taxRateBps: number;
+  discountType: "none" | "amount" | "percent";
+  discountValue: number;
+  optional: boolean;
+  selected: boolean;
+  quantityEditable: boolean;
+  subtotalMinor: number;
+  discountMinor: number;
+  taxMinor: number;
+  totalMinor: number;
+}
+
+export interface PricingTotalsData {
+  currency: string;
+  subtotalMinor: number;
+  discountMinor: number;
+  taxMinor: number;
+  totalMinor: number;
 }
 
 export interface TermsSection {
@@ -184,6 +212,13 @@ export interface ThankYouData {
   pageNumber: number;
 }
 
+export interface SignatureData {
+  title: string;
+  message: string;
+  signers: Array<{ name: string; role: string }>;
+  pageNumber: number;
+}
+
 export interface CoverData {
   title: string;
   subtitle: string;
@@ -208,6 +243,7 @@ export type ProposalSection = (
   | { type: "weather"; data: WeatherData }
   | { type: "termsConditions"; data: TermsConditionsData }
   | { type: "thankYou"; data: ThankYouData }
+  | { type: "signature"; data: SignatureData }
 ) & {
   editorSource?: {
     sectionId: number;

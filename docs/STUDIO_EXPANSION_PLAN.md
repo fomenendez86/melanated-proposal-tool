@@ -10,11 +10,14 @@ hoteles/excursiones desde un catálogo ahora acoplado en pantallas anchas
 shares y eventos en tablas reales), dashboard de propuestas en `/proposals`
 con crear/duplicar/archivar/eliminar, y autenticación mínima (login
 single-usuario en `proxy.ts` + sesión firmada) protegiendo todo el studio.
-**Fase 13.1 completa** (plantillas de propuesta: guardar/crear
-desde/gestionar) — 13.2 (secciones/snippets), 13.3 (imágenes) y 13.4 (fees)
-siguen pendientes. Ver `docs/PROJECT_STATUS.md` para el detalle técnico
-completo de cada sub-fase.
-**Actualizado:** 2026-08-23
+**Fase 13 completa (13.1–13.4)**: plantillas, secciones/snippets guardados,
+biblioteca de imágenes con upload persistente y fees reutilizables. **Fases
+14–17 completas**: variables/merge fields y tabla de precios interactiva
+(14), envío por email + firma electrónica + cierre del pipeline (15),
+instrumentación de analytics + panel Activity + notificaciones programadas
+(16), y comentarios cliente↔vendedor + notas internas (17). Ver
+`docs/PROJECT_STATUS.md` para el detalle técnico de cada sub-fase.
+**Actualizado:** 2026-08-25
 
 Este documento extiende el roadmap de
 [`EDITOR_IMPLEMENTATION_PLAN.md`](EDITOR_IMPLEMENTATION_PLAN.md) (Fases 1–9,
@@ -53,7 +56,7 @@ intactos:
 | Pipeline de propuestas con estados (Draft/Sent/Viewed/Won/Lost) | **Completo (Fase 12.1)** — transiciones automáticas conectadas | **12** |
 | Crear, duplicar, archivar propuestas | **Completo (Fase 12.2)** — dashboard en `/proposals` | **12** |
 | Plantillas (guardar como / crear desde) | **Completo (Fase 13.1)** | **13** |
-| Biblioteca de contenido: secciones guardadas, snippets, imágenes, fees | Parcial — catálogo de hoteles/excursiones | **13** |
+| Biblioteca de contenido: secciones guardadas, snippets, imágenes, fees | **Completo (Fase 13.2–13.4)** | **13** |
 | Variables / merge fields (`{{client.name}}`) | No | **14** |
 | Tabla de precios interactiva (cantidades, ítems opcionales, totales) | Parcial — montos estáticos | **14** |
 | Envío por email con link rastreable | Parcial — link manual con password/expiración | **15** |
@@ -463,7 +466,7 @@ el estudio en multi-propuesta y paga la deuda técnica señalada en
 
 ---
 
-## Fase 13 — Plantillas y biblioteca de contenido
+## Fase 13 — Plantillas y biblioteca de contenido — **completa**
 
 Convierte el trabajo hecho en activos reutilizables — el corazón del flujo
 "crear propuesta en 10 minutos".
@@ -514,34 +517,34 @@ pipeline) y verificado de punta a punta contra un servidor real (guardar,
 listar en galería, crear, confirmar "Dates not assigned" y las 44 páginas del
 itinerario retenidas).
 
-### 13.2 — Secciones guardadas y snippets
+### 13.2 — Secciones guardadas y snippets — **completa**
 
-1. Guardar una sección de la propuesta actual (payload + variante) en una
-   biblioteca global, con nombre y etiquetas.
-2. Nueva pestaña "Library" en el drawer de catálogo: buscar e insertar
-   secciones guardadas (pasando las mismas validaciones de compatibilidad de
-   diseño) — y arrastrarlas al canvas vía Fase 11.
-3. Snippets de texto (párrafos reutilizables: políticas, descripciones de
-   ciudades) insertables desde el inspector y desde la edición inline
-   (comando o botón "insertar snippet" en campos multiline).
+1. **Hecho.** Secciones libres (`refId == null`) se guardan como snapshot de
+   payload + variante, nombre, descripción y etiquetas; insertarlas siempre
+   crea una copia independiente.
+2. **Hecho.** La pestaña Library busca, filtra compatibilidad, inserta por
+   botón o drag al canvas y reutiliza la validación/orden transaccional de
+   composición.
+3. **Hecho.** Snippets globales se crean/buscan/archivan y se insertan en el
+   cursor desde campos multiline del inspector y edición inline.
 
-### 13.3 — Biblioteca de imágenes
+### 13.3 — Biblioteca de imágenes — **completa**
 
-1. Upload real de imágenes (hasta ahora todo es URL/asset preexistente):
-   almacenamiento en disco del volumen (`OPERATIONS.md` ya define backup),
-   límites de tamaño/formato, nombres content-hash.
-2. Grid de imágenes en el drawer Library con búsqueda por nombre/etiqueta;
-   los pickers de imagen (inspector y Fase 10.4) ofrecen "elegir de la
-   biblioteca | subir | URL".
-3. Registrar la decisión de object storage para producción en "decisiones a
-   revisitar" — el contrato de la biblioteca no debe asumir filesystem.
+1. **Hecho.** Upload autenticado de PNG/JPEG/WebP/GIF hasta 8 MB, validación
+   por magic bytes y nombres SHA-256; el volumen viaja junto al SQLite en
+   backup/restore.
+2. **Hecho.** Grid buscable por nombre/etiqueta y pickers de biblioteca en
+   inspector y popover inline; el URL libre existente permanece disponible.
+3. **Hecho.** `docs/OPERATIONS.md` registra el filesystem como adapter actual
+   reemplazable, con object storage S3-compatible como decisión de despliegue
+   a revisitar y claves estables sin rutas absolutas en la base.
 
-### 13.4 — Biblioteca de fees (precursor de Fase 14)
+### 13.4 — Biblioteca de fees (precursor de Fase 14) — **completa**
 
-1. Tabla de ítems de precio reutilizables: nombre, descripción, precio
-   unitario, moneda, unidad (por persona/noche/vehículo), impuesto aplicable.
-2. CRUD dentro del drawer Library; la Fase 14 los consumirá en la tabla de
-   precios.
+1. **Hecho.** Tabla de ítems reutilizables con precio entero en moneda menor,
+   moneda, unidad e impuesto en basis points.
+2. **Hecho.** Crear, editar, buscar y archivar desde Library; el contrato
+   tipado queda listo para ser consumido por Pricing 2.0.
 
 ### Criterios de aceptación
 

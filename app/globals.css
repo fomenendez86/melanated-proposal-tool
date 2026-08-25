@@ -230,6 +230,13 @@
   cursor: text;
 }
 
+.proposal-studio [data-page-content] [data-edit-field].proposal-studio-variable-region {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: color-mix(in srgb, var(--editor-brand) 58%, transparent);
+  text-underline-offset: 0.18em;
+}
+
 .proposal-studio-inline-editor {
   position: absolute;
   z-index: 10;

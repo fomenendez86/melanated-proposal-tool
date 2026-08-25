@@ -5,6 +5,7 @@ const baseUrl = "http://localhost:3100";
 const env = {
   ...process.env,
   DATABASE_URL: path.resolve("data/e2e-proposals.db"),
+  LIBRARY_UPLOAD_DIRECTORY: path.resolve("data/e2e-uploads"),
   E2E_BASE_URL: baseUrl,
   NEXT_DIST_DIR: ".next-e2e",
   NEXT_FONT_GOOGLE_MOCKED_RESPONSES: path.resolve("tests/fixtures/google-fonts.cjs"),

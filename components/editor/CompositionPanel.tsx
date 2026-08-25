@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Copy, Eye, EyeOff, FilePlus2, ListTree, RotateCcw, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, BookmarkPlus, Copy, Eye, EyeOff, FilePlus2, ListTree, RotateCcw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -11,6 +11,7 @@ import {
   setProposalSectionDeleted,
   setProposalSectionHidden,
 } from "@/app/proposals/[id]/editor/compositionActions";
+import { saveProposalSectionToLibrary } from "@/app/proposals/[id]/editor/libraryActions";
 import type { ProposalCompositionData } from "@/lib/composition/types";
 import type { ProposalDesignContext, ProposalSectionType } from "@/lib/designs/types";
 import { ADDABLE_SECTIONS } from "@/lib/editor/addableSections";
@@ -28,6 +29,8 @@ export default function CompositionPanel({ proposalId, composition, designContex
   const [pending, setPending] = useState("");
   const [error, setError] = useState("");
   const [newType, setNewType] = useState<ProposalSectionType>("triangleDivider");
+  const [savingItemId, setSavingItemId] = useState<number | null>(null);
+  const [libraryDraft, setLibraryDraft] = useState({ name: "", description: "", tags: "" });
 
   async function mutate(key: string, action: () => Promise<{ ok: boolean; formError?: string }>) {
     setPending(key);
@@ -94,6 +97,7 @@ export default function CompositionPanel({ proposalId, composition, designContex
                       if (await mutate(`hide-${item.id}`, () => setProposalSectionHidden(proposalId, item.id, !item.hidden))) setItems((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, hidden: !candidate.hidden } : candidate));
                     }} aria-label={item.hidden ? `Show ${item.label}` : `Hide ${item.label}`}>{item.hidden ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}</EditorButton>
                     <EditorButton type="button" variant="ghost" size="icon" className="size-9" disabled={pending === `copy-${item.id}`} onClick={() => void mutate(`copy-${item.id}`, () => duplicateProposalSection(proposalId, item.id))} aria-label={`Duplicate ${item.label}`}><Copy className="size-3.5" /></EditorButton>
+                    {item.reusable ? <EditorButton type="button" variant="ghost" size="icon" className="size-9" onClick={() => { setSavingItemId(item.id); setLibraryDraft({ name: item.label, description: "", tags: "" }); }} aria-label={`Save ${item.label} to library`}><BookmarkPlus className="size-3.5" /></EditorButton> : null}
                     <EditorButton type="button" variant="ghost" size="icon" className="size-9 text-editor-danger" disabled={pending === `delete-${item.id}`} onClick={async () => {
                       if (!window.confirm(`Delete ${item.label}? You can restore it from this panel.`)) return;
                       if (await mutate(`delete-${item.id}`, () => setProposalSectionDeleted(proposalId, item.id, true))) setItems((current) => current.map((candidate) => candidate.id === item.id ? { ...candidate, deleted: true, hidden: true } : candidate));
@@ -101,6 +105,18 @@ export default function CompositionPanel({ proposalId, composition, designContex
                   </>
                 )}
               </div>
+              {savingItemId === item.id ? (
+                <div className="mt-3 space-y-2 border-t border-editor-border-subtle pt-3">
+                  <p className="text-xs font-semibold text-editor-text">Save reusable section</p>
+                  <input aria-label="Saved section name" value={libraryDraft.name} onChange={(event) => setLibraryDraft((current) => ({ ...current, name: event.target.value }))} className={`h-11 w-full rounded-lg border border-editor-border bg-editor-raised px-3 text-sm text-editor-text ${editorFocusRing}`} placeholder="Section name" />
+                  <textarea aria-label="Saved section description" value={libraryDraft.description} onChange={(event) => setLibraryDraft((current) => ({ ...current, description: event.target.value }))} className={`w-full rounded-lg border border-editor-border bg-editor-raised px-3 py-2 text-sm text-editor-text ${editorFocusRing}`} rows={2} placeholder="Optional description" />
+                  <input aria-label="Saved section tags" value={libraryDraft.tags} onChange={(event) => setLibraryDraft((current) => ({ ...current, tags: event.target.value }))} className={`h-11 w-full rounded-lg border border-editor-border bg-editor-raised px-3 text-sm text-editor-text ${editorFocusRing}`} placeholder="Tags, separated by commas" />
+                  <div className="flex gap-2"><EditorButton type="button" variant="ghost" size="sm" className="flex-1" onClick={() => setSavingItemId(null)}>Cancel</EditorButton><EditorButton type="button" variant="primary" size="sm" className="flex-1" disabled={pending === `save-library-${item.id}`} onClick={async () => {
+                    const ok = await mutate(`save-library-${item.id}`, () => saveProposalSectionToLibrary(proposalId, item.id, { name: libraryDraft.name, description: libraryDraft.description, tags: libraryDraft.tags.split(",") }));
+                    if (ok) setSavingItemId(null);
+                  }}><BookmarkPlus className="size-3.5" /> Save</EditorButton></div>
+                </div>
+              ) : null}
             </article>
           ))}
         </div>

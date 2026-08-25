@@ -21,6 +21,7 @@ const ALL_SECTION_TYPES: ProposalSectionType[] = [
   "weather",
   "termsConditions",
   "thankYou",
+  "signature",
 ];
 
 const designs: DocumentDesignDescriptor[] = [
@@ -54,6 +55,7 @@ const designs: DocumentDesignDescriptor[] = [
       triangleDivider: "navy-triangle",
       sectionDivider: "editorial-bars",
     },
+    requiredVariablePaths: ["client.name", "trip.title"],
     rendererId: "melanated-blocks-v1",
     editorSchemaId: "structured-proposal-v1",
   },
@@ -87,6 +89,7 @@ const designs: DocumentDesignDescriptor[] = [
       triangleDivider: "clean-title",
       sectionDivider: "full-bleed",
     },
+    requiredVariablePaths: ["client.name", "trip.title"],
     rendererId: "melanated-blocks-v1",
     editorSchemaId: "structured-proposal-v1",
   },

@@ -52,6 +52,8 @@ output/
 /data/*.db-journal
 /data/*.db-shm
 /data/*.db-wal
+/data/uploads/
+/data/e2e-uploads/
 /backups/
 /test-results/
 /playwright-report/

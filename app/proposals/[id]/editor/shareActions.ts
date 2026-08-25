@@ -5,11 +5,13 @@ import { eq } from "drizzle-orm";
 
 import { hasValidSession } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
-import { getProposalData } from "@/lib/db/getProposalData";
+import { syncCommentThreadsForRevision } from "@/lib/db/commentThreads";
+import { getProposalDataSnapshot } from "@/lib/db/getProposalData";
 import { getProposalDesignContext } from "@/lib/db/getProposalDesignContext";
 import { nextProposalStatus } from "@/lib/db/proposalStatus";
 import { proposalEvents, proposalRevisions, proposalShares, proposals } from "@/lib/db/schema";
 import type { CreateShareResult } from "@/lib/sharing/types";
+import { findVariableIssues } from "@/lib/variables/catalog";
 
 export async function createProposalShare(
   proposalId: number,
@@ -28,8 +30,20 @@ export async function createProposalShare(
     return { ok: false, formError: "Expiration must be from 1 to 365 days." };
   }
 
-  const data = await getProposalData(proposalId);
+  const snapshot = await getProposalDataSnapshot(proposalId);
+  const data = snapshot.resolved;
   const designContext = await getProposalDesignContext(proposalId, data.sections.map((section) => section.type));
+  const unresolvedRequiredVariables = findVariableIssues(
+    snapshot.raw,
+    snapshot.variables,
+    designContext.active.requiredVariablePaths
+  ).filter((issue) => issue.required);
+  if (unresolvedRequiredVariables.length > 0) {
+    return {
+      ok: false,
+      formError: `Resolve required variable${unresolvedRequiredVariables.length === 1 ? "" : "s"}: ${unresolvedRequiredVariables.map((issue) => issue.token).join(", ")}.`,
+    };
+  }
   const createdAt = new Date();
   const expiresAt = new Date(createdAt.getTime() + expiresInDays * 86_400_000);
   const token = randomBytes(24).toString("hex");
@@ -46,6 +60,7 @@ export async function createProposalShare(
           designId: designContext.active.id,
           designVersion: designContext.active.version,
           data,
+          rawData: snapshot.raw,
           design: designContext.active,
           createdAt,
         })
@@ -69,6 +84,7 @@ export async function createProposalShare(
         type: "shared",
         createdAt,
       }).run();
+      syncCommentThreadsForRevision(transaction, proposalId, data.sections);
       const nextStatus = nextProposalStatus(proposal.status, "sent");
       if (nextStatus) {
         transaction.update(proposals).set({ status: nextStatus, updatedAt: createdAt }).where(eq(proposals.id, proposalId)).run();
