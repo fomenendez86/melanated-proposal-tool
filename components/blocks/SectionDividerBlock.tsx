@@ -22,7 +22,10 @@ export default function SectionDividerBlock({
         Proposal
       </div>
 
-      <div className="absolute inset-x-0 top-0 px-[82px] pt-[110px] text-center">
+      {/* The title starts below the brand rule, not level with it — see
+          reference/pdf-pages/page-20.png. The old 110px top crowded the mark
+          once the real logo replaced the small text wordmark. */}
+      <div className="absolute inset-x-0 top-0 px-[82px] pt-[168px] text-center">
         <h1 {...editableRegion("dividerTitle")} className="text-[77px] font-bold uppercase leading-none tracking-wide">
           {data.title}
         </h1>

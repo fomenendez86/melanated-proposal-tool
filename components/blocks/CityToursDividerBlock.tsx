@@ -24,7 +24,7 @@ export default function CityToursDividerBlock({
         <div className="absolute inset-x-0 top-8 flex items-center justify-between px-[71px] text-[10px] font-sans uppercase tracking-wide">
           <div className="flex items-center gap-2">
             <div className="h-[5px] w-[77px] bg-yellow-400" />
-            <span className="font-semibold"><BrandWordmark /></span>
+            <span className="font-semibold"><BrandWordmark onDark /></span>
           </div>
           <div className="text-right">Proposal</div>
         </div>
@@ -33,7 +33,7 @@ export default function CityToursDividerBlock({
           <h1 className="text-6xl font-bold uppercase leading-none">
             {data.city}
           </h1>
-          <p className="mt-2 font-serif text-4xl italic">
+          <p className="mt-2 font-script text-4xl">
             Tours &amp; Excursions <BrandIcon slot="globe" className="inline-block size-7 align-middle" />
           </p>
         </div>

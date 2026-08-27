@@ -139,13 +139,16 @@ documentarlo en `docs/PROJECT_STATUS.md`.
   panel contextual (Content/Design), catálogo, composición, revisión,
   compartir y PDF. La portada `/` redirige temporalmente a la propuesta seed
   `1`.
-- **Tipografía**: los bloques usan las clases Tailwind `font-serif` (títulos)
-  y `font-sans` (cuerpo, default). Ninguna referencia a un nombre de fuente
-  directo — `app/globals.css` resuelve `--font-serif` → `--font-heading` →
-  `--font-brand-heading` con fallback a la fuente sans cargada en
-  `lib/fonts.ts`. Para activar una fuente de marca real, ver
-  `docs/BRAND_ASSET_PACK.md`; no agregar más de dos roles tipográficos sin
-  una decisión de diseño explícita.
+- **Tipografía**: tres roles, y solo tres. Los bloques usan las clases
+  Tailwind `font-serif` (títulos, hoy Prata), `font-script` (acentos
+  manuscritos: "thank you", subtítulos de divisores, línea de cliente en la
+  portada; hoy Allura) y `font-sans` (cuerpo, default). Ninguna referencia a
+  un nombre de fuente directo — `app/globals.css` resuelve `--font-serif` →
+  `--font-heading` → `--font-brand-heading` y `--font-script` →
+  `--font-brand-script`, todo cargado en `lib/fonts.ts`. `font-script` nunca
+  se combina con `italic` (la fuente ya viene inclinada). El tercer rol se
+  aprobó explícitamente el 2026-08-27; no agregar un cuarto sin otra decisión
+  de diseño. Ver `docs/BRAND_ASSET_PACK.md`.
 - **Paginación automática** (`lib/paginate.ts`): Overview, ExcursionList y
   TermsConditions usan empaquetado por altura estimada (heurística basada en
   cantidad de caracteres por línea, no medición real del DOM — es

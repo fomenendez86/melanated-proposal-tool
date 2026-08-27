@@ -20,7 +20,7 @@ export default function TermsConditionsBlock({
       </div>
 
       {data.showTitle && (
-        <h1 className="mt-8 text-center font-serif text-4xl italic">
+        <h1 className="mt-8 text-center font-script text-5xl">
           Terms &amp; Conditions
         </h1>
       )}

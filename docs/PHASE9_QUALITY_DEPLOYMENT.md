@@ -57,9 +57,20 @@ verification, and guarded restore are implemented. See `OPERATIONS.md`.
 
 Reference-page PNGs are visual direction, not proof of rights or approval for
 extracted assets. The required handoff is the approved logo, licensed fonts,
-founder and travel photography, icons/illustrations, and usage rights. Until
-supplied, Picsum URLs and text/emoji stand-ins remain explicit placeholders;
-the final brand acceptance criterion must not be marked complete.
+founder and travel photography, icons/illustrations, and usage rights.
+
+**Partially closed on 2026-08-27, with the owner's explicit approval on each
+call — the criterion stays open.** Two slots now carry real assets: the
+typography (Prata for the display role, Allura for the script role, both OFL
+licensed, so they ship as-is) and the logo, extracted from
+`reference/pdf-pages/page-01.png` because that is the only copy of the mark in
+the repo. The extracted logo is an interim asset, approved as such: it is
+169x64 px, which is sharp at the sizes the document uses it but has no
+headroom above them, and it is not a substitute for the vector original. Still
+outstanding, and still blocking: the vector/high-resolution logo, founder and
+travel photography (Picsum URLs remain), and commissioned section icons (the
+globe and warning slots still render generic stand-ins). The final brand
+acceptance criterion must not be marked complete until those arrive.
 
 The import path for that handoff is now mechanical: the logo wordmark and the
 two fixed section icons (globe, warning triangle) are config-driven through

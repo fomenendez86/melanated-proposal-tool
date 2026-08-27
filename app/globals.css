@@ -11,6 +11,7 @@
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-brand-heading, var(--font-sans));
   --font-serif: var(--font-heading);
+  --font-script: var(--font-brand-script, var(--font-heading));
   --font-editor: var(--font-source-serif), var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);

@@ -42,7 +42,7 @@ export default function TwoColumnListBlock({ data }: TwoColumnListBlockProps) {
         <SectionHeader title={data.title} />
       </div>
 
-      <h1 className="mt-8 text-center font-serif text-5xl italic">
+      <h1 className="mt-8 text-center font-script text-6xl">
         {data.title}
       </h1>
 

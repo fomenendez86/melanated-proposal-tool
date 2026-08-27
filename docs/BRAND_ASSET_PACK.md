@@ -1,13 +1,21 @@
 # Brand asset pack — import pipeline
 
-**Status:** pipeline ready; no owner-approved assets received yet. This is the
-last open criterion of Phase 9 — see `PHASE9_QUALITY_DEPLOYMENT.md`.
+**Status:** partially imported (2026-08-27). Typography and the logo slot now
+carry real assets; photography and the commissioned icons do not, so this is
+still the last open criterion of Phase 9 — see `PHASE9_QUALITY_DEPLOYMENT.md`.
 
 ## What still needs to arrive
 
-The approved logo, licensed fonts, founder and travel photography, and any
-commissioned icons/illustrations, with usage rights confirmed. Until then,
-text/emoji stand-ins and stock placeholder photos remain in place on purpose.
+- **The vector or high-resolution logo.** What ships today was extracted from
+  `reference/pdf-pages/page-01.png` (the only copy of the mark in the repo) at
+  the owner's explicit direction, and is an interim asset: 169x64 px, sharp at
+  the sizes the document uses but with no headroom above them.
+- **Founder and travel photography.** Still Picsum placeholders; see the
+  data-driven section below.
+- **Commissioned section icons.** The `globe` and `warning` slots still render
+  generic stand-ins.
+
+Fonts are done: the display and script roles ship OFL-licensed faces (below).
 
 ## What "mechanical" means here
 
@@ -30,13 +38,30 @@ Two categories of placeholder exist, and they are handled differently:
   place the document currently prints the "Melanated Safaris" text wordmark
   (`PageHeader`, `CoverBlock`, `CityToursDividerBlock`, `ExcursionListBlock`,
   `SectionDividerBlock`).
-- To activate: drop the logo file at `public/brand/logo/wordmark.svg` (or
-  `.png`), then change `BRAND_LOGO` in `lib/brand/config.ts` to
-  `{ kind: "image", src: "/brand/logo/wordmark.svg", alt: "Melanated Safaris" }`.
-- `CityToursDividerBlock` renders its wordmark over a photo (not a flat
-  background). If the supplied logo is dark-on-transparent, check that
-  placement specifically once real photography is in — a reversed/light
-  logo variant may be needed there. Not solved yet; flag if it comes up.
+- **Live since 2026-08-27:** `{ kind: "image", src: "/brand/logo/wordmark.png",
+  srcOnDark: "/brand/logo/wordmark-on-dark.png", alt, width: 169, height: 64 }`.
+  Both files were extracted from `reference/pdf-pages/page-01.png`: the paper
+  white was unpremultiplied into a real alpha channel so the mark composites
+  over photos, and the reversed variant recolours the unsaturated ink (the
+  "SAFARIS" line and the fist's outlines) to white while the tricolour letters
+  keep their hue.
+- To replace it with the owner's original: drop the file at
+  `public/brand/logo/wordmark.svg` (or `.png`) and update `src` plus
+  `width`/`height` (the intrinsic pixels, used only for the aspect ratio).
+  Drop `srcOnDark` if the supplied mark already reads on dark.
+- **Sizing is a component concern, not a call-site one.** A stacked logo (icon
+  over wordmark over "SAFARIS") cannot inherit the 1em of the 10px uppercase
+  rules the call sites use, so `BrandWordmark` renders images at `h-[3.4em]`
+  by default; `CoverBlock` overrides it to 62px, matching page-01. Text mode
+  still inherits its line, unchanged.
+- **The dark-placement caveat is resolved.** `CityToursDividerBlock` renders
+  its wordmark over a photo and passes `onDark`, which swaps in the reversed
+  variant. The minimal-grid renderer's equivalent sits on a light surface and
+  does not.
+- Side effect worth knowing: `SectionDividerBlock`'s title started at
+  `pt-[110px]`, which crowded the real mark once it replaced the small text
+  wordmark. It moved to `pt-[168px]`, which is also where
+  `reference/pdf-pages/page-20.png` puts it.
 
 ### Section icons
 
@@ -64,18 +89,35 @@ Two categories of placeholder exist, and they are handled differently:
 
 ### Fonts
 
-- The document currently renders two roles: a heading/display treatment
-  (Tailwind `font-serif`, used for titles and italic accents across most
-  blocks) and body text (Tailwind `font-sans`, default). This two-role setup
-  is a deliberate simplification of the original PDF's seven named fonts —
-  see "Fidelidad visual" in the root `CLAUDE.md`. Do not wire more than two
-  roles without a design decision first.
+**Done — the document ships real type as of 2026-08-27.**
+
+- **Display role** (`font-serif` / `font-heading`): **Prata**, the high-contrast
+  serif the original PDF uses for the cover title. Loaded in `lib/fonts.ts` via
+  `next/font/google` under `--font-brand-heading`, which is the variable
+  `app/globals.css` already resolved to. Single weight (400), no italic.
+- **Script role** (`font-script`): **Allura**, for the handwritten accents —
+  "thank you", the divider subtitles, the cover's client line. This is a
+  **third** typographic role, approved by the owner on 2026-08-27 after seeing
+  the alternative (slanted Prata, which reads as a formal didone, not as the
+  original's handwriting). Never combine it with `italic`: the face is already
+  slanted, and Tailwind would synthesise a second slant on top.
+- **Body role** (`font-sans`): unchanged, still Geist. The original's body face
+  (Muli) has not been wired — swapping it would move every line break in the
+  document, and the paginator's budgets are tuned around the current metrics.
+- Both new faces are OFL licensed, so no rights handoff is pending for them.
+- The design descriptor (`lib/designs/registry.ts` →
+  `brand.headingFontFamily`/`bodyFontFamily`) has no field for a script role.
+  That is deliberate: adding one changes the versioned design contract. The
+  role lives purely in the CSS variable chain.
+- Do not add a fourth role without another design decision.
 - `app/globals.css` resolves `--font-serif` → `--font-heading` →
-  `--font-brand-heading` (falls back to the body sans font when unset). No
-  component references a font by name directly, so this is the only file
-  that needs to change.
-- `lib/fonts.ts` centralizes font loading (currently Geist via
-  `next/font/google`).
+  `--font-brand-heading`, and `--font-script` → `--font-brand-script` (each
+  falling back down the chain when unset). No component references a font by
+  name directly, so this is the only file that needs to change.
+- `lib/fonts.ts` centralizes font loading.
+- `tests/fixtures/google-fonts.cjs` mocks every Google font the app requests so
+  the E2E build never touches the network. **Adding a font means adding its
+  `css2?family=...` URL there too**, or the offline build fails.
 - To activate a licensed heading font:
   1. Add the font files under `public/brand/fonts/heading/`.
   2. In `lib/fonts.ts`, load it with `next/font/local` and

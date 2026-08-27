@@ -24,7 +24,7 @@ export default function ThankYouBlock({ data }: ThankYouBlockProps) {
       </div>
 
       <div className="absolute left-0 top-1/2 w-[55%] -translate-y-1/2 px-[82px]">
-        <p {...editableRegion("thankYouMessage", "multiline")} className="font-serif text-5xl italic">{data.message}</p>
+        <p {...editableRegion("thankYouMessage", "multiline")} className="font-script text-6xl">{data.message}</p>
       </div>
 
       <div className="absolute -bottom-24 -right-24 h-[420px] w-[420px] rotate-45 bg-[var(--design-primary,#1c202b)]" />

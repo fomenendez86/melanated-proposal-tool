@@ -8,6 +8,47 @@ made, or a new pendiente is found.
 
 ## Estado general
 
+**Paquete de marca: tipografía y logo importados (2026-08-27); Fase 9 sigue
+abierta.** El gate de marca estaba bloqueado esperando assets del dueño. Dos de
+los cuatro slots se pudieron cerrar de verdad, cada uno con una decisión
+explícita del dueño tomada en el momento:
+
+- **Tipografía — hecha, con licencia.** El rol display pasó a **Prata**, el
+  serif de alto contraste que el PDF original usa en el título de portada, y se
+  agregó un **tercer rol tipográfico** (`font-script`) con **Allura** para los
+  acentos manuscritos — "thank you", los subtítulos de divisor, la línea de
+  cliente en la portada. Las dos son OFL, así que no queda handoff de derechos
+  pendiente por fuentes. El tercer rol era justamente lo que
+  `BRAND_ASSET_PACK.md` reservaba como decisión del dueño: la alternativa era
+  dejar esos acentos como Prata inclinada, que lee como didone formal y no como
+  la letra manuscrita del original. Se comparó contra
+  `reference/pdf-pages/page-01/20/21/39.png` antes de aprobar. El cuerpo sigue
+  en Geist a propósito: cambiarlo movería cada corte de línea del documento y
+  los presupuestos del paginador están calibrados sobre esas métricas.
+- **Logo — importado, pero interino.** El wordmark real ("MELANATED" tricolor +
+  puño sobre África + "SAFARIS") solo existía en el repo dentro de los PNG de
+  referencia a ~100dpi. Con aprobación explícita se extrajo de
+  `page-01.png`: el blanco del papel se despremultiplicó a un canal alfa real
+  (los trazos rojo/oro/verde conservan su tono en vez de ensuciarse), y se
+  generó una **variante reversada** que pasa a blanco la tinta sin saturación
+  —la línea "SAFARIS" y los contornos del puño— para las ubicaciones sobre
+  foto. Eso cierra el caveat que el doc dejaba anotado como "no resuelto" para
+  `CityToursDividerBlock`. Es 169x64 px: nítido en los tamaños que el documento
+  usa, sin headroom por encima. **No reemplaza al vectorial** — el criterio de
+  aceptación de marca sigue sin marcarse.
+
+Dos efectos colaterales del logo real, ambos verificados contra la referencia:
+`BrandWordmark` ahora define la altura del logo (un logo apilado no puede
+heredar el `1em` de las reglas de 10px donde antes iba el texto: default
+`h-[3.4em]`, portada 62px), y el título de `SectionDividerBlock` bajó de
+`pt-[110px]` a `pt-[168px]`, que es donde lo pone `page-20.png` — el valor
+viejo apretaba la marca contra el título.
+
+Sigue pendiente y sigue bloqueando Fase 9: el logo vectorial o en alta, la
+fotografía real (todo el seed sigue en Picsum) y los íconos comisionados (los
+slots `globe` y `warning` siguen con stand-ins genéricos; en el original el
+"globe" es en realidad la bandera de Tanzania en pincelada).
+
 **Suite E2E migrada a build de producción; dos bugs reales de producción
 encontrados y corregidos (2026-08-27).** Al ir a cerrar los 6 fallos
 deterministas anotados abajo, 4 ya no se reproducían (2 de `dashboard.spec.ts`
@@ -1379,13 +1420,17 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
   medía 28px de ancho — una sola palabra —; con el fix, [138, 77, 116]).
   Como `coverSubtitle`/`clientName` son campos editables por el usuario, el
   fix es genérico (cualquier texto futuro), no un ajuste del string default.
-- Fuentes custom del original (Prata, BankGothicBT, Muli, Gotham-Bold,
-  PalmClubScript, Oswald, EBGaramond, etc.) — todo usa la fuente sans por
-  defecto + serif/italic genérico como aproximación. El hook para
-  reemplazarlas ya existe (`--font-serif` → `--font-heading` →
-  `--font-brand-heading` en `app/globals.css`); ver `docs/BRAND_ASSET_PACK.md`.
-- Logo real como imagen — sigue siendo texto placeholder (config-driven,
-  ver arriba).
+- ~~Fuentes custom del original — todo usa la sans por defecto + serif/italic
+  genérico.~~ Cerrado el 2026-08-27 en sus dos roles visibles: display en
+  **Prata** y acentos manuscritos en **Allura** (ambas OFL). De la lista
+  original quedan sin replicar las comerciales (BankGothicBT, Gotham-Bold,
+  PalmClubScript) y las de cuerpo/condensadas (Muli, Oswald, EBGaramond): el
+  sistema tiene tres roles a propósito, no siete, y el cuerpo sigue en Geist
+  porque cambiarlo movería cada corte de línea y recalibraría el paginador.
+- Logo real como imagen — **importado el 2026-08-27, pero interino**: extraído
+  de `reference/pdf-pages/page-01.png` a 169x64 px con alfa real y variante
+  reversada para fondos oscuros. Falta el vectorial o una versión en alta del
+  dueño; hasta entonces el criterio de marca de Fase 9 no se marca completo.
 - ~~Iconos e ilustraciones hechas a mano (pasaporte, visa, conchas,
   clima)~~ — parcialmente atendido (ver "Limpieza de pendientes" arriba):
   emoji del seed mejorados/completados donde faltaban (clima, seguro de

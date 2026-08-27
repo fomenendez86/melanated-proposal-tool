@@ -24,7 +24,9 @@ export default function CoverBlock({ data }: CoverBlockProps) {
 
       <div className="absolute left-0 top-0 h-full w-[32%] px-10 py-10 text-[var(--design-primary,#1c202b)]">
         <p className="text-[10px] font-semibold uppercase tracking-[0.12em]">
-          <BrandWordmark />
+          {/* The cover carries the mark larger than the running header rules do,
+              matching reference/pdf-pages/page-01.png. */}
+          <BrandWordmark className="h-[62px]" />
         </p>
 
         <div className="mt-4 flex h-[640px] items-center justify-center">
@@ -37,7 +39,7 @@ export default function CoverBlock({ data }: CoverBlockProps) {
           <p {...editableRegion("coverSubtitle", "multiline")} className="text-pretty text-[12px] font-bold uppercase leading-4 tracking-[0.1em]">
             {data.subtitle}
           </p>
-          <p {...editableRegion("clientName")} className="text-pretty mt-3 font-serif text-2xl italic">{data.clientLine}</p>
+          <p {...editableRegion("clientName")} className="text-pretty mt-3 font-script text-3xl">{data.clientLine}</p>
         </div>
       </div>
     </div>

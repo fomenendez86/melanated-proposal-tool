@@ -26,7 +26,7 @@ export default function TriangleDividerBlock({
               <p
                 key={index}
                 {...(index < TITLE_LINE_FIELDS.length ? editableRegion(TITLE_LINE_FIELDS[index]) : {})}
-                className="font-serif text-5xl italic leading-tight"
+                className="font-script text-6xl leading-tight"
               >
                 {line.text}
               </p>
