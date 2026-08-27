@@ -24,6 +24,11 @@ export async function saveCurrentProposalAsTemplateAction(
   if (description && description.length > 500) return { ok: false, formError: "Description is too long." };
 
   const result = await saveProposalAsTemplate(proposalId, { name, description });
-  if (result.ok) revalidatePath("/proposals/templates");
+  if (result.ok) {
+    revalidatePath("/proposals/templates");
+    // The dashboard's "New proposal" dialog offers the same template list, and
+    // /proposals is prerendered — without this it keeps serving the old one.
+    revalidatePath("/proposals");
+  }
   return result;
 }

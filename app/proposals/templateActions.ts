@@ -15,6 +15,9 @@ export interface TemplateMutationResult {
 
 function revalidateTemplates() {
   revalidatePath("/proposals/templates");
+  // The dashboard's "New proposal" dialog offers the same template list, and
+  // /proposals is prerendered — without this it keeps serving the old one.
+  revalidatePath("/proposals");
 }
 
 async function getTemplateRow(templateId: number) {

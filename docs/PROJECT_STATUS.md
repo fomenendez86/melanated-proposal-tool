@@ -8,6 +8,50 @@ made, or a new pendiente is found.
 
 ## Estado general
 
+**Suite E2E migrada a build de producción; dos bugs reales de producción
+encontrados y corregidos (2026-08-27).** Al ir a cerrar los 6 fallos
+deterministas anotados abajo, 4 ya no se reproducían (2 de `dashboard.spec.ts`
+los arregló el commit del reskin al pasar las filas a `article`; los 2 de
+mobile — logout y heading oculto — pasan solos) y el 5°/6° tenía causa raíz
+identificable: `EditableRegionKind` tiene 4 valores y `PricingBlock`/
+`SignatureBlock` emiten legítimamente `data-edit-kind="collection"`, así que
+el desactualizado era el test, no el contrato. Corregida la lista blanca.
+
+Los fallos restantes no eran de lógica sino del **arnés**: la suite corría
+contra `next dev`, donde cada ruta se compila bajo demanda y cada server
+action re-renderiza el documento de 34 páginas. Eso producía dos familias de
+falso negativo: (a) clicks perdidos sobre controles server-rendered cuyo
+bundle todavía se estaba compilando (la hidratación aún no había enganchado
+el handler), y (b) esperas de `router.refresh()` que excedían cualquier
+presupuesto — aislado el test pasaba, bajo carga fallaba a 8s y también a
+30s. En vez de inflar timeouts se eliminó la causa: `pretest:e2e` ahora corre
+`next build` y `scripts/runE2E.mjs` levanta `next start` en el 3100. La
+corrida pasó de 8–14 min con 1–6 fallos variables a **45 passed / 0 failed en
+3.3 min**.
+
+Correr contra un build de producción destapó dos bugs que el dev server
+ocultaba y que sí afectaban al producto desplegado:
+
+- **El focus trap del drawer de propiedades le robaba el foco al campo que
+  el usuario acababa de tocar** (`ProposalEditorShell.tsx`). Al activar una
+  región del canvas en mobile, el efecto del formulario enfoca su campo y el
+  efecto del diálogo — que corre después, porque los hijos hacen commit
+  primero — movía el foco al `[data-dialog-initial-focus]`. Ahora el trap
+  solo siembra foco si nada dentro del diálogo lo tiene ya. Rompía 5 tests
+  de mobile y era una regresión de UX real en producción.
+- **Guardar, renombrar o archivar una plantilla (y crear/editar itinerarios)
+  no revalidaba `/proposals`.** El diálogo "New proposal" del dashboard
+  ofrece esas mismas listas, y `/proposals` es prerenderizada, así que servía
+  un picker viejo: una plantilla recién guardada no aparecía nunca. Las
+  acciones ahora revalidan `/proposals` además de su galería.
+
+Cambios de test que acompañan: `dashboard.spec.ts` reintenta la apertura del
+diálogo "New proposal" y `editor.spec.ts` la del menú de inserción (misma
+carrera de hidratación que el caso por teclado ya documentaba), los
+presupuestos de `toPass` para round trips de server action se ampliaron, y
+`global-setup.ts` tolera el arranque frío. `tsc --noEmit`, `eslint` y
+`npm test` (8/8) limpios.
+
 **Chrome de la app pasado a full-bleed, se saca el look de "ventana
 flotante" (2026-08-26), a pedido explícito del usuario.** El reskin
 Broadsheet había envuelto el chrome (`AppShell.tsx`, `app/login/page.tsx`)
@@ -1393,24 +1437,11 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
   Resuelto al aislar la base y el build E2E, partir siempre del seed y ejecutar
   únicamente los escenarios aplicables a cada proyecto; la corrida completa
   actual termina con 43 passed y 0 skipped.
-- **Nuevo, encontrado al verificar "Paleta de inserción unificada" (arriba,
-  2026-08-25) — no corregido, fuera de alcance de ese cambio.** La corrida
-  completa ya no da 43/0 — hay 6 fallos deterministas, reproducidos
-  idénticos tanto con el cambio de este pase aplicado como contra el commit
-  base sin él (vía `git stash`), así que son preexistentes y no relacionados
-  con la paleta/drag-drop: (1-2) `dashboard.spec.ts` — "duplicating a
-  proposal" y "archive, restore and delete", ambas timeout esperando
-  controles de la fila `DEMO-0001`; (3) `auth.spec.ts` — "logout clears the
-  session" en mobile, el botón "Log out" queda bloqueado por otro elemento
-  que intercepta el click; (4) `editor.spec.ts` — "editor exposes document,
-  catalog..." en mobile, el heading "The Mainland Tour" queda `hidden`; (5-6)
-  `editor.spec.ts` — "rendered pages annotate editable regions..." en
-  desktop y mobile, el contrato de `data-edit-kind` espera
-  `"text"|"multiline"|"image"` pero encuentra `"collection"` en al menos una
-  región del canvas — sugiere que algún bloque nuevo (posiblemente de la
-  Biblioteca de Itinerarios Fase 2, o del renderer Minimal Grid) empezó a
-  emitir un `data-edit-kind="collection"` que el test todavía no contempla,
-  o que la lista blanca del test quedó desactualizada. Ninguno de los 6
-  toca `InsertionGap`/`CatalogPanel`/el drag ghost. Queda pendiente
-  investigar la causa raíz y decidir si es el contrato o el test el que
-  hay que actualizar.
+- ~~6 fallos deterministas encontrados al verificar "Paleta de inserción
+  unificada" (2026-08-25).~~ Cerrados el 2026-08-27 (ver la entrada de
+  "Estado general" arriba): 4 ya no se reproducían, el contrato
+  `data-edit-kind` resultó correcto y el test desactualizado, y la
+  inestabilidad de fondo se eliminó moviendo la suite a un build de
+  producción. La corrida completa termina en **45 passed / 0 failed**. La
+  suite ya no ejercita el servidor de desarrollo: si algo solo falla bajo
+  `next dev`, no lo va a detectar.

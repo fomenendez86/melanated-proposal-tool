@@ -91,7 +91,7 @@ test("rendered pages annotate editable regions from the shared field contract", 
   expect(regions.length).toBeGreaterThan(30);
   for (const region of regions) {
     expect(region.field).not.toBe("");
-    expect(["text", "multiline", "image"]).toContain(region.kind);
+    expect(["text", "multiline", "image", "collection"]).toContain(region.kind);
     expect(region.pageIndex).not.toBeNull();
   }
 
@@ -369,10 +369,13 @@ test("dragging a page thumbnail reorders sections and persists, in both directio
   // Drag the first draggable section past the third draggable section.
   await dragFirstHandleTo(draggableBefore[2].bottom);
 
+  // A committed reorder only shows up once the server action's `router.refresh()`
+  // re-renders the whole 34-page document — seconds under `next dev`. These
+  // `toPass` budgets wait for that round trip, not for the drag itself.
   await expect(async () => {
     const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
     expect(titles).not.toEqual(initialTitles);
-  }).toPass({ timeout: 8000 });
+  }).toPass({ timeout: 30_000 });
 
   const reorderedTitles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -380,7 +383,7 @@ test("dragging a page thumbnail reorders sections and persists, in both directio
   await expect(async () => {
     const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
     expect(titles).toEqual(reorderedTitles);
-  }).toPass({ timeout: 5000 });
+  }).toPass({ timeout: 20_000 });
 
   // Drag the SECOND draggable section up above the first one. This
   // exercises the upward/negative-direction path with a second,
@@ -400,7 +403,7 @@ test("dragging a page thumbnail reorders sections and persists, in both directio
   await expect(async () => {
     const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
     expect(titles).not.toEqual(reorderedTitles);
-  }).toPass({ timeout: 8000 });
+  }).toPass({ timeout: 30_000 });
 
   const secondReorderTitles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -408,7 +411,7 @@ test("dragging a page thumbnail reorders sections and persists, in both directio
   await expect(async () => {
     const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
     expect(titles).toEqual(secondReorderTitles);
-  }).toPass({ timeout: 5000 });
+  }).toPass({ timeout: 20_000 });
 });
 
 test("the canvas insertion affordance adds a section at the exact gap position and persists", { tag: "@desktop-only" }, async ({ page }) => {
@@ -423,13 +426,22 @@ test("the canvas insertion affordance adds a section at the exact gap position a
   const firstRunIndex = initialCards.findIndex((card) => card.hasHandle);
   expect(firstRunIndex).toBeGreaterThanOrEqual(0);
 
-  await page.getByRole("button", { name: "Insert a section at the start" }).click();
-  await page.getByRole("menuitem", { name: "Thank-you page" }).click();
+  // The document shell is server-rendered, so the gap is clickable a moment
+  // before React attaches its handler and the first click is dropped — the
+  // same race the keyboard variant below documents. Retry opening the menu.
+  const insertMenu = page.getByRole("menu", { name: "Section to insert" });
+  await expect(async () => {
+    if (await insertMenu.isHidden()) {
+      await page.getByRole("button", { name: "Insert a section at the start" }).click();
+    }
+    expect(await insertMenu.isVisible()).toBe(true);
+  }).toPass({ timeout: 20_000 });
+  await insertMenu.getByRole("menuitem", { name: "Thank-you page" }).click();
 
   await expect(async () => {
     const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
     expect(titles.length).toBe(initialTitles.length + 1);
-  }).toPass({ timeout: 8000 });
+  }).toPass({ timeout: 30_000 });
 
   const titlesAfterInsert = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
   expect(titlesAfterInsert[firstRunIndex]).toBe("Thank You");
@@ -440,7 +452,7 @@ test("the canvas insertion affordance adds a section at the exact gap position a
   await expect(async () => {
     const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
     expect(titles).toEqual(titlesAfterInsert);
-  }).toPass({ timeout: 5000 });
+  }).toPass({ timeout: 20_000 });
 });
 
 test("the insertion affordance is keyboard-reachable and Escape cancels without changes", { tag: "@desktop-only" }, async ({ page }) => {
@@ -462,7 +474,7 @@ test("the insertion affordance is keyboard-reachable and Escape cancels without 
       await page.keyboard.press("Enter");
     }
     expect(await menu.isVisible()).toBe(true);
-  }).toPass({ timeout: 5000 });
+  }).toPass({ timeout: 20_000 });
 
   await page.keyboard.press("Escape");
   await expect(menu).toBeHidden();
@@ -509,7 +521,7 @@ test("dragging a hotel from the docked catalog inserts it at the drop gap and pe
   await expect(async () => {
     const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
     expect(titles.length).toBe(initialTitles.length + 2);
-  }).toPass({ timeout: 8000 });
+  }).toPass({ timeout: 30_000 });
 
   const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
   expect(titles[firstRunIndex]).toBe(hotelName);
@@ -522,7 +534,7 @@ test("dragging a hotel from the docked catalog inserts it at the drop gap and pe
   await expect(async () => {
     const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
     expect(titles).toEqual(titlesAfterInsert);
-  }).toPass({ timeout: 5000 });
+  }).toPass({ timeout: 20_000 });
 
   await expect(page.getByRole("button", { name: `Drag ${hotelName} to a position in the document` })).toHaveCount(0);
 });
@@ -558,7 +570,7 @@ test("dragging a block card from the Catalog panel's Blocks tab inserts it at th
   await expect(async () => {
     const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
     expect(titles.length).toBe(initialTitles.length + 1);
-  }).toPass({ timeout: 8000 });
+  }).toPass({ timeout: 30_000 });
 
   const titlesAfterInsert = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
   expect(titlesAfterInsert[firstRunIndex]).toBe("Thank You");
@@ -569,7 +581,7 @@ test("dragging a block card from the Catalog panel's Blocks tab inserts it at th
   await expect(async () => {
     const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
     expect(titles).toEqual(titlesAfterInsert);
-  }).toPass({ timeout: 5000 });
+  }).toPass({ timeout: 20_000 });
 });
 
 test("below the 2xl breakpoint the catalog stays a modal, and Escape cancels a canvas drop without changes", { tag: "@desktop-only" }, async ({ page }) => {

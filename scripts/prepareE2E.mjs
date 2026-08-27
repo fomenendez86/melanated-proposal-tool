@@ -36,3 +36,15 @@ const seed = spawnSync(process.execPath, ["--import", "./tests/tsx-bootstrap.mjs
   env,
 });
 if (seed.status !== 0) process.exit(seed.status ?? 1);
+
+// Build once here instead of letting `next dev` compile routes on demand
+// during the run. On-demand compilation was the single largest source of
+// flakiness: a route's first hit paid seconds of compile time, and the client
+// bundle could still be compiling when Playwright clicked a server-rendered
+// control, so the pre-hydration click was silently dropped.
+const build = spawnSync(process.execPath, ["node_modules/next/dist/bin/next", "build"], {
+  stdio: "inherit",
+  env,
+  windowsHide: true,
+});
+if (build.status !== 0) process.exit(build.status ?? 1);

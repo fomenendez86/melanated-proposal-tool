@@ -1,4 +1,19 @@
 import { expect, test } from "playwright/test";
+import type { Locator, Page } from "playwright/test";
+
+// `next dev` compiles client chunks on demand, so a server-rendered control
+// can be clickable seconds before React attaches its handler — the first
+// click is then silently dropped. Retry until the dialog actually mounts
+// instead of assuming a single click registered; the trigger only ever sets
+// `open` to true, so an extra click is harmless.
+async function openNewProposalDialog(page: Page): Promise<Locator> {
+  const dialog = page.getByRole("dialog", { name: "New proposal" });
+  await expect(async () => {
+    await page.getByRole("button", { name: "New proposal" }).click();
+    await expect(dialog).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 60_000 });
+  return dialog;
+}
 
 test("dashboard lists proposals and supports search", { tag: "@desktop-only" }, async ({ page }) => {
   await page.goto("/proposals", { waitUntil: "domcontentloaded" });
@@ -14,9 +29,7 @@ test("dashboard lists proposals and supports search", { tag: "@desktop-only" }, 
 
 test("creating a blank proposal seeds only the base pages", { tag: "@desktop-only" }, async ({ page }) => {
   await page.goto("/proposals", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "New proposal" }).click();
-  const dialog = page.getByRole("dialog", { name: "New proposal" });
-  await expect(dialog).toBeVisible();
+  const dialog = await openNewProposalDialog(page);
   await dialog.getByLabel("Trip name").fill("E2E Blank Trip");
   await dialog.getByRole("button", { name: "Create proposal" }).click();
 
@@ -37,8 +50,7 @@ test("duplicating a proposal creates an independent copy", { tag: "@desktop-only
 
 test("archive, restore and delete manage lifecycle from the dashboard", { tag: "@desktop-only" }, async ({ page }) => {
   await page.goto("/proposals", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "New proposal" }).click();
-  const dialog = page.getByRole("dialog", { name: "New proposal" });
+  const dialog = await openNewProposalDialog(page);
   await dialog.getByLabel("Trip name").fill("E2E Lifecycle Trip");
   await dialog.getByRole("button", { name: "Create proposal" }).click();
   await page.waitForURL(/\/proposals\/\d+\/editor/);

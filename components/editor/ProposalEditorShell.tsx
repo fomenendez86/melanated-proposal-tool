@@ -1506,8 +1506,12 @@ export default function ProposalEditorShell({
         (element) => !element.hasAttribute("aria-hidden")
       );
 
+    // Activating a canvas region opens this drawer *and* focuses the field it
+    // maps to; that form effect runs before this one (children commit first),
+    // so pulling focus unconditionally would steal it from the field the user
+    // just tapped. Only seed focus when nothing inside the dialog holds it.
     const initialFocus = dialog.querySelector<HTMLElement>("[data-dialog-initial-focus]");
-    initialFocus?.focus();
+    if (!dialog.contains(document.activeElement)) initialFocus?.focus();
 
     function handleDialogKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {

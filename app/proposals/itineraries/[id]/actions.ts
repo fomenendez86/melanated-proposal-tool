@@ -31,6 +31,9 @@ export interface ItineraryRowMutationResult {
 function revalidateItinerary(itineraryId: number) {
   revalidatePath(`/proposals/itineraries/${itineraryId}/edit`);
   revalidatePath("/proposals/itineraries");
+  // Same reason as the template lists: the dashboard's "New proposal" dialog
+  // picks an itinerary from this list, and /proposals is prerendered.
+  revalidatePath("/proposals");
 }
 
 async function verifyItinerary(itineraryId: number) {

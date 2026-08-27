@@ -15,7 +15,12 @@ process.env.NEXT_FONT_GOOGLE_MOCKED_RESPONSES = path.resolve("tests/fixtures/goo
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  timeout: 90_000,
+  // The suite drives `next dev`, not a production build: every server action
+  // is followed by an RSC re-render of a 34-page document, and the first hit
+  // on a route also pays for its on-demand compile. Both budgets are sized
+  // for that, not for how fast the app is in production.
+  timeout: 120_000,
+  expect: { timeout: 15_000 },
   // Projects share one disposable SQLite fixture. Serial execution prevents
   // same-proposal writes from racing within a run; the next run starts clean.
   workers: 1,

@@ -43,9 +43,11 @@ if (await responds(`${baseUrl}/api/health`)) {
   throw new Error(`Port 3100 is already serving an application. Stop it before running the isolated E2E suite.`);
 }
 
+// Serves the production build produced by `pretest:e2e` — see the comment
+// there for why the suite does not run against `next dev`.
 const server = spawn(
   process.execPath,
-  ["node_modules/next/dist/bin/next", "dev", "--hostname", "localhost", "--port", "3100"],
+  ["node_modules/next/dist/bin/next", "start", "--hostname", "localhost", "--port", "3100"],
   { env, stdio: "inherit", windowsHide: true }
 );
 

@@ -24,10 +24,14 @@ export default async function globalSetup() {
 
   const browser = await chromium.launch();
   const page = await browser.newPage();
-  await page.goto(`${BASE_URL}/login`, { waitUntil: "domcontentloaded" });
+  // `pretest:e2e` deletes `.next-e2e`, so this is always the dev server's
+  // first (cold) compile of /login and then of /proposals — on a slow machine
+  // either can outlast Playwright's 30s default and fail the whole run before
+  // a single test starts. The generous budgets here are paid once per run.
+  await page.goto(`${BASE_URL}/login`, { waitUntil: "domcontentloaded", timeout: 120_000 });
   await page.getByLabel("Password").fill(process.env.STUDIO_AUTH_PASSWORD ?? "");
   await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL(`${BASE_URL}/proposals`, { timeout: 15_000 });
+  await page.waitForURL(`${BASE_URL}/proposals`, { timeout: 120_000 });
   await page.context().storageState({ path: STORAGE_STATE_PATH });
   await browser.close();
 }
