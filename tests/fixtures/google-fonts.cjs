@@ -34,6 +34,15 @@ const allura = `
   }
 `;
 
+const outfit = `
+  @font-face {
+    font-family: 'Outfit';
+    font-style: normal;
+    font-weight: 100 900;
+    src: local('Segoe UI'), local('Arial');
+  }
+`;
+
 const prata = `
   @font-face {
     font-family: 'Prata';
@@ -47,6 +56,7 @@ module.exports = {
   "https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap": geist,
   "https://fonts.googleapis.com/css2?family=Geist+Mono:wght@100..900&display=swap": geistMono,
   "https://fonts.googleapis.com/css2?family=Allura:wght@400&display=swap": allura,
+  "https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap": outfit,
   "https://fonts.googleapis.com/css2?family=Prata:wght@400&display=swap": prata,
   "https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@200..900&display=swap": sourceSerif4,
 };

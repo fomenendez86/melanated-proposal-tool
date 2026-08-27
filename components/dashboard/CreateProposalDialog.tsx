@@ -5,12 +5,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { createProposal } from "@/app/proposals/actions";
-import { EditorButton, EditorNotice, EditorSegmentedControl, editorFocusRing } from "@/components/editor/EditorUi";
+import AdminButton from "@/components/admin/ui/AdminButton";
+import AdminSegmentedControl from "@/components/admin/ui/AdminSegmentedControl";
+import { EditorNotice } from "@/components/editor/EditorUi";
 import type { ClientOption } from "@/lib/db/getClientOptions";
 import type { ItineraryPickerRow } from "@/lib/db/getItineraryList";
 import type { DocumentDesignDescriptor } from "@/lib/designs/types";
 
-const inputClass = `h-11 w-full rounded-editor-md border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`;
+const inputClass =
+  "h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-theme-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10";
 
 export default function CreateProposalDialog({
   clients,
@@ -127,31 +130,30 @@ export default function CreateProposalDialog({
 
   return (
     <>
-      <EditorButton ref={triggerRef} type="button" variant="primary" onClick={() => setOpen(true)}>
-        <FilePlus className="size-4" aria-hidden="true" />
+      <AdminButton ref={triggerRef} type="button" size="sm" startIcon={<FilePlus className="size-4" aria-hidden="true" />} onClick={() => setOpen(true)}>
         New proposal
-      </EditorButton>
+      </AdminButton>
       {open ? (
-        <div ref={dialogRef} className="fixed inset-0 z-[70] grid place-items-center bg-editor-overlay p-4" role="dialog" aria-modal="true" aria-labelledby="create-proposal-title">
-          <div className="w-full max-w-md rounded-editor-lg border border-editor-border bg-editor-panel p-5 shadow-2xl">
+        <div ref={dialogRef} className="fixed inset-0 z-[70] grid place-items-center bg-gray-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="create-proposal-title">
+          <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-lg">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="flex items-center gap-2 text-editor-brand">
+                <div className="flex items-center gap-2 text-brand-500">
                   <FilePlus className="size-4" aria-hidden="true" />
-                  <h2 id="create-proposal-title" className="text-lg font-semibold">New proposal</h2>
+                  <h2 id="create-proposal-title" className="text-theme-xl font-semibold text-gray-800">New proposal</h2>
                 </div>
-                <p className="mt-1 text-sm leading-5 text-editor-text-muted">Start from a blank document or duplicate an existing proposal.</p>
+                <p className="mt-1 text-theme-sm leading-5 text-gray-500">Start from a blank document or duplicate an existing proposal.</p>
               </div>
-              <EditorButton type="button" variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close new proposal dialog">
+              <AdminButton type="button" variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Close new proposal dialog">
                 <X className="size-5" aria-hidden="true" />
-              </EditorButton>
+              </AdminButton>
             </div>
 
             <div className="mt-5 space-y-4">
               <div>
-                <span className="text-xs font-semibold text-editor-text">Client</span>
+                <span className="text-theme-xs font-medium text-gray-700">Client</span>
                 <div className="mt-1.5">
-                  <EditorSegmentedControl
+                  <AdminSegmentedControl
                     label="Client source"
                     value={clientMode}
                     onChange={setClientMode}
@@ -181,12 +183,12 @@ export default function CreateProposalDialog({
                 )}
               </div>
 
-              <label className="block text-xs font-semibold text-editor-text">
+              <label className="block text-theme-xs font-medium text-gray-700">
                 Trip name
                 <input aria-label="Trip name" className={`mt-1.5 ${inputClass}`} value={tripName} onChange={(event) => setTripName(event.target.value)} placeholder="e.g. The Mainland Tour" />
               </label>
 
-              <label className="block text-xs font-semibold text-editor-text">
+              <label className="block text-theme-xs font-medium text-gray-700">
                 Document design
                 <select aria-label="Document design" className={`mt-1.5 ${inputClass}`} value={designChoice} onChange={(event) => setDesignChoice(event.target.value)}>
                   {designs.map((design) => (
@@ -198,9 +200,9 @@ export default function CreateProposalDialog({
               </label>
 
               <div>
-                <span className="text-xs font-semibold text-editor-text">Start from</span>
+                <span className="text-theme-xs font-medium text-gray-700">Start from</span>
                 <div className="mt-1.5">
-                  <EditorSegmentedControl
+                  <AdminSegmentedControl
                     label="Proposal origin"
                     value={origin}
                     onChange={setOrigin}
@@ -272,9 +274,9 @@ export default function CreateProposalDialog({
               </div>
 
               {error ? <EditorNotice tone="danger" className="px-3 py-2 text-xs">{error}</EditorNotice> : null}
-              <EditorButton type="button" variant="primary" className="w-full" disabled={loading} onClick={() => void submit()}>
+              <AdminButton type="button" className="w-full" disabled={loading} onClick={() => void submit()}>
                 {loading ? "Creating…" : "Create proposal"}
-              </EditorButton>
+              </AdminButton>
             </div>
           </div>
         </div>

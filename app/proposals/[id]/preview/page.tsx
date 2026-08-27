@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 
-import AppShell from "@/components/app/AppShell";
+import AppShell from "@/components/admin/AdminShell";
 import { editorButtonStyles } from "@/components/editor/EditorUi";
 import ProposalRenderer from "@/components/ProposalRenderer";
 import { getProposalData } from "@/lib/db/getProposalData";

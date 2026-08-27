@@ -8,6 +8,59 @@ made, or a new pendiente is found.
 
 ## Estado general
 
+**El área de dashboard pasa a una plantilla de admin vendorizada (2026-08-27),
+por decisión explícita del usuario.** La plantilla es TailAdmin (edición free
+Next.js, MIT, Copyright (c) 2023 TailAdmin) — se la nombra acá y en los headers
+de los archivos porque la licencia MIT lo exige, que es la excepción ahora
+documentada en la regla de nombres de `CLAUDE.md`. El texto completo está en
+`licenses/tailadmin-LICENSE`.
+
+Se le advirtió al usuario antes de empezar que esto rompe la unidad visual con
+el editor —que se acababa de reskinear a Broadsheet— y que la plantilla se
+distribuye como repo para clonar, no como paquete: "usarla" es copiar su código
+y adoptar sus tokens. El usuario lo confirmó igual, así que **la app ahora corre
+tres sistemas visuales a propósito**: documento (`--design-*`), editor
+(Broadsheet, `--editor-*`) y admin (tokens vendorizados). La tabla de límites y
+la regla que lo hace sostenible —nunca restilar un componente compartido para
+servir a una superficie— están en `docs/EDITOR_DESIGN_SYSTEM.md`.
+
+Qué se integró y cómo:
+
+- **Tokens, de forma aditiva.** El `@theme` de la plantilla arranca con
+  `--font-*: initial` y `--breakpoint-*: initial`, que resetean los defaults de
+  Tailwind: copiarlo entero habría borrado los roles `font-serif`/`font-script`
+  del documento. Se copiaron solo las rampas de color (`brand`, `gray`,
+  `success`, `error`, `warning`, `blue-light`, `orange`), la escala
+  `--text-title-*`/`--text-theme-*` y las sombras. Quedaron afuera, con el
+  motivo escrito en `app/globals.css`: los resets, los overrides de
+  `--color-white`/`--color-black` (moverían los `text-black/65` de las páginas
+  de share y del certificado) y su `@layer base`, que impone un `border-color`
+  global y un fondo de `body` que llegarían hasta las páginas del documento.
+- **Shell nuevo** en `components/admin/`: sidebar colapsable con persistencia
+  por navegador, header con título/acciones/logout, y backdrop en mobile.
+  Mantiene los mismos props que el shell anterior (`active`, `title`,
+  `subtitle`, `backHref`, `proposalId`, `headerActions`), así que las 6
+  llamadas cambiaron solo el import. `components/app/AppShell.tsx` se borró;
+  `ApplicationRail.tsx` sigue vivo porque lo usa el editor.
+- **Dashboard rehecho** en el idioma de la plantilla: 4 tiles de métricas
+  calculadas sobre los datos que ya llegaban (propuestas abiertas, valor del
+  pipeline, esperando cliente, ganadas) y una tabla en vez de la grilla de
+  tarjetas. Los tests que ubicaban filas con `article` volvieron a `tr`.
+- **Primitivas vendorizadas** en `components/admin/ui/`: Badge, Button, Table.
+  `AdminSegmentedControl` no viene de la plantilla: se escribió con su misma API
+  que el control del editor para no pintar la píldora activa con el acento del
+  editor dentro del diálogo del admin.
+
+**Pendiente conocido de este cambio:** dentro de Templates, Itineraries y
+Notifications los contenedores ya usan los tokens del admin (`.app-page`,
+`.app-page-toolbar`, `.app-card` se restilaron), pero los controles internos
+—`EditorButton`, `EditorStatusBadge`, `EditorNotice`— siguen siendo del kit del
+editor y se ven como tales. Portarlos es el siguiente paso; no se hizo en este
+pase para no tocar componentes que el editor comparte.
+
+Verificación: `tsc --noEmit` y `eslint` limpios, 45/45 E2E, y recorrido visual
+con capturas de dashboard, plantillas, notificaciones y el diálogo de creación.
+
 **Paquete de marca: tipografía y logo importados (2026-08-27); Fase 9 sigue
 abierta.** El gate de marca estaba bloqueado esperando assets del dueño. Dos de
 los cuatro slots se pudieron cerrar de verdad, cada uno con una decisión

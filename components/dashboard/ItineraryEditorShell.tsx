@@ -31,7 +31,7 @@ import {
   removeItineraryTransport,
   updateItineraryDays,
 } from "@/app/proposals/itineraries/[id]/actions";
-import AppShell from "@/components/app/AppShell";
+import AppShell from "@/components/admin/AdminShell";
 import { archiveItinerary, restoreItinerary } from "@/app/proposals/itineraries/actions";
 import ItineraryEditor from "@/components/editor/ItineraryEditor";
 import { EditorButton, EditorEmptyState, EditorNotice, EditorSegmentedControl, editorFocusRing } from "@/components/editor/EditorUi";

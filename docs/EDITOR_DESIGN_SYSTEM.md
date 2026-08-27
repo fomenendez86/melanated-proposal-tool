@@ -1,11 +1,34 @@
 # Proposal Studio — Editor Design System
 
-**Status:** Broadsheet reskin implemented
-**Updated:** 2026-08-25
+**Status:** Broadsheet reskin implemented; scope narrowed to the editor
+**Updated:** 2026-08-27
 
-This system styles Proposal Studio chrome only. Document designs keep their own
-typography, colors, geometry, and assets inside the canvas (`--design-*`
+This system styles the **proposal editor's** chrome. Document designs keep their
+own typography, colors, geometry, and assets inside the canvas (`--design-*`
 tokens, a completely separate namespace — see below).
+
+## Scope: three design systems, one app
+
+As of 2026-08-27 the app deliberately runs three visual systems, and the
+boundaries between them are load-bearing:
+
+| Surface | System | Tokens | Typeface |
+| --- | --- | --- | --- |
+| Rendered proposal pages | The document design | `--design-*` | Prata / Allura / Geist |
+| Proposal editor (`/proposals/[id]/editor`) | Broadsheet (this doc) | `--editor-*` | Source Serif 4 |
+| Admin area (`/proposals`, templates, itineraries, notifications) | Vendored admin kit | `--color-brand-*`, `--color-gray-*`, `--text-theme-*` | Outfit |
+
+The admin area was moved off Broadsheet at the owner's explicit direction (see
+`PROJECT_STATUS.md`, 2026-08-27), after being told that it would stop matching
+the editor. It is not an accident and it is not a migration in progress: do not
+"fix" one surface by making it look like another without a decision.
+
+**The rule that keeps this survivable:** never restyle a shared component to
+suit one surface. `EditorButton`, `EditorStatusBadge` and friends belong to the
+editor; `components/admin/ui/*` belongs to the admin area. When the admin area
+needs something the editor already has, copy it into `components/admin/ui/`
+rather than adding a variant to the editor's kit — that is why
+`AdminSegmentedControl` exists alongside `EditorSegmentedControl`.
 
 ## Broadsheet
 

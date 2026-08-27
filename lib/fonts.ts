@@ -1,4 +1,4 @@
-import { Allura, Geist, Geist_Mono, Prata, Source_Serif_4 } from "next/font/google";
+import { Allura, Geist, Geist_Mono, Outfit, Prata, Source_Serif_4 } from "next/font/google";
 
 export const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,9 +33,17 @@ export const brandScript = Allura({
   weight: "400",
 });
 
+// Typeface of the vendored admin surface (the /proposals dashboard area). Kept
+// in its own variable so it never leaks into the document or the editor chrome,
+// which have their own faces — see docs/EDITOR_DESIGN_SYSTEM.md.
+export const adminSans = Outfit({
+  variable: "--font-outfit",
+  subsets: ["latin"],
+});
+
 export const sourceSerif = Source_Serif_4({
   variable: "--font-source-serif",
   subsets: ["latin"],
 });
 
-export const fontVariables = `${geistSans.variable} ${geistMono.variable} ${brandHeading.variable} ${brandScript.variable} ${sourceSerif.variable}`;
+export const fontVariables = `${geistSans.variable} ${geistMono.variable} ${brandHeading.variable} ${brandScript.variable} ${adminSans.variable} ${sourceSerif.variable}`;

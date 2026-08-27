@@ -1,6 +1,6 @@
 import { desc } from "drizzle-orm";
 
-import AppShell from "@/components/app/AppShell";
+import AppShell from "@/components/admin/AdminShell";
 import { EditorButton, EditorEmptyState } from "@/components/editor/EditorUi";
 import { db } from "@/lib/db/client";
 import { proposalNotifications } from "@/lib/db/schema";

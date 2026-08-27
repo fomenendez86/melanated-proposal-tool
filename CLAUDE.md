@@ -85,6 +85,11 @@ variables/pricing interactivo, envío/firma, analytics y comentarios) está en
   marcas/copyright. Describir la categoría ("editor comercial de propuestas",
   "herramienta de diseño externa") en lugar del nombre. Las librerías y
   tecnologías del stack (Next.js, Playwright, SQLite, etc.) sí se nombran.
+  **Excepción: los avisos de licencia.** Cuando se copia código de terceros al
+  repo, la licencia puede exigir que el aviso de copyright viaje con la copia
+  (MIT lo exige). En ese caso hay que nombrar la fuente, en el header del
+  archivo y en `licenses/`. La regla existe para evitar problemas legales, no
+  para crearlos: cumplir la licencia gana. Ver `licenses/README.md`.
 
 ## Referencia visual
 Las páginas del PDF original están en `reference/pdf-pages/page-NN.png`.
@@ -103,6 +108,15 @@ documentarlo en `docs/PROJECT_STATUS.md`.
   del editor, (2) la definición versionada del diseño, (3) el contenido de la
   propuesta y (4) las páginas renderizadas. El shell no debe hardcodear el
   orden, cantidad de páginas, campos ni estilos propios de Tanzania.
+- **Tres sistemas visuales, con límites duros.** El documento renderizado usa
+  `--design-*`; el editor usa Broadsheet (`--editor-*`); el área de admin
+  (`/proposals`, plantillas, itinerarios, notificaciones) usa los tokens de la
+  plantilla vendorizada (`brand`/`gray`/`text-theme-*`, tipografía Outfit,
+  primitivas en `components/admin/ui/`). No unificar por cuenta propia: la
+  divergencia fue una decisión explícita del dueño. Y **nunca restilar un
+  componente compartido para servir a una superficie** — si el admin necesita
+  algo que el editor ya tiene, se copia a `components/admin/ui/`. Tabla de
+  límites en `docs/EDITOR_DESIGN_SYSTEM.md`.
 - **Un editor, varios diseños:** navegación, canvas, inspector, dialogs,
   accesibilidad y estados de guardado pertenecen al Proposal Studio. Tamaño de
   página, marca, bloques soportados, variantes, defaults y renderers pertenecen

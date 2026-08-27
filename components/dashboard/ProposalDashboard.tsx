@@ -4,6 +4,10 @@ import {
   Archive,
   ArrowUUpLeft,
   Bell,
+  ChartLineUp,
+  ClockCounterClockwise,
+  FileText,
+  Trophy,
   Copy,
   Eye,
   ArrowCounterClockwise,
@@ -13,11 +17,13 @@ import {
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { archiveProposal, deleteProposal, duplicateProposalFromDashboard, markProposalLost, reopenProposal, restoreProposal } from "@/app/proposals/actions";
-import AppShell from "@/components/app/AppShell";
-import { EditorButton, EditorEmptyState, EditorStatusBadge, editorButtonStyles, editorFocusRing } from "@/components/editor/EditorUi";
+import AppShell from "@/components/admin/AdminShell";
+import AdminBadge, { type AdminBadgeColor } from "@/components/admin/ui/Badge";
+import AdminButton from "@/components/admin/ui/AdminButton";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/admin/ui/Table";
 import type { TemplateListRow } from "@/lib/db/getTemplateList";
 import type { ItineraryPickerRow } from "@/lib/db/getItineraryList";
 import type { ClientOption } from "@/lib/db/getClientOptions";
@@ -38,19 +44,41 @@ const STATUS_OPTIONS: { value: ProposalStatus | "all"; label: string }[] = [
   { value: "archived", label: "Archived" },
 ];
 
-const STATUS_TONE: Record<ProposalStatus, "neutral" | "warning" | "success" | "danger"> = {
-  draft: "neutral",
-  sent: "neutral",
+const STATUS_TONE: Record<ProposalStatus, AdminBadgeColor> = {
+  draft: "light",
+  sent: "info",
   viewed: "warning",
   approved: "success",
   won: "success",
-  lost: "danger",
-  archived: "neutral",
+  lost: "error",
+  archived: "light",
 };
+
+const OPEN_STATUSES: ProposalStatus[] = ["draft", "sent", "viewed", "approved"];
+const AWAITING_STATUSES: ProposalStatus[] = ["sent", "viewed"];
+
+const inputClass =
+  "h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-theme-sm text-gray-800 placeholder:text-gray-400 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10";
+
+function MetricTile({ label, value, icon, badge }: { label: string; value: string; icon: ReactNode; badge?: ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 md:p-6">
+      <div className="flex size-12 items-center justify-center rounded-xl bg-gray-100 text-gray-800">{icon}</div>
+      <div className="mt-5 flex items-end justify-between">
+        <div>
+          <span className="text-theme-sm text-gray-500">{label}</span>
+          <h4 className="mt-2 font-bold text-gray-800 text-title-sm">{value}</h4>
+        </div>
+        {badge}
+      </div>
+    </div>
+  );
+}
 
 type SortMode = "activity" | "value" | "name";
 
-const selectClass = `h-11 rounded-editor-md border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`;
+const selectClass =
+  "h-11 rounded-lg border border-gray-300 bg-white px-3 text-theme-sm text-gray-700 focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10";
 
 export default function ProposalDashboard({
   rows,
@@ -135,6 +163,16 @@ export default function ProposalDashboard({
     .filter((template) => template.status !== "archived")
     .map((template) => ({ id: template.id, title: template.name }));
 
+  const openRows = rows.filter((row) => OPEN_STATUSES.includes(row.status));
+  const pipelineValue = openRows.reduce((total, row) => total + (row.valueRaw ?? 0), 0);
+  const wonCount = rows.filter((row) => row.status === "won").length;
+  const awaitingCount = rows.filter((row) => AWAITING_STATUSES.includes(row.status)).length;
+  const currencyFormatter = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  });
+
   return (
     <AppShell
       active="proposals"
@@ -142,100 +180,159 @@ export default function ProposalDashboard({
       subtitle={`${rows.length} proposal${rows.length === 1 ? "" : "s"} total`}
       headerActions={(
         <>
-          <Link href="/proposals/notifications" prefetch={false} aria-label={`${unreadNotifications} unread notifications`} className={`${editorButtonStyles({ variant: "ghost", size: "icon" })} relative`}>
-            <Bell className="size-4" aria-hidden="true" />
-            {unreadNotifications > 0 ? <span className="absolute right-1.5 top-1.5 grid size-4 place-items-center rounded-full bg-editor-danger text-[9px] text-white">{unreadNotifications}</span> : null}
+          <Link
+            href="/proposals/notifications"
+            prefetch={false}
+            aria-label={`${unreadNotifications} unread notifications`}
+            className="relative grid size-10 place-items-center rounded-lg border border-gray-200 text-gray-500 transition hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+          >
+            <Bell className="size-5" aria-hidden="true" />
+            {unreadNotifications > 0 ? (
+              <span className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-error-500 text-[9px] font-medium text-white">
+                {unreadNotifications}
+              </span>
+            ) : null}
           </Link>
           <CreateProposalDialog clients={clients} designs={designs} existingProposals={existingProposals} templates={templateOptions} itineraries={itineraries} />
         </>
       )}
     >
-      <div className="app-page">
-
-      <div className="app-page-toolbar">
-        <div className="relative flex-1 min-w-[220px]">
-          <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-editor-text-subtle" aria-hidden="true" />
-          <input
-            aria-label="Search proposals"
-            placeholder="Search by name, client, or number"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            className={`h-11 w-full rounded-editor-md border border-editor-border bg-editor-raised pl-9 pr-3 text-sm ${editorFocusRing}`}
+      <div className="space-y-5 md:space-y-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 xl:grid-cols-4">
+          <MetricTile label="Open proposals" value={String(openRows.length)} icon={<FileText className="size-6" aria-hidden="true" />} />
+          <MetricTile
+            label="Pipeline value"
+            value={pipelineValue > 0 ? currencyFormatter.format(pipelineValue) : "—"}
+            icon={<ChartLineUp className="size-6" aria-hidden="true" />}
+          />
+          <MetricTile label="Awaiting client" value={String(awaitingCount)} icon={<ClockCounterClockwise className="size-6" aria-hidden="true" />} />
+          <MetricTile
+            label="Won"
+            value={String(wonCount)}
+            icon={<Trophy className="size-6" aria-hidden="true" />}
+            badge={wonCount > 0 ? <AdminBadge color="success" size="sm">Closed</AdminBadge> : undefined}
           />
         </div>
-        <select aria-label="Filter by status" className={selectClass} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as ProposalStatus | "all")}>
-          {STATUS_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
-          ))}
-        </select>
-        <select aria-label="Sort proposals" className={selectClass} value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}>
-          <option value="activity">Sort: Last activity</option>
-          <option value="value">Sort: Value</option>
-          <option value="name">Sort: Name</option>
-        </select>
-      </div>
 
-      {error ? <p className="text-sm font-semibold text-editor-danger">{error}</p> : null}
+        <div className="rounded-2xl border border-gray-200 bg-white">
+          <div className="flex flex-col gap-3 border-b border-gray-100 p-5 sm:flex-row sm:items-center">
+            <div className="relative min-w-[220px] flex-1">
+              <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+              <input
+                aria-label="Search proposals"
+                placeholder="Search by name, client, or number"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                className={`${inputClass} pl-9`}
+              />
+            </div>
+            <select aria-label="Filter by status" className={selectClass} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as ProposalStatus | "all")}>
+              {STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <select aria-label="Sort proposals" className={selectClass} value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}>
+              <option value="activity">Sort: Last activity</option>
+              <option value="value">Sort: Value</option>
+              <option value="name">Sort: Name</option>
+            </select>
+          </div>
 
-      {visibleRows.length === 0 ? (
-        <EditorEmptyState title="No proposals match" description="Try a different search or status filter." />
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {visibleRows.map((row) => (
-            <article key={row.id} className="app-card group flex flex-col overflow-hidden rounded-editor-lg">
-              <Link href={`/proposals/${row.id}/editor`} prefetch={false} className="relative block aspect-[4/3] overflow-hidden bg-editor-panel-muted">
-                {row.coverImageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={row.coverImageUrl} alt="" className="size-full object-cover transition duration-300 group-hover:scale-[1.04]" />
-                ) : (
-                  <div className="flex size-full items-center justify-center bg-gradient-to-br from-editor-brand to-editor-brand-hover">
-                    <span className="px-4 text-center text-sm font-semibold uppercase tracking-wide text-white/90">{row.designName}</span>
-                  </div>
-                )}
-                <span className="absolute right-2 top-2">
-                  <EditorStatusBadge tone={STATUS_TONE[row.status]} className="capitalize shadow-editor-toolbar">{row.status}</EditorStatusBadge>
-                </span>
-              </Link>
-              <div className="flex flex-1 flex-col gap-1 p-4">
-                <Link href={`/proposals/${row.id}/editor`} prefetch={false} className="font-semibold text-editor-text-strong hover:text-editor-brand">{row.title}</Link>
-                <p className="text-xs text-editor-text-subtle">{row.proposalNumber}</p>
-                <p className="text-sm text-editor-text">{row.clientName}</p>
-                <div className="mt-1 flex items-center justify-between text-xs text-editor-text-muted">
-                  <span className="tabular-nums text-sm font-semibold text-editor-text-strong">{row.value}</span>
-                  <span>{new Date(row.lastActivityAt).toLocaleDateString()}</span>
-                </div>
-                <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">
-                  <span className="text-xs text-editor-text-subtle">{row.pageCount} pages · {row.designName}</span>
-                  <div className="flex items-center gap-1">
-                    <Link href={`/proposals/${row.id}/preview`} prefetch={false} aria-label={`Preview ${row.title}`} className={editorButtonStyles({ variant: "ghost", size: "icon" })}>
-                      <Eye className="size-4" aria-hidden="true" />
-                    </Link>
-                    <EditorButton type="button" variant="ghost" size="icon" aria-label={`Duplicate ${row.title}`} disabled={pendingId === row.id} onClick={() => void handleDuplicate(row.id)}>
-                      <Copy className="size-4" aria-hidden="true" />
-                    </EditorButton>
-                    {!["draft", "lost", "won", "archived"].includes(row.status) ? <EditorButton type="button" variant="ghost" size="icon" aria-label={`Mark ${row.title} lost`} disabled={pendingId === row.id} onClick={() => handleLost(row.id)}><XCircle className="size-4" aria-hidden="true" /></EditorButton> : null}
-                    {["lost", "won", "approved"].includes(row.status) ? <EditorButton type="button" variant="ghost" size="icon" aria-label={`Reopen ${row.title}`} disabled={pendingId === row.id} onClick={() => void handleReopen(row.id)}><ArrowCounterClockwise className="size-4" aria-hidden="true" /></EditorButton> : null}
-                    {row.status === "archived" ? (
-                      <EditorButton type="button" variant="ghost" size="icon" aria-label={`Restore ${row.title}`} disabled={pendingId === row.id} onClick={() => void runAction(row.id, () => restoreProposal(row.id))}>
-                        <ArrowUUpLeft className="size-4" aria-hidden="true" />
-                      </EditorButton>
-                    ) : (
-                      <EditorButton type="button" variant="ghost" size="icon" aria-label={`Archive ${row.title}`} disabled={pendingId === row.id} onClick={() => void runAction(row.id, () => archiveProposal(row.id))}>
-                        <Archive className="size-4" aria-hidden="true" />
-                      </EditorButton>
-                    )}
-                    {row.status === "draft" ? (
-                      <EditorButton type="button" variant="ghost" size="icon" aria-label={`Delete ${row.title}`} disabled={pendingId === row.id} onClick={() => handleDelete(row.id, row.title)}>
-                        <Trash className="size-4" aria-hidden="true" />
-                      </EditorButton>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            </article>
-          ))}
+          {error ? <p className="border-b border-gray-100 px-5 py-3 text-theme-sm font-medium text-error-600">{error}</p> : null}
+
+          {visibleRows.length === 0 ? (
+            <div className="px-5 py-16 text-center">
+              <p className="text-theme-sm font-medium text-gray-700">No proposals match</p>
+              <p className="mt-1 text-theme-sm text-gray-500">Try a different search or status filter.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableCell isHeader>Proposal</TableCell>
+                    <TableCell isHeader>Client</TableCell>
+                    <TableCell isHeader>Status</TableCell>
+                    <TableCell isHeader className="text-right">Value</TableCell>
+                    <TableCell isHeader>Last activity</TableCell>
+                    <TableCell isHeader className="text-right">Actions</TableCell>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {visibleRows.map((row) => (
+                    <TableRow key={row.id} className="hover:bg-gray-50">
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="size-11 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                            {row.coverImageUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={row.coverImageUrl} alt="" className="size-full object-cover" />
+                            ) : (
+                              <div className="grid size-full place-items-center bg-brand-50 text-theme-xs font-medium text-brand-500">
+                                {row.designName.slice(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <Link href={`/proposals/${row.id}/editor`} prefetch={false} className="block truncate font-medium text-gray-800 hover:text-brand-500">
+                              {row.title}
+                            </Link>
+                            <p className="truncate text-theme-xs text-gray-500">{row.proposalNumber} · {row.pageCount} pages · {row.designName}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">{row.clientName}</TableCell>
+                      <TableCell>
+                        <AdminBadge color={STATUS_TONE[row.status]} size="sm">{row.status}</AdminBadge>
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums text-gray-800">{row.value}</TableCell>
+                      <TableCell className="whitespace-nowrap">{new Date(row.lastActivityAt).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-end gap-1">
+                          <Link
+                            href={`/proposals/${row.id}/preview`}
+                            prefetch={false}
+                            aria-label={`Preview ${row.title}`}
+                            className="grid size-9 place-items-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                          >
+                            <Eye className="size-4" aria-hidden="true" />
+                          </Link>
+                          <AdminButton variant="ghost" size="icon" className="size-9" aria-label={`Duplicate ${row.title}`} disabled={pendingId === row.id} onClick={() => void handleDuplicate(row.id)}>
+                            <Copy className="size-4" aria-hidden="true" />
+                          </AdminButton>
+                          {!["draft", "lost", "won", "archived"].includes(row.status) ? (
+                            <AdminButton variant="ghost" size="icon" className="size-9" aria-label={`Mark ${row.title} lost`} disabled={pendingId === row.id} onClick={() => handleLost(row.id)}>
+                              <XCircle className="size-4" aria-hidden="true" />
+                            </AdminButton>
+                          ) : null}
+                          {["lost", "won", "approved"].includes(row.status) ? (
+                            <AdminButton variant="ghost" size="icon" className="size-9" aria-label={`Reopen ${row.title}`} disabled={pendingId === row.id} onClick={() => void handleReopen(row.id)}>
+                              <ArrowCounterClockwise className="size-4" aria-hidden="true" />
+                            </AdminButton>
+                          ) : null}
+                          {row.status === "archived" ? (
+                            <AdminButton variant="ghost" size="icon" className="size-9" aria-label={`Restore ${row.title}`} disabled={pendingId === row.id} onClick={() => void runAction(row.id, () => restoreProposal(row.id))}>
+                              <ArrowUUpLeft className="size-4" aria-hidden="true" />
+                            </AdminButton>
+                          ) : (
+                            <AdminButton variant="ghost" size="icon" className="size-9" aria-label={`Archive ${row.title}`} disabled={pendingId === row.id} onClick={() => void runAction(row.id, () => archiveProposal(row.id))}>
+                              <Archive className="size-4" aria-hidden="true" />
+                            </AdminButton>
+                          )}
+                          {row.status === "draft" ? (
+                            <AdminButton variant="ghost" size="icon" className="size-9" aria-label={`Delete ${row.title}`} disabled={pendingId === row.id} onClick={() => handleDelete(row.id, row.title)}>
+                              <Trash className="size-4" aria-hidden="true" />
+                            </AdminButton>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
-      )}
       </div>
     </AppShell>
   );

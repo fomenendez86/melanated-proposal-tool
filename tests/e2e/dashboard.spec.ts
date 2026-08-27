@@ -40,7 +40,7 @@ test("creating a blank proposal seeds only the base pages", { tag: "@desktop-onl
 
 test("duplicating a proposal creates an independent copy", { tag: "@desktop-only" }, async ({ page }) => {
   await page.goto("/proposals", { waitUntil: "domcontentloaded" });
-  const row = page.locator("article", { hasText: "DEMO-0001" });
+  const row = page.locator("tr", { hasText: "DEMO-0001" });
   await row.getByRole("button", { name: /^Duplicate/ }).click();
 
   await page.waitForURL(/\/proposals\/\d+\/editor/);
@@ -56,7 +56,7 @@ test("archive, restore and delete manage lifecycle from the dashboard", { tag: "
   await page.waitForURL(/\/proposals\/\d+\/editor/);
 
   await page.goto("/proposals", { waitUntil: "domcontentloaded" });
-  const row = page.locator("article", { has: page.getByRole("link", { name: "E2E Lifecycle Trip" }) });
+  const row = page.locator("tr", { has: page.getByRole("link", { name: "E2E Lifecycle Trip" }) });
   await expect(row.getByText("draft", { exact: true })).toBeVisible();
 
   await row.getByRole("button", { name: /^Archive/ }).click();

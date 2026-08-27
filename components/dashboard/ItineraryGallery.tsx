@@ -22,7 +22,7 @@ import {
   restoreItinerary,
   updateItineraryFields,
 } from "@/app/proposals/itineraries/actions";
-import AppShell from "@/components/app/AppShell";
+import AppShell from "@/components/admin/AdminShell";
 import { EditorButton, EditorEmptyState, EditorNotice, EditorStatusBadge, editorFocusRing } from "@/components/editor/EditorUi";
 import type { ItineraryListRow } from "@/lib/db/getItineraryList";
 
@@ -259,7 +259,7 @@ export default function ItineraryGallery({ itineraries }: { itineraries: Itinera
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {itineraries.map((itinerary) => (
-            <div key={itinerary.id} className="app-card flex flex-col overflow-hidden rounded-editor-lg">
+            <div key={itinerary.id} className="app-card flex flex-col">
               <div className="relative flex aspect-[3/4] items-center justify-center overflow-hidden bg-gradient-to-br from-editor-brand to-editor-brand-hover">
                 {itinerary.thumbnailUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
