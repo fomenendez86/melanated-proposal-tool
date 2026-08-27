@@ -8,13 +8,33 @@
 The Catalog opens as a Proposal Studio drawer and keeps the document visible as
 the working context. Advisors can:
 
-- switch between Hotels and Excursions;
-- search name, description, city, or destination;
-- filter by country, destination, and city;
+- switch between Hotels, Excursions, Blocks, and Library;
+- search name, description, city, or destination (Hotels/Excursions);
+- filter by country, destination, and city (Hotels/Excursions);
 - see whether an item is already in the proposal;
 - add a catalog item without leaving the editor;
 - create a missing hotel or excursion and add it immediately;
-- update a reusable catalog default from the same contextual surface.
+- update a reusable catalog default from the same contextual surface;
+- browse and insert template blocks or library content as icon-labeled cards.
+
+### Blocks mode
+
+Blocks shows the fixed set of template section types from
+`ADDABLE_SECTIONS` (`lib/editor/addableSections.ts` — image title divider,
+editorial section divider, thank-you page, signature page) as icon+label
+cards, filtered by `designContext.active.supportedSectionTypes` the same way
+every other insertion path in this document already is. A card is added by
+click (appends at the end via `addProposalSection`) or by drag (the same
+`useCatalogDragInsert` mechanism as Hotels/Excursions/Library, landing at the
+exact `InsertionGap` position). Unlike Hotels/Excursions/Library sections,
+Blocks cards have **no** duplicate-control or "update default" affordance —
+template sections have no identity to deduplicate against, they're a fixed
+menu of structural types, not records. There is no search box in this mode;
+the set is small and fixed. `components/editor/InsertionGap.tsx`'s own
+inline "+" menu offers the same 4 block types as a lower-friction, no-drag,
+keyboard-reachable alternative and is kept deliberately — see
+`docs/STUDIO_EXPANSION_PLAN.md` Fase 11 for why drag must never be the only
+path.
 
 ## Data-safety boundary
 

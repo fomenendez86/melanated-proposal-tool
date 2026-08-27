@@ -1,6 +1,15 @@
 "use client";
 
-import { Building2, Check, Compass, GripVertical, LibraryBig, MapPin, Plus, Search } from "lucide-react";
+import {
+  Buildings,
+  Check,
+  Compass,
+  DotsSixVertical,
+  Books,
+  MapPin,
+  Plus,
+  MagnifyingGlass,
+} from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
@@ -14,8 +23,9 @@ import {
 } from "@/app/proposals/[id]/editor/catalogActions";
 import type { ProposalCatalogData } from "@/lib/catalog/types";
 import type { ProposalDesignContext, ProposalSectionType } from "@/lib/designs/types";
-import type { ContentLibraryData } from "@/lib/library/types";
+import type { ContentLibraryData, LibraryImageItem } from "@/lib/library/types";
 
+import BlocksPalette from "./BlocksPalette";
 import ContentLibraryPanel from "./ContentLibraryPanel";
 import {
   EditorButton,
@@ -27,9 +37,9 @@ import {
 } from "./EditorUi";
 import type { CatalogDragItem } from "./useCatalogDragInsert";
 
-type CatalogMode = "hotels" | "excursions" | "library";
+type CatalogMode = "hotels" | "excursions" | "library" | "blocks";
 
-const controlClass = `h-11 w-full rounded-lg border border-editor-border bg-editor-raised px-3 text-sm text-editor-text outline-none transition placeholder:text-editor-text-subtle focus:border-editor-border-strong focus:ring-2 focus:ring-editor-border-strong/20 ${editorFocusRing}`;
+const controlClass = `h-11 w-full rounded-editor-md border border-editor-border bg-editor-raised px-3 text-sm text-editor-text outline-none transition placeholder:text-editor-text-subtle focus:border-editor-border-strong focus:ring-2 focus:ring-editor-border-strong/20 ${editorFocusRing}`;
 const textAreaClass = `${controlClass} h-auto py-2.5`;
 
 export default function CatalogPanel({
@@ -40,6 +50,8 @@ export default function CatalogPanel({
   designContext,
   enableDrag = false,
   onDragStart,
+  onImageUploaded,
+  onImageArchived,
 }: {
   proposalId: number;
   catalog: ProposalCatalogData;
@@ -48,6 +60,8 @@ export default function CatalogPanel({
   designContext: ProposalDesignContext;
   enableDrag?: boolean;
   onDragStart?: (item: CatalogDragItem, event: React.PointerEvent) => void;
+  onImageUploaded?: (item: LibraryImageItem) => void;
+  onImageArchived?: (id: number) => void;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<CatalogMode>("hotels");
@@ -175,18 +189,18 @@ export default function CatalogPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-editor-panel">
-      <EditorPanelHeader icon={<LibraryBig className="size-4" />} label="Catalog" onClose={onClose} closeLabel="Close catalog" />
+      <EditorPanelHeader icon={<Books className="size-4" />} label="Catalog" onClose={onClose} closeLabel="Close catalog" />
       <div className="border-b border-editor-border-subtle p-4">
         <EditorSegmentedControl
           label="Catalog content type"
           value={mode}
-          options={[{ value: "hotels", label: "Hotels" }, { value: "excursions", label: "Excursions" }, { value: "library", label: "Library" }]}
+          options={[{ value: "hotels", label: "Hotels" }, { value: "excursions", label: "Excursions" }, { value: "blocks", label: "Blocks" }, { value: "library", label: "Library" }]}
           onChange={(value) => { setMode(value); setCreating(false); setEditingItemId(null); setFormError(""); }}
           className="flex w-full [&>button]:flex-1"
         />
-        {mode !== "library" ? <>
-          <label className="mt-3 flex h-11 items-center gap-2 rounded-lg border border-editor-border bg-editor-raised px-3 text-editor-text-muted focus-within:border-editor-border-strong focus-within:ring-2 focus-within:ring-editor-border-strong/20">
-            <Search className="size-4" aria-hidden="true" />
+        {mode !== "library" && mode !== "blocks" ? <>
+          <label className="mt-3 flex h-11 items-center gap-2 rounded-editor-md border border-editor-border bg-editor-raised px-3 text-editor-text-muted focus-within:border-editor-border-strong focus-within:ring-2 focus-within:ring-editor-border-strong/20">
+            <MagnifyingGlass className="size-4" aria-hidden="true" />
             <span className="sr-only">Search catalog</span>
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${mode}`} className="min-w-0 flex-1 bg-transparent text-sm text-editor-text-strong outline-none placeholder:text-editor-text-subtle" />
           </label>
@@ -215,12 +229,21 @@ export default function CatalogPanel({
             designContext={designContext}
             enableDrag={enableDrag}
             onDragStart={onDragStart}
+            onImageUploaded={onImageUploaded}
+            onImageArchived={onImageArchived}
+          />
+        ) : mode === "blocks" ? (
+          <BlocksPalette
+            proposalId={proposalId}
+            designContext={designContext}
+            enableDrag={enableDrag}
+            onDragStart={onDragStart}
           />
         ) : <>
         {formError ? <EditorNotice tone="danger" className="mb-3 px-3 py-2 text-xs">{formError}</EditorNotice> : null}
 
         {creating ? (
-          <div className="mb-4 space-y-3 rounded-xl border border-editor-border-strong bg-editor-inset p-3.5">
+          <div className="mb-4 space-y-3 rounded-editor-lg border border-editor-border-strong bg-editor-inset p-3.5">
             <div>
               <h3 className="text-sm font-semibold text-editor-text">{editingItemId === null ? "New" : "Update"} {mode === "hotels" ? "hotel" : "excursion"}</h3>
               <p className="mt-1 text-xs text-editor-text-muted">{editingItemId === null ? "Create a reusable catalog default and add it to this proposal." : "This updates the reusable catalog default. Proposal-only overrides remain separate."}</p>
@@ -256,7 +279,7 @@ export default function CatalogPanel({
             const selected = item.selected || (isHotel ? selectedHotels.has(item.id) : selectedExcursions.has(item.id));
             const draggable = dragEnabledForMode && !selected;
             return (
-              <article key={`${mode}-${item.id}`} className="overflow-hidden rounded-xl border border-editor-border-subtle bg-editor-raised">
+              <article key={`${mode}-${item.id}`} className="overflow-hidden rounded-editor-lg border border-editor-border-subtle bg-editor-raised">
                 {item.previewImageUrl ? <div className="h-28 bg-editor-inset bg-cover bg-center" style={{ backgroundImage: `url("${item.previewImageUrl.replaceAll('"', '\\"')}")` }} role="img" aria-label={`${label} preview`} /> : null}
                 <div className="p-3.5">
                   <div className="flex items-start gap-3">
@@ -265,12 +288,12 @@ export default function CatalogPanel({
                         type="button"
                         onPointerDown={(event) => onDragStart?.({ kind: isHotel ? "hotel" : "excursion", id: item.id, label }, event)}
                         aria-label={`Drag ${label} to a position in the document`}
-                        className={`-ml-1 mt-0.5 grid size-8 shrink-0 cursor-grab place-items-center rounded-md text-editor-text-subtle hover:bg-editor-inset hover:text-editor-text active:cursor-grabbing ${editorFocusRing}`}
+                        className={`-ml-1 mt-0.5 grid size-8 shrink-0 cursor-grab place-items-center rounded-editor-sm text-editor-text-subtle hover:bg-editor-inset hover:text-editor-text active:cursor-grabbing ${editorFocusRing}`}
                       >
-                        <GripVertical className="size-4" aria-hidden="true" />
+                        <DotsSixVertical className="size-4" aria-hidden="true" />
                       </button>
                     ) : null}
-                    <div className="mt-0.5 text-editor-brand">{isHotel ? <Building2 className="size-4" /> : <Compass className="size-4" />}</div>
+                    <div className="mt-0.5 text-editor-brand">{isHotel ? <Buildings className="size-4" /> : <Compass className="size-4" />}</div>
                     <div className="min-w-0 flex-1"><h3 className="text-sm font-semibold text-editor-text">{label}</h3><p className="mt-1 flex items-center gap-1 text-[11px] text-editor-text-muted"><MapPin className="size-3" /> {item.cityName} · {item.destinationName}</p></div>
                   </div>
                   <p className="mt-2 line-clamp-3 text-xs leading-4 text-editor-text-muted">{item.description}</p>
@@ -282,7 +305,7 @@ export default function CatalogPanel({
               </article>
             );
           })}
-          {items.length === 0 ? <EditorEmptyState compact icon={<Search className="size-5" />} title="No catalog matches" description="Adjust the search or location filters, or create the missing item." /> : null}
+          {items.length === 0 ? <EditorEmptyState compact icon={<MagnifyingGlass className="size-5" />} title="No catalog matches" description="Adjust the search or location filters, or create the missing item." /> : null}
         </div>
         </>}
       </div>

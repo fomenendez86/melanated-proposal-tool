@@ -8,6 +8,219 @@ made, or a new pendiente is found.
 
 ## Estado general
 
+**Chrome de la app pasado a full-bleed, se saca el look de "ventana
+flotante" (2026-08-26), a pedido explícito del usuario.** El reskin
+Broadsheet había envuelto el chrome (`AppShell.tsx`, `app/login/page.tsx`)
+en una tarjeta centrada con margen, `max-w`, esquinas redondeadas, borde y
+sombra (clase `.app-window` en `app/globals.css`) — quedaba como una
+ventana de escritorio flotando sobre un fondo con textura
+(`body::before`). El usuario la vio corriendo y pidió eliminarla: la app
+debe ocupar el viewport completo, no aparentar una ventana. Se sacó
+`.app-window` y el `body::before` decorativo (ya no tenía nada detrás que
+decorar) de `app/globals.css`, y se quitaron `mx-auto`/`max-w-*`/
+`border`/`rounded-editor-lg`/sombra/padding externo de `AppShell.tsx` y
+`app/login/page.tsx`, conservando el layout interno (rail + columna de
+contenido con scroll propio en `AppShell`, split-screen en login) y el
+comportamiento de impresión. Verificado con capturas de Playwright en
+`/login` y el dashboard tras iniciar sesión — ambos llenan el viewport
+sin margen ni tarjeta. `tsc --noEmit` limpio.
+
+**Pasada de revisión visual sobre el reskin Broadsheet (2026-08-25),
+a pedido explícito del usuario tras verlo corriendo.** Recorrido con
+Playwright por login, dashboard, toolbar del editor, panel Properties
+(tabs Content/Design), Review, Activity, Document Structure, Catalog
+(los 4 modos), templates, itinerarios, notificaciones y el editor en
+mobile — capturas reales, no solo lectura de código. Un hallazgo real,
+corregido:
+
+- **`--editor-inset` tenía un tinte cyan (`--color-accent-100`) que no
+  encajaba con todos sus usos.** Elegido originalmente pensando solo en
+  el caso "hover de drag handle", pero el token ya se documentaba (y se
+  usa de hecho) como superficie neutra multi-propósito: círculos
+  numerados en Document Structure, ícono del tab Design en Properties,
+  chip de `EditorEmptyState`, fondo neutral de `EditorStatusBadge`. Con
+  el tinte cyan, esos elementos pasivos (un simple número de secuencia)
+  leían como "resaltados/activos" sin motivo — confirmado visualmente
+  con una captura ampliada (@3x) antes y después. Revertido a
+  neutral-200 de Broadsheet (`#eae7e7`), restaurando el carácter sutil
+  que el token ya tenía antes del reskin. `docs/EDITOR_DESIGN_SYSTEM.md`
+  actualizado con la corrección y el porqué.
+- **Efecto colateral encontrado y corregido en el mismo paso:**
+  `app/proposals/notifications/page.tsx` reusaba `bg-editor-inset` para
+  resaltar la fila de una notificación no leída — con el token ahora
+  neutral, ese resaltado dejó de leerse (fondo casi idéntico al de la
+  página). Corregido con un tinte dedicado `bg-editor-brand/10` en vez
+  de reusar el token compartido — el caso "no leído" es genuinamente una
+  señal de atención, no una superficie neutra, así que necesitaba su
+  propio color en vez de heredar el de `editor-inset`.
+- Sin otros hallazgos — el resto del reskin (tipografía, paleta,
+  radio, íconos duotone en tamaños grandes/medianos) sostuvo bien la
+  revisión visual en las 12 superficies recorridas. Nota aparte, no un
+  bug: los íconos duotone en filas de acciones muy chicas (14–19px,
+  `Document Structure`, tarjetas de itinerario) se ven visualmente casi
+  idénticos a un ícono "regular" — confirmado leyendo el SVG renderizado
+  en vivo que el peso duotone sí se aplica correctamente (el segundo
+  tono existe, solo que a esa escala y en `currentColor` monocromático
+  la diferencia de opacidad es casi imperceptible) — es una
+  característica inherente del estilo a tamaños chicos, no una falla de
+  implementación; se deja como está porque coincide con cómo Broadsheet
+  documenta su propio set de íconos "a tamaños de interfaz."
+- Verificación: `tsc --noEmit` y `eslint` limpios tras el ajuste.
+
+**Reskin "Broadsheet" del chrome del editor (2026-08-25).** A partir del
+comparativo visual aprobado en la pasada anterior, el usuario eligió
+"Broadsheet" — el sistema de diseño del mockup importado vía Claude
+Design (proyecto `ac657a46-6fb1-4d99-beae-f604b67b49e0`,
+`_ds/broadsheet-.../styles.css` + `readme.md`) — como dirección real para
+todo el chrome de Proposal Studio (toolbar, paneles, dashboard, login), no
+solo la porción mostrada en el comparativo. Los nombres de los 29 tokens
+`--editor-*` no cambiaron — solo sus valores, mapeados 1:1 desde los tokens
+de Broadsheet — así que **cero archivos de color hardcodeado necesitaron
+edición** (confirmado por auditoría previa: 0 hex/rgb en
+`components/editor|dashboard|app`). Detalle completo del mapeo y las
+decisiones de scope en `docs/EDITOR_DESIGN_SYSTEM.md` (reescrito). Resumen:
+
+- **Tipografía**: Source Serif 4 vía `next/font/google` (nuevo
+  `lib/fonts.ts`), aplicada como `font-editor` (token nuevo, namespace
+  separado de `--font-heading`/`--font-brand-heading` que sigue siendo del
+  documento renderizado) en los 3 roots del chrome (`AppShell.tsx`,
+  `ProposalEditorShell.tsx`, `app/login/page.tsx`). Cubre todo el texto del
+  chrome, no solo títulos — regla explícita del readme de Broadsheet ("the
+  serif is the chrome").
+- **Íconos**: migración completa de `lucide-react` a `@phosphor-icons/react`
+  en peso **duotone** (regla explícita de Broadsheet), 65 íconos únicos en
+  23 archivos. `IconContext.Provider` envuelve `AppShell.tsx` y
+  `ProposalEditorShell.tsx` (los únicos 2 roots que pueden alojar un
+  Context Provider) para que el peso se herede automático sin tocar cada
+  call site. Dos archivos (`EditorUi.tsx`, `ApplicationRail.tsx`) pasaron a
+  `"use client"` específicamente para poder usar el import normal
+  (dependiente de contexto) en vez de la variante `/ssr`; `app/login/page.tsx`
+  es un Server Component `async` que no puede convertirse, así que usa
+  `@phosphor-icons/react/ssr` (variante sin hooks) con `weight="duotone"`
+  explícito en sus 4 íconos. `sectionTypeIcons.tsx` no necesitó ningún
+  cambio de directiva — solo exporta referencias, nunca renderiza.
+- **Radio**: escala nueva y separada `--radius-editor-sm/md/lg` (1/2/4px) en
+  `@theme inline`, **sin tocar** `--radius`/`--radius-sm..4xl` global (ese
+  alimenta todo `rounded-*` de la app entera, incluyendo los bloques del
+  documento — verificado leyendo `app/globals.css` antes de tocar nada).
+  Codemod mecánico de ~150 usos de `rounded-{lg,xl,2xl,md}` en los ~25
+  archivos del chrome; `rounded-full` quedó intacto en todos lados.
+- **Modo oscuro — removido, no ocultado.** Broadsheet es explícitamente
+  light-only ("this system shows no dark surfaces", su propio readme).
+  Se sacó el toggle completo de `ProposalEditorShell.tsx` (estado,
+  persistencia a `localStorage`, atributo `data-theme`) y se borró el
+  bloque `.proposal-studio[data-theme="dark"]` de `app/globals.css`. Es una
+  regresión real y deliberada de una feature que funcionaba — documentado
+  acá y en `docs/EDITOR_DESIGN_SYSTEM.md` a propósito, no en un bullet
+  perdido.
+- **Fuera de alcance, a propósito**: los colores de estado
+  (success/warning/danger, 8 tokens) quedaron en sus valores previos —
+  Broadsheet no define paleta semántica y fabricar una que solo se
+  pareciera a su método OKLCH hubiera sido inventar, no extraer. La escala
+  de espaciado (`--space-*` de Broadsheet, densidad 1.25×, notablemente más
+  aireada que el `p-4`/`gap-2` actual) quedó documentada pero sin
+  implementar — retocarla toca layout real, no solo decoración, y necesita
+  su propia pasada de verificación visual por panel.
+- **Bug real encontrado y corregido, no relacionado al diseño en sí:**
+  `npm run test:e2e` aísla las fuentes de Google vía
+  `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` → `tests/fixtures/google-fonts.cjs`
+  (un mapa URL→CSS, sin red real). Agregar Source Serif 4 sin agregar su
+  entrada rompía **toda la suite** — ni siquiera `global-setup.ts` podía
+  loguearse, porque la página de login no compilaba bajo Turbopack
+  (`Missing mocked response`/`Module not found` en el font loader). La URL
+  exacta no es adivinable a mano con confianza (Next arma el query string
+  desde los ejes variables del font-data.json — para Source Serif 4 resultó
+  `.../css2?family=Source+Serif+4:wght@200..900&display=swap`); se calculó
+  llamando directo a las funciones internas de Next
+  (`validateGoogleFontFunctionCall`/`getFontAxes`/`getGoogleFontsUrl`) en
+  vez de adivinar, y se agregó la entrada faltante al fixture.
+- **Verificación**: `tsc --noEmit` y `eslint` limpios en todo el repo.
+  Verificado en navegador real (Playwright manual, no solo e2e) contra
+  `npm run dev`: login, dashboard, toolbar del editor, panel Properties,
+  pestaña Blocks del Catalog — cero errores de consola, toggle de modo
+  oscuro confirmado ausente, `font-family` computado confirma Source Serif 4
+  cargada. Suite e2e completa corrida tras el fix del fixture de fuentes
+  (ver arriba): 40 passed, 5 failed — pero el set de 5 **no coincide** con
+  los 6 preexistentes ya documentados (solo 2 se solapan). Investigado antes
+  de asumir regresión: los 5 tests fallidos, corridos de nuevo en
+  aislamiento (grep de Playwright, base de datos e2e fresca), **pasan
+  los 5 sin excepción** — confirma que son flakiness preexistente
+  dependiente del orden/estado compartido entre tests dentro de una corrida
+  completa (mismo patrón ya visto y documentado antes en este archivo:
+  "4 tests de editor.spec.ts fallaban de forma intermitente en mobile"), no
+  algo introducido por este reskin. Ninguno de los 5 toca color/tipografía/
+  íconos/radio — son sobre upload de imágenes, edición inline y el drawer
+  de catálogo en mobile, áreas que este cambio no tocó funcionalmente.
+
+**Paleta de inserción unificada + pulido visual del drop-zone (2026-08-25).**
+El usuario mostró una captura de un editor de documentos comercial distinto
+(no nombrado, por la regla de `CLAUDE.md`) y pidió adoptar su concepto de
+panel de inserción: una grilla de tarjetas ícono+label arrastrables, un
+indicador de drop punteado con badge "+", y un panel con pestañas. Alcance
+confirmado con el usuario vía pregunta explícita: **ambas mitades** — (A)
+unificar las superficies de inserción existentes en una sola paleta de
+tarjetas, y (B) rediseñar el feedback visual de drag/drop. El canvas de
+posicionamiento libre quedó descartado desde el inicio — `CLAUDE.md` prohíbe
+esa dirección; todo sigue insertándose solo en los límites de sección
+(`InsertionGap`), nunca en un punto arbitrario.
+
+- **Unificación (A)**: los 4 tipos de bloque plantilla de `ADDABLE_SECTIONS`
+  (`lib/editor/addableSections.ts` — divisor con imagen, divisor editorial,
+  thank-you, firma), antes alcanzables solo desde el menú de texto propio de
+  `InsertionGap`, ahora también viven como una pestaña "Blocks" nueva dentro
+  del drawer `CatalogPanel` ya existente (junto a Hotels/Excursions/Library),
+  renderizados como tarjetas ícono+label (`components/editor/BlocksPalette.tsx`,
+  nuevo) arrastrables por el mismo mecanismo que hoteles/excursiones/library.
+  `CatalogDragItem` (`useCatalogDragInsert.ts`) pasó de interfaz plana a
+  unión discriminada agregando `{ kind: "template"; sectionType; label }`;
+  el drop ejecuta `addProposalSection` igual que el click en `InsertionGap`.
+  Hoteles/Excursiones se dejaron **sin tocar** como lista buscable — son
+  registros de datos específicos, no tipos de bloque genéricos, misma
+  distinción que ya hacía el sistema. El menú propio de `InsertionGap` se
+  mantuvo intacto a propósito (Fase 11 exige que el drag nunca sea el único
+  camino, y a menos de `2xl:` el Catalog sigue siendo modal) — solo ganó
+  íconos, mismo mapa `components/editor/sectionTypeIcons.tsx` (nuevo) que
+  usan la paleta y el ghost de drag, para que las tres superficies de
+  inserción lean como un solo lenguaje visual.
+- **Pulido visual (B)**: `InsertionGap` cambió su indicador resaltado de una
+  línea sólida a una línea punteada (`border-dashed`) con una píldora
+  "Drop here"; el ghost flotante de drag (`ProposalEditorShell.tsx`, portal a
+  `document.body`) pasó de un pill con ícono a una tarjeta con chip de ícono
+  y un badge "+" en la esquina, cubriendo ahora los 4 kinds de
+  `CatalogDragItem`. Ambos ríos con tokens `editor-*` únicamente — sin fuga
+  hacia `--design-*`. Verificado visualmente en un servidor real (Playwright
+  manual, no solo e2e) en modo claro y oscuro.
+- **Regresión evitada, no introducida**: TypeScript no angosta una unión
+  discriminada correctamente cuando el miembro no-target tiene el
+  discriminante como unión de 3 literales y se lo excluye por 3
+  comparaciones negativas encadenadas (`item.kind === "hotel" ? ... : item.kind
+  === "excursion" ? ... : item.kind === "savedSection" ? ... : item.sectionType`
+  falla a compilar) — confirmado con un caso aislado mínimo. Se resolvió
+  chequeando el nuevo miembro (`"template"`) primero en la cadena de
+  ternarios, en `useCatalogDragInsert.ts` y en el ghost de
+  `ProposalEditorShell.tsx`.
+- **Docs actualizados en el mismo cambio**: `docs/CONTEXTUAL_CATALOG.md`
+  (nueva sección "Blocks mode"), `docs/EDITOR_DESIGN_SYSTEM.md` (entradas
+  "Palette card" y "Drag ghost and drop indicator" en Components),
+  `docs/STUDIO_EXPANSION_PLAN.md` (Fase 11.2 ampliada para mencionar
+  `insertLibrarySection`/`addProposalSection`, ya estaba desactualizada
+  antes de este cambio).
+- **Verificación**: `tsc --noEmit` y `eslint` limpios. Un test e2e nuevo
+  (`tests/e2e/editor.spec.ts` — "dragging a block card from the Catalog
+  panel's Blocks tab...") cubre arrastrar una tarjeta Blocks hasta un gap
+  exacto y que persista tras reload, calcado del test existente de arrastrar
+  un hotel. Suite completa corrida dos veces: la primera corrida (con un
+  `npm run dev` manual compitiendo por CPU en paralelo, para la
+  verificación visual) mostró 6 fallos; la segunda corrida aislada mostró
+  los **mismos 6 fallos exactos**, y una tercera corrida de esos 6 tests
+  contra el commit base sin este cambio (vía `git stash`) los reprodujo
+  **idénticos** — confirmando que son preexistentes y no relacionados
+  (`dashboard.spec.ts` duplicar/archivar, `auth.spec.ts` logout en mobile,
+  y el contrato `data-edit-kind` de `editor.spec.ts` esperando
+  `"text"|"multiline"|"image"` pero recibiendo `"collection"` en desktop y
+  mobile). **No corregidos a propósito** — fuera del alcance de este
+  cambio; quedan como pendiente conocido, ver más abajo.
+
 **Biblioteca de Itinerarios — Fase 2, cierre de los pendientes dejados
 explícitamente afuera de la Fase 1 (2026-08-25).** A pedido del usuario
 ("termina el resto"), se completaron los 4 puntos que habían quedado
@@ -1180,3 +1393,24 @@ navy-triangle reusada para dividers de hotel Y de itinerario — geometría vía
   Resuelto al aislar la base y el build E2E, partir siempre del seed y ejecutar
   únicamente los escenarios aplicables a cada proyecto; la corrida completa
   actual termina con 43 passed y 0 skipped.
+- **Nuevo, encontrado al verificar "Paleta de inserción unificada" (arriba,
+  2026-08-25) — no corregido, fuera de alcance de ese cambio.** La corrida
+  completa ya no da 43/0 — hay 6 fallos deterministas, reproducidos
+  idénticos tanto con el cambio de este pase aplicado como contra el commit
+  base sin él (vía `git stash`), así que son preexistentes y no relacionados
+  con la paleta/drag-drop: (1-2) `dashboard.spec.ts` — "duplicating a
+  proposal" y "archive, restore and delete", ambas timeout esperando
+  controles de la fila `DEMO-0001`; (3) `auth.spec.ts` — "logout clears the
+  session" en mobile, el botón "Log out" queda bloqueado por otro elemento
+  que intercepta el click; (4) `editor.spec.ts` — "editor exposes document,
+  catalog..." en mobile, el heading "The Mainland Tour" queda `hidden`; (5-6)
+  `editor.spec.ts` — "rendered pages annotate editable regions..." en
+  desktop y mobile, el contrato de `data-edit-kind` espera
+  `"text"|"multiline"|"image"` pero encuentra `"collection"` en al menos una
+  región del canvas — sugiere que algún bloque nuevo (posiblemente de la
+  Biblioteca de Itinerarios Fase 2, o del renderer Minimal Grid) empezó a
+  emitir un `data-edit-kind="collection"` que el test todavía no contempla,
+  o que la lista blanca del test quedó desactualizada. Ninguno de los 6
+  toca `InsertionGap`/`CatalogPanel`/el drag ghost. Queda pendiente
+  investigar la causa raíz y decidir si es el contrato o el test el que
+  hay que actualizar.

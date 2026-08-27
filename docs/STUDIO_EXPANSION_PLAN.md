@@ -327,13 +327,16 @@ acoplar `CatalogPanel` en `2xl:` que destrabó 11.2.
    Solo las páginas que inician sección son arrastrables (las continuaciones
    de paginación se mueven con su sección); indicador de drop entre cards;
    auto-scroll del panel durante el drag.
-2. **Insertar arrastrando desde el catálogo (completo, 11.2):** los ítems
-   del catálogo contextual (hoteles, excursiones), acoplado en `2xl:`
-   (`CatalogPanel` deja de ser modal-only a partir de ese breakpoint), se
-   arrastran al canvas vía `useCatalogDragInsert.ts`; cada `InsertionGap`
-   se resalta como drop target válido mientras se arrastra. Soltar ejecuta
-   `addCatalogHotelToProposal`/`addCatalogExcursionToProposal` con el
-   `afterSectionId` del punto de drop. Por debajo de `2xl` el catálogo
+2. **Insertar arrastrando desde el catálogo (completo, 11.2; ampliado con
+   Library y Blocks):** los ítems del catálogo contextual (hoteles,
+   excursiones, secciones guardadas de Library, y los tipos de bloque
+   plantilla en la pestaña Blocks), acoplado en `2xl:` (`CatalogPanel` deja
+   de ser modal-only a partir de ese breakpoint), se arrastran al canvas vía
+   `useCatalogDragInsert.ts`; cada `InsertionGap` se resalta como drop
+   target válido mientras se arrastra. Soltar ejecuta
+   `addCatalogHotelToProposal`/`addCatalogExcursionToProposal`/
+   `insertLibrarySection`/`addProposalSection` (según el `kind` del ítem)
+   con el `afterSectionId` del punto de drop. Por debajo de `2xl` el catálogo
    sigue siendo el modal de siempre, con el botón "Add to proposal" (sin
    drag, agrega al final) como camino completo.
 3. **Puntos de inserción en canvas (completo, 11.3):** en hover/foco sobre

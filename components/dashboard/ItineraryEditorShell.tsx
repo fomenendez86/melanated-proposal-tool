@@ -1,7 +1,15 @@
 "use client";
 
-import { ArrowDown, ArrowLeft, ArrowUp, Bus, Check, CircleAlert, MapPinned, Plane, Plus, Trash2, TicketCheck } from "lucide-react";
-import Link from "next/link";
+import {
+  ArrowDown,
+  ArrowUp,
+  Bus,
+  MapPinArea,
+  Airplane,
+  Plus,
+  Trash,
+  Ticket,
+} from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -23,6 +31,7 @@ import {
   removeItineraryTransport,
   updateItineraryDays,
 } from "@/app/proposals/itineraries/[id]/actions";
+import AppShell from "@/components/app/AppShell";
 import { archiveItinerary, restoreItinerary } from "@/app/proposals/itineraries/actions";
 import ItineraryEditor from "@/components/editor/ItineraryEditor";
 import { EditorButton, EditorEmptyState, EditorNotice, EditorSegmentedControl, editorFocusRing } from "@/components/editor/EditorUi";
@@ -33,7 +42,7 @@ import type { ItineraryCatalogPickerData } from "@/lib/db/getItineraryCatalogPic
 import type { ClientOption } from "@/lib/db/getClientOptions";
 import type { DocumentDesignDescriptor } from "@/lib/designs/types";
 
-const inputClass = `h-10 w-full rounded-lg border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`;
+const inputClass = `h-10 w-full rounded-editor-md border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`;
 
 const SAVE_COPY: Record<EditorSaveState, string> = {
   loaded: "Loaded",
@@ -107,7 +116,7 @@ function GenerateProposalDialog({
 
   return (
     <div className="fixed inset-0 z-[70] grid place-items-center bg-editor-overlay p-4" role="dialog" aria-modal="true" aria-labelledby="generate-proposal-title">
-      <div className="w-full max-w-md rounded-2xl border border-editor-border bg-editor-panel p-5 shadow-2xl">
+      <div className="w-full max-w-md rounded-editor-lg border border-editor-border bg-editor-panel p-5 shadow-2xl">
         <h2 id="generate-proposal-title" className="text-lg font-semibold text-editor-text-strong">Generate proposal</h2>
         <p className="mt-1 text-sm text-editor-text-muted">Creates a real proposal from this itinerary that you can personalize, download, or send.</p>
 
@@ -213,7 +222,7 @@ function HotelsPanel({ itinerary, catalog, activeTierId, onChange }: { itinerary
   }
 
   return (
-    <section className="space-y-3 rounded-xl border border-editor-border-subtle bg-editor-raised p-4">
+    <section className="space-y-3 rounded-editor-lg border border-editor-border-subtle bg-editor-raised p-4">
       <h3 className="text-sm font-semibold text-editor-text-strong">Hotels</h3>
       {visible.length === 0 ? (
         <p className="text-xs text-editor-text-muted">No hotels yet for this scope — the client won&apos;t see an accommodations section unless you add one.</p>
@@ -222,7 +231,7 @@ function HotelsPanel({ itinerary, catalog, activeTierId, onChange }: { itinerary
           {visible.map((row, index) => {
             const hotel = catalog.hotels.find((h) => h.id === row.hotelId);
             return (
-              <li key={row.id} className="flex items-center justify-between gap-2 rounded-lg border border-editor-border-subtle bg-editor-panel px-3 py-2 text-sm">
+              <li key={row.id} className="flex items-center justify-between gap-2 rounded-editor-md border border-editor-border-subtle bg-editor-panel px-3 py-2 text-sm">
                 <div className="min-w-0">
                   <p className="truncate font-medium text-editor-text-strong">{hotel?.name ?? `Hotel #${row.hotelId}`}</p>
                   <p className="truncate text-xs text-editor-text-muted">{row.roomCategory} · {row.mealPlan} · {row.nights} night{row.nights === 1 ? "" : "s"} · {row.tierId === null ? "Shared" : "This tier"}</p>
@@ -230,7 +239,7 @@ function HotelsPanel({ itinerary, catalog, activeTierId, onChange }: { itinerary
                 <div className="flex items-center">
                   <MoveButtons disabled={pending} atTop={index === 0} atBottom={index === visible.length - 1} onUp={() => void move(row.id, -1)} onDown={() => void move(row.id, 1)} />
                   <EditorButton type="button" variant="ghost" size="icon" aria-label="Remove hotel" disabled={pending} onClick={() => void remove(row.id)}>
-                    <Trash2 className="size-4" aria-hidden="true" />
+                    <Trash className="size-4" aria-hidden="true" />
                   </EditorButton>
                 </div>
               </li>
@@ -305,9 +314,9 @@ function FlightsPanel({ itinerary, activeTierId, onChange }: { itinerary: Itiner
   }
 
   return (
-    <section className="space-y-3 rounded-xl border border-editor-border-subtle bg-editor-raised p-4">
+    <section className="space-y-3 rounded-editor-lg border border-editor-border-subtle bg-editor-raised p-4">
       <div className="flex items-center gap-2 text-editor-text-strong">
-        <Plane className="size-4" aria-hidden="true" />
+        <Airplane className="size-4" aria-hidden="true" />
         <h3 className="text-sm font-semibold">Flights</h3>
       </div>
       {visible.length === 0 ? (
@@ -315,7 +324,7 @@ function FlightsPanel({ itinerary, activeTierId, onChange }: { itinerary: Itiner
       ) : (
         <ul className="space-y-2">
           {visible.map((row, index) => (
-            <li key={row.id} className="flex items-center justify-between gap-2 rounded-lg border border-editor-border-subtle bg-editor-panel px-3 py-2 text-sm">
+            <li key={row.id} className="flex items-center justify-between gap-2 rounded-editor-md border border-editor-border-subtle bg-editor-panel px-3 py-2 text-sm">
               <div className="min-w-0">
                 <p className="truncate font-medium text-editor-text-strong">{[row.carrier, row.flightNumber].filter(Boolean).join(" ") || "Flight"}</p>
                 <p className="truncate text-xs text-editor-text-muted">{[row.originAirport, row.destinationAirport].filter(Boolean).join(" → ")} · {row.tierId === null ? "Shared" : "This tier"}</p>
@@ -323,7 +332,7 @@ function FlightsPanel({ itinerary, activeTierId, onChange }: { itinerary: Itiner
               <div className="flex items-center">
                 <MoveButtons disabled={pending} atTop={index === 0} atBottom={index === visible.length - 1} onUp={() => void move(row.id, -1)} onDown={() => void move(row.id, 1)} />
                 <EditorButton type="button" variant="ghost" size="icon" aria-label="Remove flight" disabled={pending} onClick={() => void remove(row.id)}>
-                  <Trash2 className="size-4" aria-hidden="true" />
+                  <Trash className="size-4" aria-hidden="true" />
                 </EditorButton>
               </div>
             </li>
@@ -393,7 +402,7 @@ function TransportPanel({ itinerary, activeTierId, onChange }: { itinerary: Itin
   }
 
   return (
-    <section className="space-y-3 rounded-xl border border-editor-border-subtle bg-editor-raised p-4">
+    <section className="space-y-3 rounded-editor-lg border border-editor-border-subtle bg-editor-raised p-4">
       <div className="flex items-center gap-2 text-editor-text-strong">
         <Bus className="size-4" aria-hidden="true" />
         <h3 className="text-sm font-semibold">Ground transportation</h3>
@@ -403,7 +412,7 @@ function TransportPanel({ itinerary, activeTierId, onChange }: { itinerary: Itin
       ) : (
         <ul className="space-y-2">
           {visible.map((row, index) => (
-            <li key={row.id} className="flex items-center justify-between gap-2 rounded-lg border border-editor-border-subtle bg-editor-panel px-3 py-2 text-sm">
+            <li key={row.id} className="flex items-center justify-between gap-2 rounded-editor-md border border-editor-border-subtle bg-editor-panel px-3 py-2 text-sm">
               <div className="min-w-0">
                 <p className="truncate font-medium text-editor-text-strong">{row.mode || row.description || "Transportation"}</p>
                 <p className="truncate text-xs text-editor-text-muted">{[row.pickupLocation, row.dropoffLocation].filter(Boolean).join(" → ")} · {row.tierId === null ? "Shared" : "This tier"}</p>
@@ -411,7 +420,7 @@ function TransportPanel({ itinerary, activeTierId, onChange }: { itinerary: Itin
               <div className="flex items-center">
                 <MoveButtons disabled={pending} atTop={index === 0} atBottom={index === visible.length - 1} onUp={() => void move(row.id, -1)} onDown={() => void move(row.id, 1)} />
                 <EditorButton type="button" variant="ghost" size="icon" aria-label="Remove transportation" disabled={pending} onClick={() => void remove(row.id)}>
-                  <Trash2 className="size-4" aria-hidden="true" />
+                  <Trash className="size-4" aria-hidden="true" />
                 </EditorButton>
               </div>
             </li>
@@ -479,9 +488,9 @@ function ExcursionsPanel({ itinerary, catalog, activeTierId, onChange }: { itine
   }
 
   return (
-    <section className="space-y-3 rounded-xl border border-editor-border-subtle bg-editor-raised p-4">
+    <section className="space-y-3 rounded-editor-lg border border-editor-border-subtle bg-editor-raised p-4">
       <div className="flex items-center gap-2 text-editor-text-strong">
-        <TicketCheck className="size-4" aria-hidden="true" />
+        <Ticket className="size-4" aria-hidden="true" />
         <h3 className="text-sm font-semibold">Excursions</h3>
       </div>
       {visible.length === 0 ? (
@@ -491,7 +500,7 @@ function ExcursionsPanel({ itinerary, catalog, activeTierId, onChange }: { itine
           {visible.map((row, index) => {
             const excursion = catalog.excursions.find((e) => e.id === row.excursionId);
             return (
-              <li key={row.id} className="flex items-center justify-between gap-2 rounded-lg border border-editor-border-subtle bg-editor-panel px-3 py-2 text-sm">
+              <li key={row.id} className="flex items-center justify-between gap-2 rounded-editor-md border border-editor-border-subtle bg-editor-panel px-3 py-2 text-sm">
                 <div className="min-w-0">
                   <p className="truncate font-medium text-editor-text-strong">{excursion?.title ?? `Excursion #${row.excursionId}`}</p>
                   <p className="truncate text-xs text-editor-text-muted">
@@ -501,7 +510,7 @@ function ExcursionsPanel({ itinerary, catalog, activeTierId, onChange }: { itine
                 <div className="flex items-center">
                   <MoveButtons disabled={pending} atTop={index === 0} atBottom={index === visible.length - 1} onUp={() => void move(row.id, -1)} onDown={() => void move(row.id, 1)} />
                   <EditorButton type="button" variant="ghost" size="icon" aria-label="Remove excursion" disabled={pending} onClick={() => void remove(row.id)}>
-                    <Trash2 className="size-4" aria-hidden="true" />
+                    <Trash className="size-4" aria-hidden="true" />
                   </EditorButton>
                 </div>
               </li>
@@ -590,23 +599,13 @@ export default function ItineraryEditorShell({
   }
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col gap-5 px-6 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <Link href="/proposals/itineraries" prefetch={false} className="inline-flex items-center gap-1.5 text-sm font-semibold text-editor-text-muted hover:text-editor-brand">
-            <ArrowLeft className="size-4" aria-hidden="true" />
-            Itineraries
-          </Link>
-          <h1 className="mt-2 flex items-center gap-2 text-2xl font-semibold text-editor-text-strong">
-            <MapPinned className="size-5 text-editor-brand" aria-hidden="true" />
-            {itinerary.name}
-          </h1>
-          <p className="mt-1 flex items-center gap-1.5 text-xs text-editor-text-muted">
-            {saveState === "error" ? <CircleAlert className="size-3.5 text-editor-danger" aria-hidden="true" /> : <Check className="size-3.5" aria-hidden="true" />}
-            {SAVE_COPY[saveState]}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+    <AppShell
+      active="itineraries"
+      title={itinerary.name}
+      subtitle={SAVE_COPY[saveState]}
+      backHref="/proposals/itineraries"
+      headerActions={(
+        <>
           {itinerary.archived ? (
             <EditorButton type="button" variant="secondary" onClick={() => void archiveOrRestore(false)}>Restore</EditorButton>
           ) : (
@@ -615,8 +614,10 @@ export default function ItineraryEditorShell({
           <EditorButton type="button" variant="primary" onClick={() => setGenerating(true)}>
             Generate proposal
           </EditorButton>
-        </div>
-      </div>
+        </>
+      )}
+    >
+      <div className="app-page max-w-5xl">
 
       {error ? <EditorNotice tone="danger" className="px-3 py-2 text-xs">{error}</EditorNotice> : null}
 
@@ -632,7 +633,7 @@ export default function ItineraryEditorShell({
                 {tier.name}
               </EditorButton>
               <EditorButton type="button" variant="ghost" size="icon" aria-label={`Delete ${tier.name} tier`} onClick={() => void removeTier(tier.id)}>
-                <Trash2 className="size-3.5" aria-hidden="true" />
+                <Trash className="size-3.5" aria-hidden="true" />
               </EditorButton>
             </div>
           ))}
@@ -645,7 +646,7 @@ export default function ItineraryEditorShell({
         </div>
       </section>
 
-      <section className="rounded-xl border border-editor-border-subtle bg-editor-panel p-4">
+      <section className="rounded-editor-lg border border-editor-border-subtle bg-editor-panel p-4">
         <ItineraryEditor
           initialText={serializeItineraryEditorDays(
             itinerary.days.map((day) => ({
@@ -669,10 +670,11 @@ export default function ItineraryEditorShell({
       <TransportPanel itinerary={itinerary} activeTierId={activeTierId} onChange={refresh} />
 
       {itinerary.days.length === 0 && itinerary.hotels.length === 0 ? (
-        <EditorEmptyState icon={<MapPinned className="size-5" aria-hidden="true" />} title="Start with a day" description='Use "Add day" above to build the day-by-day plan.' />
+        <EditorEmptyState icon={<MapPinArea className="size-5" aria-hidden="true" />} title="Start with a day" description='Use "Add day" above to build the day-by-day plan.' />
       ) : null}
 
       {generating ? <GenerateProposalDialog itinerary={itinerary} clients={clients} designs={designs} onClose={() => setGenerating(false)} /> : null}
-    </div>
+      </div>
+    </AppShell>
   );
 }

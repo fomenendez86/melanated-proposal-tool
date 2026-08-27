@@ -1,12 +1,22 @@
 "use client";
 
-import { Archive, ArchiveRestore, Bell, Copy, Eye, LibraryBig, LogOut, MapPinned, RotateCcw, Search, Trash2, XCircle } from "lucide-react";
+import {
+  Archive,
+  ArrowUUpLeft,
+  Bell,
+  Copy,
+  Eye,
+  ArrowCounterClockwise,
+  MagnifyingGlass,
+  Trash,
+  XCircle,
+} from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
-import { logout } from "@/app/login/actions";
 import { archiveProposal, deleteProposal, duplicateProposalFromDashboard, markProposalLost, reopenProposal, restoreProposal } from "@/app/proposals/actions";
+import AppShell from "@/components/app/AppShell";
 import { EditorButton, EditorEmptyState, EditorStatusBadge, editorButtonStyles, editorFocusRing } from "@/components/editor/EditorUi";
 import type { TemplateListRow } from "@/lib/db/getTemplateList";
 import type { ItineraryPickerRow } from "@/lib/db/getItineraryList";
@@ -40,7 +50,7 @@ const STATUS_TONE: Record<ProposalStatus, "neutral" | "warning" | "success" | "d
 
 type SortMode = "activity" | "value" | "name";
 
-const selectClass = `h-11 rounded-lg border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`;
+const selectClass = `h-11 rounded-editor-md border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`;
 
 export default function ProposalDashboard({
   rows,
@@ -126,41 +136,31 @@ export default function ProposalDashboard({
     .map((template) => ({ id: template.id, title: template.name }));
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col gap-5 px-6 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-editor-text-strong">Proposals</h1>
-          <p className="mt-1 text-sm text-editor-text-muted">{rows.length} proposal{rows.length === 1 ? "" : "s"} total</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/proposals/notifications" prefetch={false} aria-label={`${unreadNotifications} unread notifications`} className={editorButtonStyles({ variant: "ghost" })}><Bell className="size-4" aria-hidden="true" />{unreadNotifications > 0 ? <span className="rounded-full bg-editor-danger px-1.5 py-0.5 text-[10px] text-white">{unreadNotifications}</span> : null}</Link>
-          <Link href="/proposals/templates" prefetch={false} className={editorButtonStyles({ variant: "secondary" })}>
-            <LibraryBig className="size-4" aria-hidden="true" />
-            Templates
-          </Link>
-          <Link href="/proposals/itineraries" prefetch={false} className={editorButtonStyles({ variant: "secondary" })}>
-            <MapPinned className="size-4" aria-hidden="true" />
-            Itineraries
+    <AppShell
+      active="proposals"
+      title="Proposals"
+      subtitle={`${rows.length} proposal${rows.length === 1 ? "" : "s"} total`}
+      headerActions={(
+        <>
+          <Link href="/proposals/notifications" prefetch={false} aria-label={`${unreadNotifications} unread notifications`} className={`${editorButtonStyles({ variant: "ghost", size: "icon" })} relative`}>
+            <Bell className="size-4" aria-hidden="true" />
+            {unreadNotifications > 0 ? <span className="absolute right-1.5 top-1.5 grid size-4 place-items-center rounded-full bg-editor-danger text-[9px] text-white">{unreadNotifications}</span> : null}
           </Link>
           <CreateProposalDialog clients={clients} designs={designs} existingProposals={existingProposals} templates={templateOptions} itineraries={itineraries} />
-          <form action={logout}>
-            <EditorButton type="submit" variant="ghost" aria-label="Log out">
-              <LogOut className="size-4" aria-hidden="true" />
-              <span className="hidden sm:inline">Log out</span>
-            </EditorButton>
-          </form>
-        </div>
-      </div>
+        </>
+      )}
+    >
+      <div className="app-page">
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="app-page-toolbar">
         <div className="relative flex-1 min-w-[220px]">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-editor-text-subtle" aria-hidden="true" />
+          <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-editor-text-subtle" aria-hidden="true" />
           <input
             aria-label="Search proposals"
             placeholder="Search by name, client, or number"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            className={`h-11 w-full rounded-lg border border-editor-border bg-editor-raised pl-9 pr-3 text-sm ${editorFocusRing}`}
+            className={`h-11 w-full rounded-editor-md border border-editor-border bg-editor-raised pl-9 pr-3 text-sm ${editorFocusRing}`}
           />
         </div>
         <select aria-label="Filter by status" className={selectClass} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as ProposalStatus | "all")}>
@@ -180,9 +180,9 @@ export default function ProposalDashboard({
       {visibleRows.length === 0 ? (
         <EditorEmptyState title="No proposals match" description="Try a different search or status filter." />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {visibleRows.map((row) => (
-            <article key={row.id} className="group flex flex-col overflow-hidden rounded-xl border border-editor-border-subtle bg-editor-panel shadow-editor-card transition hover:border-editor-border-strong">
+            <article key={row.id} className="app-card group flex flex-col overflow-hidden rounded-editor-lg">
               <Link href={`/proposals/${row.id}/editor`} prefetch={false} className="relative block aspect-[4/3] overflow-hidden bg-editor-panel-muted">
                 {row.coverImageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -214,10 +214,10 @@ export default function ProposalDashboard({
                       <Copy className="size-4" aria-hidden="true" />
                     </EditorButton>
                     {!["draft", "lost", "won", "archived"].includes(row.status) ? <EditorButton type="button" variant="ghost" size="icon" aria-label={`Mark ${row.title} lost`} disabled={pendingId === row.id} onClick={() => handleLost(row.id)}><XCircle className="size-4" aria-hidden="true" /></EditorButton> : null}
-                    {["lost", "won", "approved"].includes(row.status) ? <EditorButton type="button" variant="ghost" size="icon" aria-label={`Reopen ${row.title}`} disabled={pendingId === row.id} onClick={() => void handleReopen(row.id)}><RotateCcw className="size-4" aria-hidden="true" /></EditorButton> : null}
+                    {["lost", "won", "approved"].includes(row.status) ? <EditorButton type="button" variant="ghost" size="icon" aria-label={`Reopen ${row.title}`} disabled={pendingId === row.id} onClick={() => void handleReopen(row.id)}><ArrowCounterClockwise className="size-4" aria-hidden="true" /></EditorButton> : null}
                     {row.status === "archived" ? (
                       <EditorButton type="button" variant="ghost" size="icon" aria-label={`Restore ${row.title}`} disabled={pendingId === row.id} onClick={() => void runAction(row.id, () => restoreProposal(row.id))}>
-                        <ArchiveRestore className="size-4" aria-hidden="true" />
+                        <ArrowUUpLeft className="size-4" aria-hidden="true" />
                       </EditorButton>
                     ) : (
                       <EditorButton type="button" variant="ghost" size="icon" aria-label={`Archive ${row.title}`} disabled={pendingId === row.id} onClick={() => void runAction(row.id, () => archiveProposal(row.id))}>
@@ -226,7 +226,7 @@ export default function ProposalDashboard({
                     )}
                     {row.status === "draft" ? (
                       <EditorButton type="button" variant="ghost" size="icon" aria-label={`Delete ${row.title}`} disabled={pendingId === row.id} onClick={() => handleDelete(row.id, row.title)}>
-                        <Trash2 className="size-4" aria-hidden="true" />
+                        <Trash className="size-4" aria-hidden="true" />
                       </EditorButton>
                     ) : null}
                   </div>
@@ -236,6 +236,7 @@ export default function ProposalDashboard({
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </AppShell>
   );
 }

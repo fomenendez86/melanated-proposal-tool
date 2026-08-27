@@ -1,6 +1,15 @@
 "use client";
 
-import { Archive, ArchiveRestore, ArrowLeft, Copy, MapPinned, PencilLine, Plus, Trash2, X } from "lucide-react";
+import {
+  Archive,
+  ArrowUUpLeft,
+  Copy,
+  MapPinArea,
+  PencilLine,
+  Plus,
+  Trash,
+  X,
+} from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -13,10 +22,11 @@ import {
   restoreItinerary,
   updateItineraryFields,
 } from "@/app/proposals/itineraries/actions";
+import AppShell from "@/components/app/AppShell";
 import { EditorButton, EditorEmptyState, EditorNotice, EditorStatusBadge, editorFocusRing } from "@/components/editor/EditorUi";
 import type { ItineraryListRow } from "@/lib/db/getItineraryList";
 
-const inputClass = `h-11 w-full rounded-lg border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`;
+const inputClass = `h-11 w-full rounded-editor-md border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`;
 
 function useFocusTrapDialog(onClose: () => void) {
   const triggerWasFocused = useRef(document.activeElement as HTMLElement | null);
@@ -88,10 +98,10 @@ function CreateItineraryDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <div ref={dialogRef} className="fixed inset-0 z-[70] grid place-items-center bg-editor-overlay p-4" role="dialog" aria-modal="true" aria-labelledby="create-itinerary-title">
-      <div className="w-full max-w-md rounded-2xl border border-editor-border bg-editor-panel p-5 shadow-2xl">
+      <div className="w-full max-w-md rounded-editor-lg border border-editor-border bg-editor-panel p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2 text-editor-brand">
-            <MapPinned className="size-4" aria-hidden="true" />
+            <MapPinArea className="size-4" aria-hidden="true" />
             <h2 id="create-itinerary-title" className="text-lg font-semibold">New itinerary</h2>
           </div>
           <EditorButton type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Close new itinerary dialog">
@@ -151,7 +161,7 @@ function ManageItineraryDialog({ itinerary, onClose }: { itinerary: ItineraryLis
 
   return (
     <div ref={dialogRef} className="fixed inset-0 z-[70] grid place-items-center bg-editor-overlay p-4" role="dialog" aria-modal="true" aria-labelledby="manage-itinerary-title">
-      <div className="w-full max-w-md rounded-2xl border border-editor-border bg-editor-panel p-5 shadow-2xl">
+      <div className="w-full max-w-md rounded-editor-lg border border-editor-border bg-editor-panel p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2 text-editor-brand">
             <PencilLine className="size-4" aria-hidden="true" />
@@ -224,42 +234,38 @@ export default function ItineraryGallery({ itineraries }: { itineraries: Itinera
   }
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col gap-5 px-6 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <Link href="/proposals" prefetch={false} className="inline-flex items-center gap-1.5 text-sm font-semibold text-editor-text-muted hover:text-editor-brand">
-            <ArrowLeft className="size-4" aria-hidden="true" />
-            Proposals
-          </Link>
-          <h1 className="mt-2 text-2xl font-semibold text-editor-text-strong">Itineraries</h1>
-          <p className="mt-1 text-sm text-editor-text-muted">
-            {itineraries.length} itinerar{itineraries.length === 1 ? "y" : "ies"} · design-independent trip skeletons, generate a proposal when ready
-          </p>
-        </div>
+    <AppShell
+      active="itineraries"
+      title="Itineraries"
+      subtitle={`${itineraries.length} itinerar${itineraries.length === 1 ? "y" : "ies"} · reusable trip structures`}
+      backHref="/proposals"
+      headerActions={(
         <EditorButton type="button" variant="primary" onClick={() => setCreating(true)}>
           <Plus className="size-4" aria-hidden="true" />
           New itinerary
         </EditorButton>
-      </div>
+      )}
+    >
+      <div className="app-page">
 
       {error ? <p className="text-sm font-semibold text-editor-danger">{error}</p> : null}
 
       {itineraries.length === 0 ? (
         <EditorEmptyState
-          icon={<MapPinned className="size-5" aria-hidden="true" />}
+          icon={<MapPinArea className="size-5" aria-hidden="true" />}
           title="No itineraries yet"
           description="Create an itinerary to build a reusable day-by-day trip skeleton with optional tier variations."
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {itineraries.map((itinerary) => (
-            <div key={itinerary.id} className="flex flex-col overflow-hidden rounded-xl border border-editor-border-subtle bg-editor-panel shadow-editor-card transition hover:border-editor-border-strong">
+            <div key={itinerary.id} className="app-card flex flex-col overflow-hidden rounded-editor-lg">
               <div className="relative flex aspect-[3/4] items-center justify-center overflow-hidden bg-gradient-to-br from-editor-brand to-editor-brand-hover">
                 {itinerary.thumbnailUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={itinerary.thumbnailUrl} alt="" className="size-full object-cover" />
                 ) : (
-                  <MapPinned className="size-8 text-white/80" aria-hidden="true" />
+                  <MapPinArea className="size-8 text-white/80" aria-hidden="true" />
                 )}
               </div>
               <div className="flex flex-1 flex-col gap-2 p-4">
@@ -289,7 +295,7 @@ export default function ItineraryGallery({ itineraries }: { itineraries: Itinera
                   </EditorButton>
                   {itinerary.archived ? (
                     <EditorButton type="button" variant="ghost" size="icon" aria-label={`Restore ${itinerary.name}`} disabled={pendingId === itinerary.id} onClick={() => void runAction(itinerary.id, () => restoreItinerary(itinerary.id))}>
-                      <ArchiveRestore className="size-4" aria-hidden="true" />
+                      <ArrowUUpLeft className="size-4" aria-hidden="true" />
                     </EditorButton>
                   ) : (
                     <EditorButton type="button" variant="ghost" size="icon" aria-label={`Archive ${itinerary.name}`} disabled={pendingId === itinerary.id} onClick={() => void runAction(itinerary.id, () => archiveItinerary(itinerary.id))}>
@@ -297,7 +303,7 @@ export default function ItineraryGallery({ itineraries }: { itineraries: Itinera
                     </EditorButton>
                   )}
                   <EditorButton type="button" variant="ghost" size="icon" className="text-editor-danger" aria-label={`Delete ${itinerary.name}`} disabled={pendingId === itinerary.id} onClick={() => void runDelete(itinerary)}>
-                    <Trash2 className="size-4" aria-hidden="true" />
+                    <Trash className="size-4" aria-hidden="true" />
                   </EditorButton>
                 </div>
               </div>
@@ -308,6 +314,7 @@ export default function ItineraryGallery({ itineraries }: { itineraries: Itinera
 
       {creating ? <CreateItineraryDialog onClose={() => setCreating(false)} /> : null}
       {managing ? <ManageItineraryDialog itinerary={managing} onClose={() => setManagingId(null)} /> : null}
-    </div>
+      </div>
+    </AppShell>
   );
 }

@@ -1,6 +1,11 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Plus,
+  Trash,
+} from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
@@ -17,7 +22,7 @@ import type { PricingDiscountType, PricingUnit, ProposalPricingEditorItem } from
 
 import { EditorButton, EditorNotice, editorFocusRing } from "./EditorUi";
 
-const controlClass = `h-9 w-full rounded-lg border border-editor-border bg-editor-raised px-2 text-xs text-editor-text ${editorFocusRing}`;
+const controlClass = `h-9 w-full rounded-editor-md border border-editor-border bg-editor-raised px-2 text-xs text-editor-text ${editorFocusRing}`;
 
 export default function PricingItemsEditor({ proposalId, items, fees }: { proposalId: number; items: ProposalPricingEditorItem[]; fees: ContentLibraryData["fees"] }) {
   const router = useRouter();
@@ -43,7 +48,7 @@ export default function PricingItemsEditor({ proposalId, items, fees }: { propos
         <p className="mt-1 text-xs leading-4 text-editor-text-muted">Totals use integer cents and are recalculated on the server.</p>
       </div>
       {items.map((item, index) => (
-        <details key={item.id} className="rounded-xl border border-editor-border-subtle bg-editor-raised" open={items.length <= 2}>
+        <details key={item.id} className="rounded-editor-lg border border-editor-border-subtle bg-editor-raised" open={items.length <= 2}>
           <summary className="cursor-pointer px-3 py-2.5 text-xs font-semibold text-editor-text">
             {item.description} · {formatMinorMoney(item.unitPriceMinor, item.currency)}
           </summary>
@@ -69,7 +74,7 @@ export default function PricingItemsEditor({ proposalId, items, fees }: { propos
             <label className="flex items-center gap-2 text-xs text-editor-text"><input name="selectedByDefault" type="checkbox" defaultChecked={item.selectedByDefault} /> Selected by default</label>
             <label className="flex items-center gap-2 text-xs text-editor-text"><input name="quantityEditable" type="checkbox" defaultChecked={item.quantityEditable} /> Client edits quantity</label>
             <div className="col-span-2 flex items-center justify-between gap-2 pt-1">
-              <div className="flex gap-1"><EditorButton type="button" variant="ghost" aria-label={`Move ${item.description} up`} disabled={pending || index === 0} onClick={() => run(() => moveProposalPricingItem(proposalId, item.id, -1))}><ArrowUp className="size-3.5" /></EditorButton><EditorButton type="button" variant="ghost" aria-label={`Move ${item.description} down`} disabled={pending || index === items.length - 1} onClick={() => run(() => moveProposalPricingItem(proposalId, item.id, 1))}><ArrowDown className="size-3.5" /></EditorButton><EditorButton type="button" variant="ghost" aria-label={`Delete ${item.description}`} disabled={pending} onClick={() => { if (window.confirm(`Delete ${item.description}?`)) run(() => removeProposalPricingItem(proposalId, item.id)); }}><Trash2 className="size-3.5" /></EditorButton></div>
+              <div className="flex gap-1"><EditorButton type="button" variant="ghost" aria-label={`Move ${item.description} up`} disabled={pending || index === 0} onClick={() => run(() => moveProposalPricingItem(proposalId, item.id, -1))}><ArrowUp className="size-3.5" /></EditorButton><EditorButton type="button" variant="ghost" aria-label={`Move ${item.description} down`} disabled={pending || index === items.length - 1} onClick={() => run(() => moveProposalPricingItem(proposalId, item.id, 1))}><ArrowDown className="size-3.5" /></EditorButton><EditorButton type="button" variant="ghost" aria-label={`Delete ${item.description}`} disabled={pending} onClick={() => { if (window.confirm(`Delete ${item.description}?`)) run(() => removeProposalPricingItem(proposalId, item.id)); }}><Trash className="size-3.5" /></EditorButton></div>
               <EditorButton type="submit" variant="primary" disabled={pending}>Save item</EditorButton>
             </div>
           </form>
@@ -79,7 +84,7 @@ export default function PricingItemsEditor({ proposalId, items, fees }: { propos
         <select aria-label="Reusable fee" value={feeId} onChange={(event) => setFeeId(event.target.value)} className={controlClass}><option value="">Ad hoc item</option>{fees.filter((fee) => fee.currency === currency).map((fee) => <option key={fee.id} value={fee.id}>{fee.name}</option>)}</select>
         <EditorButton type="button" variant="primary" disabled={pending} onClick={() => run(() => addProposalPricingItem(proposalId, feeId ? Number(feeId) : undefined))}><Plus className="size-3.5" /> Add</EditorButton>
       </div>
-      {items.length ? <dl className="rounded-xl border border-editor-border-subtle bg-editor-raised p-3 text-xs text-editor-text"><div className="flex justify-between"><dt>Subtotal</dt><dd>{formatMinorMoney(calculated.totals.subtotalMinor, currency)}</dd></div><div className="mt-1 flex justify-between"><dt>Discount</dt><dd>−{formatMinorMoney(calculated.totals.discountMinor, currency)}</dd></div><div className="mt-1 flex justify-between"><dt>Tax</dt><dd>{formatMinorMoney(calculated.totals.taxMinor, currency)}</dd></div><div className="mt-2 flex justify-between border-t border-editor-border pt-2 font-bold"><dt>Total</dt><dd>{formatMinorMoney(calculated.totals.totalMinor, currency)}</dd></div></dl> : <EditorNotice tone="warning">Add a line item to enable calculated pricing.</EditorNotice>}
+      {items.length ? <dl className="rounded-editor-lg border border-editor-border-subtle bg-editor-raised p-3 text-xs text-editor-text"><div className="flex justify-between"><dt>Subtotal</dt><dd>{formatMinorMoney(calculated.totals.subtotalMinor, currency)}</dd></div><div className="mt-1 flex justify-between"><dt>Discount</dt><dd>−{formatMinorMoney(calculated.totals.discountMinor, currency)}</dd></div><div className="mt-1 flex justify-between"><dt>Tax</dt><dd>{formatMinorMoney(calculated.totals.taxMinor, currency)}</dd></div><div className="mt-2 flex justify-between border-t border-editor-border pt-2 font-bold"><dt>Total</dt><dd>{formatMinorMoney(calculated.totals.totalMinor, currency)}</dd></div></dl> : <EditorNotice tone="warning">Add a line item to enable calculated pricing.</EditorNotice>}
       {error ? <EditorNotice tone="danger">{error}</EditorNotice> : null}
     </section>
   );

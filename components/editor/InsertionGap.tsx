@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Plus } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -9,6 +9,7 @@ import type { ProposalDesignContext } from "@/lib/designs/types";
 import { ADDABLE_SECTIONS } from "@/lib/editor/addableSections";
 
 import { editorFocusRing } from "./EditorUi";
+import { DEFAULT_TEMPLATE_ICON, SECTION_TYPE_ICONS } from "./sectionTypeIcons";
 
 /**
  * Hover/focus affordance rendered in the gap between two rendered pages.
@@ -75,10 +76,18 @@ export default function InsertionGap({
     <div ref={containerRef} className="group/gap relative w-full" style={{ height: 12 }}>
       <div
         className={`pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 transition ${
-          highlighted ? "h-0.5 rounded-full bg-editor-brand opacity-100" : "h-px bg-editor-border-subtle opacity-0 group-hover/gap:opacity-100"
+          highlighted ? "border-t-2 border-dashed border-editor-brand opacity-100" : "h-px bg-editor-border-subtle opacity-0 group-hover/gap:opacity-100"
         }`}
         aria-hidden="true"
       />
+      {highlighted ? (
+        <span
+          className="pointer-events-none absolute left-1/2 top-1/2 ml-8 -translate-y-1/2 whitespace-nowrap rounded-full bg-editor-brand px-2 py-0.5 text-[11px] font-semibold text-white shadow-sm"
+          aria-hidden="true"
+        >
+          Drop here
+        </span>
+      ) : null}
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
@@ -96,20 +105,24 @@ export default function InsertionGap({
         <div
           role="menu"
           aria-label="Section to insert"
-          className="absolute left-1/2 top-full z-20 mt-6 w-56 -translate-x-1/2 rounded-lg border border-editor-border bg-editor-panel p-1 shadow-lg"
+          className="absolute left-1/2 top-full z-20 mt-6 w-56 -translate-x-1/2 rounded-editor-md border border-editor-border bg-editor-panel p-1 shadow-lg"
         >
-          {options.map((item) => (
-            <button
-              key={item.type}
-              type="button"
-              role="menuitem"
-              disabled={pending === item.type}
-              onClick={() => void addAt(item.type, item.label)}
-              className={`flex h-11 w-full items-center rounded-md px-3 text-left text-sm text-editor-text transition hover:bg-editor-inset disabled:opacity-50 ${editorFocusRing}`}
-            >
-              {pending === item.type ? "Adding…" : item.label}
-            </button>
-          ))}
+          {options.map((item) => {
+            const Icon = SECTION_TYPE_ICONS[item.type] ?? DEFAULT_TEMPLATE_ICON;
+            return (
+              <button
+                key={item.type}
+                type="button"
+                role="menuitem"
+                disabled={pending === item.type}
+                onClick={() => void addAt(item.type, item.label)}
+                className={`flex h-11 w-full items-center gap-2.5 rounded-editor-sm px-3 text-left text-sm text-editor-text transition hover:bg-editor-inset disabled:opacity-50 ${editorFocusRing}`}
+              >
+                <Icon className="size-4 shrink-0 text-editor-brand" aria-hidden="true" />
+                {pending === item.type ? "Adding…" : item.label}
+              </button>
+            );
+          })}
         </div>
       ) : null}
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, LibraryBig, X } from "lucide-react";
+import { Check, Books, X } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 
 import { saveCurrentProposalAsTemplateAction } from "@/app/proposals/[id]/editor/templateActions";
@@ -75,16 +75,16 @@ export default function SaveAsTemplateButton({ proposalId }: { proposalId: numbe
   return (
     <>
       <EditorButton ref={triggerRef} type="button" onClick={() => setOpen(true)} aria-label="Save as template" title="Save as template">
-        <LibraryBig className="size-4" aria-hidden="true" />
+        <Books className="size-4" aria-hidden="true" />
         <span className="hidden xl:inline">Save as template</span>
       </EditorButton>
       {open ? (
         <div ref={dialogRef} className="fixed inset-0 z-[70] grid place-items-center bg-editor-overlay p-4" role="dialog" aria-modal="true" aria-labelledby="save-template-title">
-          <div className="w-full max-w-md rounded-2xl border border-editor-border bg-editor-panel p-5 shadow-2xl">
+          <div className="w-full max-w-md rounded-editor-lg border border-editor-border bg-editor-panel p-5 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2 text-editor-brand">
-                  <LibraryBig className="size-4" aria-hidden="true" />
+                  <Books className="size-4" aria-hidden="true" />
                   <h2 id="save-template-title" className="text-lg font-semibold">Save as template</h2>
                 </div>
                 <p className="mt-1 text-sm leading-5 text-editor-text-muted">Saves a snapshot of this proposal. Later edits here never change the template.</p>
@@ -103,11 +103,11 @@ export default function SaveAsTemplateButton({ proposalId }: { proposalId: numbe
               <div className="mt-5 space-y-4">
                 <label className="block text-xs font-semibold text-editor-text">
                   Template name
-                  <input value={name} onChange={(event) => setName(event.target.value)} maxLength={120} placeholder="e.g. Classic Tanzania Safari" className={`mt-1.5 h-11 w-full rounded-lg border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`} />
+                  <input value={name} onChange={(event) => setName(event.target.value)} maxLength={120} placeholder="e.g. Classic Tanzania Safari" className={`mt-1.5 h-11 w-full rounded-editor-md border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`} />
                 </label>
                 <label className="block text-xs font-semibold text-editor-text">
                   Description (optional)
-                  <textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} className={`mt-1.5 h-20 w-full resize-none rounded-lg border border-editor-border bg-editor-raised px-3 py-2 text-sm ${editorFocusRing}`} />
+                  <textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} className={`mt-1.5 h-20 w-full resize-none rounded-editor-md border border-editor-border bg-editor-raised px-3 py-2 text-sm ${editorFocusRing}`} />
                 </label>
                 {error ? <EditorNotice tone="danger" className="px-3 py-2 text-xs">{error}</EditorNotice> : null}
                 <EditorButton type="button" variant="primary" className="w-full" disabled={loading} onClick={() => void submit()}>{loading ? "Saving…" : "Save template"}</EditorButton>

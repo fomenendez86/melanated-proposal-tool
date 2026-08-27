@@ -1,6 +1,17 @@
 "use client";
 
-import { Bookmark, Check, FileText, GripVertical, ImageIcon, Plus, Search, Tag, Trash2, WalletCards } from "lucide-react";
+import {
+  Bookmark,
+  Check,
+  FileText,
+  DotsSixVertical,
+  Image as ImageIcon,
+  Plus,
+  MagnifyingGlass,
+  Tag,
+  Trash,
+  Wallet,
+} from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
@@ -14,14 +25,14 @@ import {
   saveLibraryFee,
 } from "@/app/proposals/[id]/editor/libraryActions";
 import type { ProposalDesignContext } from "@/lib/designs/types";
-import type { ContentLibraryData, LibraryFeeItem, LibraryFeeUnit } from "@/lib/library/types";
+import type { ContentLibraryData, LibraryFeeItem, LibraryFeeUnit, LibraryImageItem } from "@/lib/library/types";
 
 import { EditorButton, EditorEmptyState, EditorNotice, EditorSegmentedControl, editorFocusRing } from "./EditorUi";
 import type { CatalogDragItem } from "./useCatalogDragInsert";
 
 type LibraryMode = "sections" | "snippets" | "images" | "fees";
 
-const controlClass = `h-11 w-full rounded-lg border border-editor-border bg-editor-raised px-3 text-sm text-editor-text outline-none transition placeholder:text-editor-text-subtle focus:border-editor-border-strong focus:ring-2 focus:ring-editor-border-strong/20 ${editorFocusRing}`;
+const controlClass = `h-11 w-full rounded-editor-md border border-editor-border bg-editor-raised px-3 text-sm text-editor-text outline-none transition placeholder:text-editor-text-subtle focus:border-editor-border-strong focus:ring-2 focus:ring-editor-border-strong/20 ${editorFocusRing}`;
 const areaClass = `${controlClass} h-auto py-2.5`;
 
 function tagList(value: string) {
@@ -38,12 +49,16 @@ export default function ContentLibraryPanel({
   designContext,
   enableDrag,
   onDragStart,
+  onImageUploaded,
+  onImageArchived,
 }: {
   proposalId: number;
   library: ContentLibraryData;
   designContext: ProposalDesignContext;
   enableDrag?: boolean;
   onDragStart?: (item: CatalogDragItem, event: React.PointerEvent) => void;
+  onImageUploaded?: (item: LibraryImageItem) => void;
+  onImageArchived?: (id: number) => void;
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -105,8 +120,8 @@ export default function ContentLibraryPanel({
         onChange={(value) => { setMode(value); setError(""); setNotice(""); }}
         className="grid w-full grid-cols-2 [&>button]:w-full"
       />
-      <label className="mt-3 flex h-11 items-center gap-2 rounded-lg border border-editor-border bg-editor-raised px-3 text-editor-text-muted focus-within:border-editor-border-strong focus-within:ring-2 focus-within:ring-editor-border-strong/20">
-        <Search className="size-4" aria-hidden="true" />
+      <label className="mt-3 flex h-11 items-center gap-2 rounded-editor-md border border-editor-border bg-editor-raised px-3 text-editor-text-muted focus-within:border-editor-border-strong focus-within:ring-2 focus-within:ring-editor-border-strong/20">
+        <MagnifyingGlass className="size-4" aria-hidden="true" />
         <span className="sr-only">Search library</span>
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${mode}`} className="min-w-0 flex-1 bg-transparent text-sm text-editor-text-strong outline-none" />
       </label>
@@ -115,7 +130,7 @@ export default function ContentLibraryPanel({
       {notice ? <EditorNotice tone="success" className="mt-3 px-3 py-2 text-xs">{notice}</EditorNotice> : null}
 
       {mode === "snippets" ? (
-        <div className="mt-4 space-y-2 rounded-xl border border-editor-border-subtle bg-editor-inset p-3">
+        <div className="mt-4 space-y-2 rounded-editor-lg border border-editor-border-subtle bg-editor-inset p-3">
           <h3 className="text-sm font-semibold text-editor-text">New text snippet</h3>
           <input aria-label="Snippet name" value={snippet.name} onChange={(event) => setSnippet((current) => ({ ...current, name: event.target.value }))} className={controlClass} placeholder="Snippet name" />
           <textarea aria-label="Snippet text" value={snippet.body} onChange={(event) => setSnippet((current) => ({ ...current, body: event.target.value }))} className={areaClass} rows={4} placeholder="Reusable paragraph" />
@@ -127,9 +142,9 @@ export default function ContentLibraryPanel({
       ) : null}
 
       {mode === "images" ? (
-        <div className="mt-4 space-y-2 rounded-xl border border-editor-border-subtle bg-editor-inset p-3">
+        <div className="mt-4 space-y-2 rounded-editor-lg border border-editor-border-subtle bg-editor-inset p-3">
           <h3 className="text-sm font-semibold text-editor-text">Upload image</h3>
-          <input ref={fileRef} aria-label="Image file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="block w-full text-xs text-editor-text-muted file:mr-2 file:rounded-lg file:border-0 file:bg-editor-raised file:px-3 file:py-2 file:font-semibold" />
+          <input ref={fileRef} aria-label="Image file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="block w-full text-xs text-editor-text-muted file:mr-2 file:rounded-editor-md file:border-0 file:bg-editor-raised file:px-3 file:py-2 file:font-semibold" />
           <input aria-label="Image name" value={image.name} onChange={(event) => setImage((current) => ({ ...current, name: event.target.value }))} className={controlClass} placeholder="Image name" />
           <input aria-label="Image tags" value={image.tags} onChange={(event) => setImage((current) => ({ ...current, tags: event.target.value }))} className={controlClass} placeholder="Tags, separated by commas" />
           <EditorButton type="button" variant="primary" className="w-full" disabled={pending === "image-upload"} onClick={async () => {
@@ -139,16 +154,17 @@ export default function ContentLibraryPanel({
             const body = new FormData();
             body.set("file", file); body.set("name", image.name); body.set("tags", image.tags); body.set("proposalId", String(proposalId));
             const response = await fetch("/api/library/images", { method: "POST", body });
-            const result = await response.json() as { ok: boolean; error?: string };
+            const result = await response.json() as { ok: boolean; id?: number; url?: string; error?: string };
             setPending("");
-            if (!result.ok) { setError(result.error ?? "The image could not be uploaded."); return; }
+            if (!result.ok || !result.id || !result.url) { setError(result.error ?? "The image could not be uploaded."); return; }
+            onImageUploaded?.({ id: result.id, name: image.name, originalName: file.name || image.name, url: result.url, mimeType: file.type, sizeBytes: file.size, tags: tagList(image.tags) });
             setNotice("Image uploaded."); setImage({ name: "", tags: "" }); if (fileRef.current) fileRef.current.value = ""; router.refresh();
           }}><Plus className="size-4" /> Upload image</EditorButton>
         </div>
       ) : null}
 
       {mode === "fees" ? (
-        <div className="mt-4 space-y-2 rounded-xl border border-editor-border-subtle bg-editor-inset p-3">
+        <div className="mt-4 space-y-2 rounded-editor-lg border border-editor-border-subtle bg-editor-inset p-3">
           <h3 className="text-sm font-semibold text-editor-text">{editingFeeId ? "Update fee" : "New reusable fee"}</h3>
           <input aria-label="Fee name" value={fee.name} onChange={(event) => setFee((current) => ({ ...current, name: event.target.value }))} className={controlClass} placeholder="Fee name" />
           <textarea aria-label="Fee description" value={fee.description} onChange={(event) => setFee((current) => ({ ...current, description: event.target.value }))} className={areaClass} rows={2} placeholder="Description" />
@@ -164,29 +180,29 @@ export default function ContentLibraryPanel({
       <div className="mt-4 space-y-3">
         {mode === "sections" ? sections.map((item) => {
           const supported = designContext.active.supportedSectionTypes.includes(item.sectionType);
-          return <article key={item.id} className="rounded-xl border border-editor-border-subtle bg-editor-raised p-3.5">
+          return <article key={item.id} className="rounded-editor-lg border border-editor-border-subtle bg-editor-raised p-3.5">
             <div className="flex items-start gap-2.5">
-              {enableDrag && supported ? <button type="button" onPointerDown={(event) => onDragStart?.({ kind: "savedSection", id: item.id, label: item.name }, event)} aria-label={`Drag saved section ${item.name} to a position in the document`} className={`grid size-8 shrink-0 cursor-grab place-items-center rounded-md text-editor-text-subtle hover:bg-editor-inset ${editorFocusRing}`}><GripVertical className="size-4" /></button> : null}
+              {enableDrag && supported ? <button type="button" onPointerDown={(event) => onDragStart?.({ kind: "savedSection", id: item.id, label: item.name }, event)} aria-label={`Drag saved section ${item.name} to a position in the document`} className={`grid size-8 shrink-0 cursor-grab place-items-center rounded-editor-sm text-editor-text-subtle hover:bg-editor-inset ${editorFocusRing}`}><DotsSixVertical className="size-4" /></button> : null}
               <Bookmark className="mt-1 size-4 shrink-0 text-editor-brand" />
               <div className="min-w-0 flex-1"><h3 className="text-sm font-semibold text-editor-text">{item.name}</h3><p className="font-mono text-[10px] text-editor-text-muted">{item.sectionType}</p></div>
             </div>
             {item.description ? <p className="mt-2 text-xs text-editor-text-muted">{item.description}</p> : null}
             {item.tags.length ? <p className="mt-2 flex items-center gap-1 text-[11px] text-editor-text-subtle"><Tag className="size-3" />{item.tags.join(" · ")}</p> : null}
             {!supported ? <p className="mt-2 text-xs text-editor-warning">Not supported by {designContext.active.name}.</p> : null}
-            <div className="mt-3 flex gap-2"><EditorButton type="button" size="sm" variant="primary" className="flex-1" disabled={!supported || pending === `section-${item.id}`} onClick={() => void run(`section-${item.id}`, () => insertLibrarySection(proposalId, item.id), "Saved section inserted.")}><Check className="size-4" /> Insert</EditorButton><EditorButton type="button" size="icon" variant="ghost" className="size-11 text-editor-danger" aria-label={`Archive saved section ${item.name}`} onClick={() => void run(`archive-section-${item.id}`, () => archiveLibrarySection(proposalId, item.id), "Saved section archived.")}><Trash2 className="size-4" /></EditorButton></div>
+            <div className="mt-3 flex gap-2"><EditorButton type="button" size="sm" variant="primary" className="flex-1" disabled={!supported || pending === `section-${item.id}`} onClick={() => void run(`section-${item.id}`, () => insertLibrarySection(proposalId, item.id), "Saved section inserted.")}><Check className="size-4" /> Insert</EditorButton><EditorButton type="button" size="icon" variant="ghost" className="size-11 text-editor-danger" aria-label={`Archive saved section ${item.name}`} onClick={() => void run(`archive-section-${item.id}`, () => archiveLibrarySection(proposalId, item.id), "Saved section archived.")}><Trash className="size-4" /></EditorButton></div>
           </article>;
         }) : null}
 
-        {mode === "snippets" ? snippets.map((item) => <article key={item.id} className="rounded-xl border border-editor-border-subtle bg-editor-raised p-3.5"><div className="flex items-start gap-2"><FileText className="mt-0.5 size-4 text-editor-brand" /><div className="min-w-0 flex-1"><h3 className="text-sm font-semibold text-editor-text">{item.name}</h3><p className="mt-1 line-clamp-4 whitespace-pre-wrap text-xs leading-5 text-editor-text-muted">{item.body}</p></div><EditorButton type="button" size="icon" variant="ghost" className="size-9 text-editor-danger" aria-label={`Archive snippet ${item.name}`} onClick={() => void run(`archive-snippet-${item.id}`, () => archiveLibrarySnippet(proposalId, item.id), "Snippet archived.")}><Trash2 className="size-4" /></EditorButton></div></article>) : null}
+        {mode === "snippets" ? snippets.map((item) => <article key={item.id} className="rounded-editor-lg border border-editor-border-subtle bg-editor-raised p-3.5"><div className="flex items-start gap-2"><FileText className="mt-0.5 size-4 text-editor-brand" /><div className="min-w-0 flex-1"><h3 className="text-sm font-semibold text-editor-text">{item.name}</h3><p className="mt-1 line-clamp-4 whitespace-pre-wrap text-xs leading-5 text-editor-text-muted">{item.body}</p></div><EditorButton type="button" size="icon" variant="ghost" className="size-9 text-editor-danger" aria-label={`Archive snippet ${item.name}`} onClick={() => void run(`archive-snippet-${item.id}`, () => archiveLibrarySnippet(proposalId, item.id), "Snippet archived.")}><Trash className="size-4" /></EditorButton></div></article>) : null}
 
-        {mode === "images" ? images.map((item) => <article key={item.id} className="overflow-hidden rounded-xl border border-editor-border-subtle bg-editor-raised"><div className="h-32 bg-editor-inset">
+        {mode === "images" ? images.map((item) => <article key={item.id} className="overflow-hidden rounded-editor-lg border border-editor-border-subtle bg-editor-raised"><div className="h-32 bg-editor-inset">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={item.url} alt={item.name} className="h-full w-full object-cover" />
-        </div><div className="flex items-start gap-2 p-3"><ImageIcon className="mt-0.5 size-4 text-editor-brand" /><div className="min-w-0 flex-1"><h3 className="truncate text-sm font-semibold text-editor-text">{item.name}</h3><p className="text-[11px] text-editor-text-muted">{Math.ceil(item.sizeBytes / 1024)} KB · {item.mimeType}</p></div><EditorButton type="button" size="icon" variant="ghost" className="size-9 text-editor-danger" aria-label={`Archive image ${item.name}`} onClick={() => void run(`archive-image-${item.id}`, () => archiveLibraryImage(proposalId, item.id), "Image archived; existing proposals remain intact.")}><Trash2 className="size-4" /></EditorButton></div></article>) : null}
+        </div><div className="flex items-start gap-2 p-3"><ImageIcon className="mt-0.5 size-4 text-editor-brand" /><div className="min-w-0 flex-1"><h3 className="truncate text-sm font-semibold text-editor-text">{item.name}</h3><p className="text-[11px] text-editor-text-muted">{Math.ceil(item.sizeBytes / 1024)} KB · {item.mimeType}</p></div><EditorButton type="button" size="icon" variant="ghost" className="size-9 text-editor-danger" aria-label={`Archive image ${item.name}`} onClick={async () => { if (await run(`archive-image-${item.id}`, () => archiveLibraryImage(proposalId, item.id), "Image archived; existing proposals remain intact.")) onImageArchived?.(item.id); }}><Trash className="size-4" /></EditorButton></div></article>) : null}
 
-        {mode === "fees" ? fees.map((item) => <article key={item.id} className="rounded-xl border border-editor-border-subtle bg-editor-raised p-3.5"><div className="flex items-start gap-2"><WalletCards className="mt-0.5 size-4 text-editor-brand" /><div className="min-w-0 flex-1"><h3 className="text-sm font-semibold text-editor-text">{item.name}</h3><p className="mt-1 text-xs text-editor-text-muted">{money(item.unitPriceMinor, item.currency)} · {item.unit.replaceAll("_", " ")} · {(item.taxRateBps / 100).toFixed(2)}% tax</p>{item.description ? <p className="mt-1 text-xs text-editor-text-muted">{item.description}</p> : null}</div></div><div className="mt-2 flex gap-2"><EditorButton type="button" size="sm" variant="secondary" className="flex-1" onClick={() => editFee(item)}>Edit</EditorButton><EditorButton type="button" size="icon" variant="ghost" className="size-11 text-editor-danger" aria-label={`Archive fee ${item.name}`} onClick={() => void run(`archive-fee-${item.id}`, () => archiveLibraryFee(proposalId, item.id), "Fee archived.")}><Trash2 className="size-4" /></EditorButton></div></article>) : null}
+        {mode === "fees" ? fees.map((item) => <article key={item.id} className="rounded-editor-lg border border-editor-border-subtle bg-editor-raised p-3.5"><div className="flex items-start gap-2"><Wallet className="mt-0.5 size-4 text-editor-brand" /><div className="min-w-0 flex-1"><h3 className="text-sm font-semibold text-editor-text">{item.name}</h3><p className="mt-1 text-xs text-editor-text-muted">{money(item.unitPriceMinor, item.currency)} · {item.unit.replaceAll("_", " ")} · {(item.taxRateBps / 100).toFixed(2)}% tax</p>{item.description ? <p className="mt-1 text-xs text-editor-text-muted">{item.description}</p> : null}</div></div><div className="mt-2 flex gap-2"><EditorButton type="button" size="sm" variant="secondary" className="flex-1" onClick={() => editFee(item)}>Edit</EditorButton><EditorButton type="button" size="icon" variant="ghost" className="size-11 text-editor-danger" aria-label={`Archive fee ${item.name}`} onClick={() => void run(`archive-fee-${item.id}`, () => archiveLibraryFee(proposalId, item.id), "Fee archived.")}><Trash className="size-4" /></EditorButton></div></article>) : null}
 
-        {(mode === "sections" ? sections.length : mode === "snippets" ? snippets.length : mode === "images" ? images.length : fees.length) === 0 ? <EditorEmptyState compact icon={mode === "sections" ? <Bookmark className="size-5" /> : mode === "snippets" ? <FileText className="size-5" /> : mode === "images" ? <ImageIcon className="size-5" /> : <WalletCards className="size-5" />} title={`No ${mode} yet`} description={normalized ? "Adjust the search or create a new library item." : "Create the first reusable item for future proposals."} /> : null}
+        {(mode === "sections" ? sections.length : mode === "snippets" ? snippets.length : mode === "images" ? images.length : fees.length) === 0 ? <EditorEmptyState compact icon={mode === "sections" ? <Bookmark className="size-5" /> : mode === "snippets" ? <FileText className="size-5" /> : mode === "images" ? <ImageIcon className="size-5" /> : <Wallet className="size-5" />} title={`No ${mode} yet`} description={normalized ? "Adjust the search or create a new library item." : "Create the first reusable item for future proposals."} /> : null}
       </div>
     </div>
   );

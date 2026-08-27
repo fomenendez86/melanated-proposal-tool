@@ -3,12 +3,12 @@
 import {
   ArrowDown,
   ArrowUp,
-  CalendarDays,
+  CalendarDots,
   Copy,
   Image as ImageIcon,
   Plus,
-  Trash2,
-} from "lucide-react";
+  Trash,
+} from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -90,7 +90,7 @@ function moveItem<T>(items: T[], from: number, to: number) {
   return next;
 }
 
-const inputClass = `w-full rounded-lg border border-editor-border bg-editor-raised px-3 py-2.5 text-sm text-editor-text-strong outline-none transition placeholder:text-editor-text-subtle focus:border-editor-border-strong focus:ring-2 focus:ring-editor-border-strong/20 ${editorFocusRing}`;
+const inputClass = `w-full rounded-editor-md border border-editor-border bg-editor-raised px-3 py-2.5 text-sm text-editor-text-strong outline-none transition placeholder:text-editor-text-subtle focus:border-editor-border-strong focus:ring-2 focus:ring-editor-border-strong/20 ${editorFocusRing}`;
 
 export default function ItineraryEditor({
   initialText,
@@ -170,7 +170,7 @@ export default function ItineraryEditor({
     <div className="space-y-4 outline-none" ref={rootRef} tabIndex={-1}>
       <div>
         <div className="flex items-center gap-2 text-editor-brand">
-          <CalendarDays className="size-4" aria-hidden="true" />
+          <CalendarDots className="size-4" aria-hidden="true" />
           <h3 className="text-sm font-semibold">Travel itinerary</h3>
         </div>
         <p className="mt-1 text-xs leading-4 text-editor-text-muted">
@@ -197,7 +197,7 @@ export default function ItineraryEditor({
 
       <div className="space-y-3">
         {days.map((day, dayIndex) => (
-          <section key={day.key} className="overflow-hidden rounded-xl border border-editor-border-subtle bg-editor-raised">
+          <section key={day.key} className="overflow-hidden rounded-editor-lg border border-editor-border-subtle bg-editor-raised">
             <div className="flex items-center gap-2 border-b border-editor-border-subtle bg-editor-inset px-3 py-2.5">
               <div className="grid size-8 shrink-0 place-items-center rounded-full bg-editor-brand text-xs font-bold text-white">
                 {dayIndex + 1}
@@ -246,7 +246,7 @@ export default function ItineraryEditor({
                   </div>
                   <div className="mt-2 space-y-2">
                     {day.activities.map((activity, activityIndex) => (
-                      <div key={activity.key} className="rounded-lg border border-editor-border-subtle p-2.5">
+                      <div key={activity.key} className="rounded-editor-md border border-editor-border-subtle p-2.5">
                         <div className="grid gap-2 sm:grid-cols-[96px_1fr] xl:grid-cols-1">
                           <input aria-label={`Day ${dayIndex + 1} activity ${activityIndex + 1} time`} className={inputClass} value={activity.timeRange} onChange={(event) => updateDay(dayIndex, (current) => ({ ...current, activities: current.activities.map((item, index) => index === activityIndex ? { ...item, timeRange: event.target.value } : item) }))} placeholder="9:00 AM" />
                           <textarea aria-label={`Day ${dayIndex + 1} activity ${activityIndex + 1} description`} rows={2} className={inputClass} value={activity.description} onChange={(event) => updateDay(dayIndex, (current) => ({ ...current, activities: current.activities.map((item, index) => index === activityIndex ? { ...item, description: event.target.value } : item) }))} placeholder="Describe the activity" />
@@ -254,7 +254,7 @@ export default function ItineraryEditor({
                         <div className="mt-1 flex justify-end">
                           <EditorButton type="button" variant="ghost" size="icon" className="size-9" disabled={activityIndex === 0} onClick={() => updateDay(dayIndex, (current) => ({ ...current, activities: moveItem(current.activities, activityIndex, activityIndex - 1) }))} aria-label="Move activity up"><ArrowUp className="size-3.5" /></EditorButton>
                           <EditorButton type="button" variant="ghost" size="icon" className="size-9" disabled={activityIndex === day.activities.length - 1} onClick={() => updateDay(dayIndex, (current) => ({ ...current, activities: moveItem(current.activities, activityIndex, activityIndex + 1) }))} aria-label="Move activity down"><ArrowDown className="size-3.5" /></EditorButton>
-                          <EditorButton type="button" variant="ghost" size="icon" className="size-9 text-editor-danger" onClick={() => updateDay(dayIndex, (current) => ({ ...current, activities: current.activities.filter((_, index) => index !== activityIndex) }))} aria-label="Delete activity"><Trash2 className="size-3.5" /></EditorButton>
+                          <EditorButton type="button" variant="ghost" size="icon" className="size-9 text-editor-danger" onClick={() => updateDay(dayIndex, (current) => ({ ...current, activities: current.activities.filter((_, index) => index !== activityIndex) }))} aria-label="Delete activity"><Trash className="size-3.5" /></EditorButton>
                         </div>
                       </div>
                     ))}
@@ -270,7 +270,7 @@ export default function ItineraryEditor({
                     {day.paragraphs.map((paragraph, paragraphIndex) => (
                       <div key={`${day.key}-paragraph-${paragraphIndex}`} className="flex items-start gap-1.5">
                         <textarea aria-label={`Day ${dayIndex + 1} paragraph ${paragraphIndex + 1}`} rows={3} className={inputClass} value={paragraph} onChange={(event) => updateDay(dayIndex, (current) => ({ ...current, paragraphs: current.paragraphs.map((item, index) => index === paragraphIndex ? event.target.value : item) }))} placeholder="Describe this part of the day" />
-                        <EditorButton type="button" variant="ghost" size="icon" className="text-editor-danger" onClick={() => updateDay(dayIndex, (current) => ({ ...current, paragraphs: current.paragraphs.filter((_, index) => index !== paragraphIndex) }))} aria-label="Delete paragraph"><Trash2 className="size-4" /></EditorButton>
+                        <EditorButton type="button" variant="ghost" size="icon" className="text-editor-danger" onClick={() => updateDay(dayIndex, (current) => ({ ...current, paragraphs: current.paragraphs.filter((_, index) => index !== paragraphIndex) }))} aria-label="Delete paragraph"><Trash className="size-4" /></EditorButton>
                       </div>
                     ))}
                   </div>
@@ -287,7 +287,7 @@ export default function ItineraryEditor({
                         <input aria-label={`Day ${dayIndex + 1} image ${imageIndex + 1}`} className={inputClass} value={url} onChange={(event) => updateDay(dayIndex, (current) => ({ ...current, images: current.images.map((item, index) => index === imageIndex ? event.target.value : item) }))} placeholder="/proposal-assets/day-image.jpg" />
                         <EditorButton type="button" variant="ghost" size="icon" disabled={imageIndex === 0} onClick={() => updateDay(dayIndex, (current) => ({ ...current, images: moveItem(current.images, imageIndex, imageIndex - 1) }))} aria-label="Move image up"><ArrowUp className="size-4" /></EditorButton>
                         <EditorButton type="button" variant="ghost" size="icon" disabled={imageIndex === day.images.length - 1} onClick={() => updateDay(dayIndex, (current) => ({ ...current, images: moveItem(current.images, imageIndex, imageIndex + 1) }))} aria-label="Move image down"><ArrowDown className="size-4" /></EditorButton>
-                        <EditorButton type="button" variant="ghost" size="icon" className="text-editor-danger" onClick={() => updateDay(dayIndex, (current) => ({ ...current, images: current.images.filter((_, index) => index !== imageIndex) }))} aria-label="Delete image"><Trash2 className="size-4" /></EditorButton>
+                        <EditorButton type="button" variant="ghost" size="icon" className="text-editor-danger" onClick={() => updateDay(dayIndex, (current) => ({ ...current, images: current.images.filter((_, index) => index !== imageIndex) }))} aria-label="Delete image"><Trash className="size-4" /></EditorButton>
                       </div>
                     ))}
                   </div>
@@ -306,7 +306,7 @@ export default function ItineraryEditor({
                 if (window.confirm(`Delete day ${dayIndex + 1}? This can be cancelled by reloading before you save.`)) {
                   updateDays((current) => current.filter((_, index) => index !== dayIndex));
                 }
-              }}><Trash2 className="size-3.5" /> Delete</EditorButton>
+              }}><Trash className="size-3.5" /> Delete</EditorButton>
             </div>
           </section>
         ))}

@@ -1,6 +1,12 @@
 "use client";
 
-import { Check, Copy, Link2, Share2, X } from "lucide-react";
+import {
+  Check,
+  Copy,
+  LinkSimple,
+  ShareNetwork,
+  X,
+} from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 
 import { createProposalShare } from "@/app/proposals/[id]/editor/shareActions";
@@ -70,16 +76,16 @@ export default function ShareProposalButton({ proposalId, disabled }: { proposal
   return (
     <>
       <EditorButton ref={triggerRef} type="button" variant="primary" disabled={disabled} onClick={() => setOpen(true)} aria-label="Share proposal" title={disabled ? "Save the proposal before sharing" : "Share proposal"}>
-        <Share2 className="size-4" aria-hidden="true" />
+        <ShareNetwork className="size-4" aria-hidden="true" />
         <span className="hidden xl:inline">Share</span>
       </EditorButton>
       {open ? (
         <div ref={dialogRef} className="fixed inset-0 z-[70] grid place-items-center bg-editor-overlay p-4" role="dialog" aria-modal="true" aria-labelledby="share-dialog-title">
-          <div className="w-full max-w-md rounded-2xl border border-editor-border bg-editor-panel p-5 shadow-2xl">
+          <div className="w-full max-w-md rounded-editor-lg border border-editor-border bg-editor-panel p-5 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2 text-editor-brand">
-                  <Link2 className="size-4" aria-hidden="true" />
+                  <LinkSimple className="size-4" aria-hidden="true" />
                   <h2 id="share-dialog-title" className="text-lg font-semibold">Share client revision</h2>
                 </div>
                 <p className="mt-1 text-sm leading-5 text-editor-text-muted">Creates an immutable snapshot so later edits do not change what the client sees.</p>
@@ -90,7 +96,7 @@ export default function ShareProposalButton({ proposalId, disabled }: { proposal
               <div className="mt-5">
                 <EditorNotice tone="success" title="Share link ready">This revision expires in {days} days{password ? " and requires the password you set" : ""}.</EditorNotice>
                 <div className="mt-3 flex gap-2">
-                  <input readOnly value={url} aria-label="Share URL" className={`h-11 min-w-0 flex-1 rounded-lg border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`} />
+                  <input readOnly value={url} aria-label="Share URL" className={`h-11 min-w-0 flex-1 rounded-editor-md border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`} />
                   <EditorButton type="button" variant="primary" onClick={async () => { await navigator.clipboard.writeText(url); setCopied(true); }}>
                     {copied ? <Check className="size-4" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}{copied ? "Copied" : "Copy"}
                   </EditorButton>
@@ -100,12 +106,12 @@ export default function ShareProposalButton({ proposalId, disabled }: { proposal
             ) : (
               <div className="mt-5 space-y-4">
                 <label className="block text-xs font-semibold text-editor-text">Expiration
-                  <select value={days} onChange={(event) => setDays(event.target.value)} className={`mt-1.5 h-11 w-full rounded-lg border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`}>
+                  <select value={days} onChange={(event) => setDays(event.target.value)} className={`mt-1.5 h-11 w-full rounded-editor-md border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`}>
                     <option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option><option value="365">1 year</option>
                   </select>
                 </label>
                 <label className="block text-xs font-semibold text-editor-text">Optional password
-                  <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" className={`mt-1.5 h-11 w-full rounded-lg border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`} />
+                  <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" className={`mt-1.5 h-11 w-full rounded-editor-md border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`} />
                 </label>
                 {error ? <EditorNotice tone="danger" className="px-3 py-2 text-xs">{error}</EditorNotice> : null}
                 <EditorButton type="button" variant="primary" className="w-full" disabled={loading} onClick={() => void create()}>{loading ? "Creating revision…" : "Create share link"}</EditorButton>

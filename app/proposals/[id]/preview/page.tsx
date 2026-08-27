@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 
+import AppShell from "@/components/app/AppShell";
+import { editorButtonStyles } from "@/components/editor/EditorUi";
 import ProposalRenderer from "@/components/ProposalRenderer";
 import { getProposalData } from "@/lib/db/getProposalData";
 import { getProposalDesignContext } from "@/lib/db/getProposalDesignContext";
@@ -22,8 +25,21 @@ export default async function ProposalPreviewPage({ params }: ProposalPreviewPag
   const designContext = await getProposalDesignContext(proposalId, data.sections.map((section) => section.type));
 
   return (
-    <main className="flex min-h-screen flex-col items-center bg-neutral-200 print:bg-white">
-      <ProposalRenderer data={data} design={designContext.active} />
-    </main>
+    <AppShell
+      active="editor"
+      proposalId={proposalId}
+      title={summary.title}
+      subtitle={`${summary.proposalNumber} · Client preview`}
+      backHref={`/proposals/${proposalId}/editor`}
+      headerActions={(
+        <Link href={`/proposals/${proposalId}/editor`} prefetch={false} className={editorButtonStyles({ variant: "primary" })}>
+          Back to editor
+        </Link>
+      )}
+    >
+      <div className="flex min-h-full flex-col items-center gap-6 bg-editor-canvas p-4 sm:p-8 print:bg-white print:p-0">
+        <ProposalRenderer data={data} design={designContext.active} />
+      </div>
+    </AppShell>
   );
 }

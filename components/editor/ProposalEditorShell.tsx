@@ -1,29 +1,28 @@
 "use client";
 
 import {
-  Building2,
+  ArrowsOut,
+  Buildings,
+  CaretLeft,
+  CaretRight,
+  ChatCircle,
   Check,
-  CircleAlert,
-  ChevronLeft,
-  ChevronRight,
-  ClipboardCheck,
+  ClipboardText,
   Compass,
   Eye,
   FileText,
-  ImagePlus,
-  Layers3,
-  LibraryBig,
-  ListTree,
-  Maximize2,
-  MessageSquare,
+  Gear,
+  IconContext,
+  ImageSquare,
   Minus,
-  Moon,
   Palette,
   Plus,
-  Settings2,
-  Sparkles,
-  Sun,
-} from "lucide-react";
+  Sparkle,
+  Stack,
+  TreeStructure,
+  Books,
+  WarningCircle,
+} from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import type {
   CSSProperties,
@@ -39,6 +38,7 @@ import { createPortal } from "react-dom";
 import { updateProposalFields } from "@/app/proposals/[id]/editor/actions";
 import { updateProposalDesign } from "@/app/proposals/[id]/editor/designActions";
 import { updateProposalSectionVariant } from "@/app/proposals/[id]/editor/compositionActions";
+import ApplicationRail from "@/components/app/ApplicationRail";
 import type { ProposalActivityData } from "@/lib/activity/types";
 import type { ProposalSummary } from "@/lib/db/getProposalSummary";
 import type { DocumentPageGeometry, ProposalDesignContext } from "@/lib/designs/types";
@@ -81,6 +81,7 @@ import SaveAsTemplateButton from "./SaveAsTemplateButton";
 import ShareProposalButton from "./ShareProposalButton";
 import SendProposalButton from "./SendProposalButton";
 import { useCatalogDragInsert } from "./useCatalogDragInsert";
+import { DEFAULT_TEMPLATE_ICON, SECTION_TYPE_ICONS } from "./sectionTypeIcons";
 import {
   EditorButton,
   EditorDrawer,
@@ -360,7 +361,7 @@ function EditableFieldsForm({
       </div>
 
       {config.saveMode === "explicit" ? (
-        <EditorNotice tone="warning" className="rounded-lg px-3 py-2 text-xs leading-4">
+        <EditorNotice tone="warning" className="rounded-editor-md px-3 py-2 text-xs leading-4">
           Review the full collection, then use Save now. These changes are not autosaved.
         </EditorNotice>
       ) : null}
@@ -379,19 +380,19 @@ function EditableFieldsForm({
               onFocus={() => onFieldFocus(field.name)}
             />
             {field.multiline && snippets.length ? (
-              <select aria-label={`Insert snippet into ${field.label}`} defaultValue="" onChange={(event) => { const selected = snippets.find((item) => item.id === Number(event.target.value)); if (selected) insertText(field.name, selected.body); event.currentTarget.value = ""; }} className={`mt-1 h-9 w-full rounded-lg border border-editor-border bg-editor-raised px-2 text-xs text-editor-text ${editorFocusRing}`}>
+              <select aria-label={`Insert snippet into ${field.label}`} defaultValue="" onChange={(event) => { const selected = snippets.find((item) => item.id === Number(event.target.value)); if (selected) insertText(field.name, selected.body); event.currentTarget.value = ""; }} className={`mt-1 h-9 w-full rounded-editor-md border border-editor-border bg-editor-raised px-2 text-xs text-editor-text ${editorFocusRing}`}>
                 <option value="">Insert text snippet…</option>
                 {snippets.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
               </select>
             ) : null}
             {!field.isImage && !["invoiceTotal", "commission", "amountDue", "nights", "currency"].includes(field.name) ? (
-              <select aria-label={`Insert variable into ${field.label}`} defaultValue="" onChange={(event) => { const selected = PROPOSAL_VARIABLES.find((item) => item.path === event.target.value); if (selected) insertText(field.name, variableToken(selected.path)); event.currentTarget.value = ""; }} className={`mt-1 h-9 w-full rounded-lg border border-editor-border bg-editor-raised px-2 text-xs text-editor-text ${editorFocusRing}`}>
+              <select aria-label={`Insert variable into ${field.label}`} defaultValue="" onChange={(event) => { const selected = PROPOSAL_VARIABLES.find((item) => item.path === event.target.value); if (selected) insertText(field.name, variableToken(selected.path)); event.currentTarget.value = ""; }} className={`mt-1 h-9 w-full rounded-editor-md border border-editor-border bg-editor-raised px-2 text-xs text-editor-text ${editorFocusRing}`}>
                 <option value="">{"{{}}"} Insert variable…</option>
                 {PROPOSAL_VARIABLES.map((item) => <option key={item.path} value={item.path}>{item.group} · {item.label}</option>)}
               </select>
             ) : null}
             {field.isImage && images.length ? (
-              <select aria-label={`Choose library image for ${field.label}`} defaultValue="" onChange={(event) => { const selected = images.find((item) => item.id === Number(event.target.value)); if (selected) setFieldValue(field.name, selected.url); event.currentTarget.value = ""; }} className={`mt-1 h-9 w-full rounded-lg border border-editor-border bg-editor-raised px-2 text-xs text-editor-text ${editorFocusRing}`}>
+              <select aria-label={`Choose library image for ${field.label}`} defaultValue="" onChange={(event) => { const selected = images.find((item) => item.id === Number(event.target.value)); if (selected) setFieldValue(field.name, selected.url); event.currentTarget.value = ""; }} className={`mt-1 h-9 w-full rounded-editor-md border border-editor-border bg-editor-raised px-2 text-xs text-editor-text ${editorFocusRing}`}>
                 <option value="">Choose from image library…</option>
                 {images.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
               </select>
@@ -402,7 +403,7 @@ function EditableFieldsForm({
 
       {formError ? (
         <div role="alert">
-          <EditorNotice tone="danger" className="rounded-lg px-3 py-2 text-xs">{formError}</EditorNotice>
+          <EditorNotice tone="danger" className="rounded-editor-md px-3 py-2 text-xs">{formError}</EditorNotice>
         </div>
       ) : null}
 
@@ -410,7 +411,7 @@ function EditableFieldsForm({
         type="submit"
         variant="primary"
         disabled={!isDirty}
-        className="w-full rounded-lg"
+        className="w-full rounded-editor-md"
       >
         {isDirty ? "Save now" : "Changes saved"}
       </EditorButton>
@@ -597,7 +598,7 @@ function InlineRegionEditor({
         />
       )}
       {(geometry.multiline && snippets.length) || PROPOSAL_VARIABLES.length ? (
-        <div ref={toolbarRef} className="absolute z-20 flex max-w-[82%] gap-1 overflow-hidden rounded-lg border border-editor-border bg-editor-panel p-1 shadow-lg" style={{ left: geometry.rect.left, top: Math.max(0, geometry.rect.top - 36) }} aria-label="Inline insert tools">
+        <div ref={toolbarRef} className="absolute z-20 flex max-w-[82%] gap-1 overflow-hidden rounded-editor-md border border-editor-border bg-editor-panel p-1 shadow-lg" style={{ left: geometry.rect.left, top: Math.max(0, geometry.rect.top - 36) }} aria-label="Inline insert tools">
           {snippets.slice(0, 3).map((snippet) => <button key={snippet.id} type="button" onPointerDown={(event) => event.preventDefault()} onClick={() => insertSnippet(snippet.body)} className="h-7 truncate rounded px-2 text-[10px] font-semibold text-editor-text hover:bg-editor-inset" aria-label={`Insert snippet ${snippet.name}`}>{snippet.name}</button>)}
           <select aria-label="Insert variable" defaultValue="" onChange={(event) => { const selected = PROPOSAL_VARIABLES.find((item) => item.path === event.target.value); if (selected) insertSnippet(variableToken(selected.path)); event.currentTarget.value = ""; }} className="h-7 max-w-40 rounded border-0 bg-editor-raised px-2 text-[10px] font-semibold text-editor-text">
             <option value="">{"{{}}"} Variable…</option>
@@ -715,7 +716,7 @@ function ImageRegionPopover({
       ref={popoverRef}
       role="dialog"
       aria-label={`Replace ${label}`}
-      className="absolute z-10 rounded-xl border border-editor-border-strong bg-white p-3 shadow-2xl"
+      className="absolute z-10 rounded-editor-lg border border-editor-border-strong bg-white p-3 shadow-2xl"
       style={{ left: geometry.left, top: geometry.top, width: IMAGE_POPOVER_WIDTH }}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
@@ -724,12 +725,12 @@ function ImageRegionPopover({
         }
       }}
     >
-      <div className="flex h-20 items-center justify-center overflow-hidden rounded-lg bg-editor-inset">
+      <div className="flex h-20 items-center justify-center overflow-hidden rounded-editor-md bg-editor-inset">
         {value ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={value} alt="" className="h-full w-full object-cover" />
         ) : (
-          <ImagePlus className="size-5 text-editor-text-subtle" aria-hidden="true" />
+          <ImageSquare className="size-5 text-editor-text-subtle" aria-hidden="true" />
         )}
       </div>
       <label htmlFor={inputId} className="mt-2 block text-xs font-semibold text-editor-text">{label}</label>
@@ -741,10 +742,10 @@ function ImageRegionPopover({
         onChange={(event) => draft.setFieldValue(field, event.target.value)}
         placeholder="/proposal-assets/... or https://"
         aria-invalid={Boolean(error)}
-        className={`mt-1.5 w-full rounded-lg border bg-editor-raised px-3 py-2 text-sm text-editor-text-strong outline-none transition placeholder:text-editor-text-subtle focus:border-editor-border-strong focus:ring-2 focus:ring-editor-border-strong/20 ${error ? "border-editor-danger" : "border-editor-border"}`}
+        className={`mt-1.5 w-full rounded-editor-md border bg-editor-raised px-3 py-2 text-sm text-editor-text-strong outline-none transition placeholder:text-editor-text-subtle focus:border-editor-border-strong focus:ring-2 focus:ring-editor-border-strong/20 ${error ? "border-editor-danger" : "border-editor-border"}`}
       />
       {images.length ? (
-        <select aria-label={`Choose library image for ${label}`} defaultValue="" onChange={(event) => { const selected = images.find((item) => item.id === Number(event.target.value)); if (selected) draft.setFieldValue(field, selected.url); event.currentTarget.value = ""; }} className="mt-2 h-9 w-full rounded-lg border border-editor-border bg-editor-raised px-2 text-xs text-editor-text">
+        <select aria-label={`Choose library image for ${label}`} defaultValue="" onChange={(event) => { const selected = images.find((item) => item.id === Number(event.target.value)); if (selected) draft.setFieldValue(field, selected.url); event.currentTarget.value = ""; }} className="mt-2 h-9 w-full rounded-editor-md border border-editor-border bg-editor-raised px-2 text-xs text-editor-text">
           <option value="">Choose from library…</option>
           {images.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
         </select>
@@ -785,7 +786,7 @@ function PropertiesPanel({
   return (
     <div className="flex h-full min-h-0 flex-col bg-editor-panel">
       <EditorPanelHeader
-        icon={<Settings2 className="size-4" />}
+        icon={<Gear className="size-4" />}
         label="Properties"
         onClose={onClose}
         closeLabel="Close properties"
@@ -868,7 +869,7 @@ function PropertiesPanel({
                 value={`${designContext.active.id}@${designContext.active.version}`}
                 disabled={designChanging}
                 onChange={(event) => onDesignChange(event.target.value)}
-                className={`mt-1.5 h-11 w-full rounded-lg border border-editor-border bg-editor-raised px-3 text-sm font-semibold text-editor-text outline-none transition hover:border-editor-border-strong disabled:cursor-wait disabled:text-editor-disabled-text ${editorFocusRing}`}
+                className={`mt-1.5 h-11 w-full rounded-editor-md border border-editor-border bg-editor-raised px-3 text-sm font-semibold text-editor-text outline-none transition hover:border-editor-border-strong disabled:cursor-wait disabled:text-editor-disabled-text ${editorFocusRing}`}
               >
                 {designContext.choices.map(({ design, compatible }) => (
                   <option
@@ -896,7 +897,7 @@ function PropertiesPanel({
                         key={variant.id}
                         onClick={() => onVariantChange(variant.id)}
                         aria-pressed={active}
-                        className={`w-full rounded-xl border p-3.5 text-left ${editorFocusRing} ${active ? "border-editor-border-strong bg-editor-inset" : "border-editor-border-subtle bg-editor-raised hover:border-editor-border"}`}
+                        className={`w-full rounded-editor-lg border p-3.5 text-left ${editorFocusRing} ${active ? "border-editor-border-strong bg-editor-inset" : "border-editor-border-subtle bg-editor-raised hover:border-editor-border"}`}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-sm font-semibold text-editor-text">{variant.label}</p>
@@ -922,10 +923,10 @@ function PropertiesPanel({
             </EditorNotice>
           </div>
 
-          <details className="group rounded-xl border border-editor-border-subtle bg-editor-raised">
+          <details className="group rounded-editor-lg border border-editor-border-subtle bg-editor-raised">
             <summary className={`flex min-h-11 cursor-pointer list-none items-center justify-between px-3.5 text-xs font-bold uppercase tracking-[0.12em] text-editor-text-muted ${editorFocusRing}`}>
               Page information
-              <ChevronRight className="size-4 transition-transform group-open:rotate-90" aria-hidden="true" />
+              <CaretRight className="size-4 transition-transform group-open:rotate-90" aria-hidden="true" />
             </summary>
             <dl className="divide-y divide-editor-border-subtle border-t border-editor-border-subtle px-3.5">
               <div className="flex items-center justify-between py-3 text-sm">
@@ -965,7 +966,7 @@ function ReviewPanel({ pageMeta, overflowPageIndexes, designContext, saveState, 
   return (
     <div className="flex h-full min-h-0 flex-col bg-editor-panel">
       <EditorPanelHeader
-        icon={<ClipboardCheck className="size-4" />}
+        icon={<ClipboardText className="size-4" />}
         label="Proposal review"
         count={issueCount}
         onClose={onClose}
@@ -1026,7 +1027,7 @@ function ReviewPanel({ pageMeta, overflowPageIndexes, designContext, saveState, 
           <EditorInspectorSection id="review-page-issues-heading" title="Page issues">
             <div className="space-y-2">
               {pageIssues.map((page) => (
-                <div key={page.id} className="rounded-xl border border-editor-warning-border bg-editor-warning-surface p-3.5">
+                <div key={page.id} className="rounded-editor-lg border border-editor-warning-border bg-editor-warning-surface p-3.5">
                   <p className="text-sm font-semibold text-editor-warning">Page {page.pageNumber} · {page.title}</p>
                   <p className="mt-1 text-xs text-editor-warning">Status: {page.status}</p>
                 </div>
@@ -1039,7 +1040,7 @@ function ReviewPanel({ pageMeta, overflowPageIndexes, designContext, saveState, 
           <EditorInspectorSection id="review-compatibility-heading" title="Design compatibility">
             <div className="space-y-2">
               {incompatibleDesigns.map(({ design, unsupportedSectionTypes }) => (
-                <div key={`${design.id}@${design.version}`} className="rounded-xl border border-editor-border-subtle bg-editor-raised p-3.5">
+                <div key={`${design.id}@${design.version}`} className="rounded-editor-lg border border-editor-border-subtle bg-editor-raised p-3.5">
                   <p className="text-sm font-semibold text-editor-text">{design.name} v{design.version}</p>
                   <p className="mt-1 text-xs leading-4 text-editor-text-muted">
                     Unsupported: {unsupportedSectionTypes.join(", ")}
@@ -1051,7 +1052,7 @@ function ReviewPanel({ pageMeta, overflowPageIndexes, designContext, saveState, 
         ) : null}
 
         <EditorInspectorSection id="review-summary-heading" title="Current document">
-          <dl className="divide-y divide-editor-border-subtle rounded-xl border border-editor-border-subtle bg-editor-raised px-3.5">
+          <dl className="divide-y divide-editor-border-subtle rounded-editor-lg border border-editor-border-subtle bg-editor-raised px-3.5">
             <div className="flex items-center justify-between py-3 text-sm">
               <dt className="text-editor-text-muted">Design</dt>
               <dd className="font-semibold text-editor-text">{designContext.active.name} v{designContext.active.version}</dd>
@@ -1118,10 +1119,6 @@ export default function ProposalEditorShell({
   const [propertiesOpen, setPropertiesOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    if (typeof window === "undefined") return "light";
-    return window.localStorage.getItem("proposal-studio-theme") === "dark" ? "dark" : "light";
-  });
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [compositionOpen, setCompositionOpen] = useState(false);
   const [saveState, setSaveState] = useState<EditorSaveState>("loaded");
@@ -1144,10 +1141,6 @@ export default function ProposalEditorShell({
   const pageRefs = useRef<Array<HTMLDivElement | null>>([]);
   const regionRequestIdRef = useRef(0);
   const highlightedElementsRef = useRef<HTMLElement[]>([]);
-
-  useEffect(() => {
-    window.localStorage.setItem("proposal-studio-theme", theme);
-  }, [theme]);
 
   const effectiveSelectedIndex = Math.min(selectedIndex, Math.max(0, pageMeta.length - 1));
   const selectedPage = pageMeta[effectiveSelectedIndex];
@@ -1551,12 +1544,16 @@ export default function ProposalEditorShell({
   }, [activityOpen, catalogOpen, closeProperties, compositionOpen, pagesOpen, propertiesOpen, reviewOpen]);
 
   return (
-    <main data-theme={theme} suppressHydrationWarning className="proposal-studio flex h-dvh min-h-0 flex-col overflow-hidden bg-editor-shell text-editor-text-strong">
+    <IconContext.Provider value={{ weight: "duotone" }}>
+    <main className="proposal-studio flex h-dvh min-h-0 flex-col overflow-hidden bg-editor-shell font-editor text-editor-text-strong">
       <div aria-live="polite" className="sr-only">{regionAnnouncement}</div>
-      <header className="z-20 flex h-16 shrink-0 items-center justify-between border-b border-editor-border-subtle bg-editor-panel px-4 shadow-editor-toolbar lg:px-5">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-editor-brand text-editor-accent" role="img" aria-label="Melanated Safaris Proposal Studio">
-            <Sparkles className="size-5" aria-hidden="true" />
+      <div className="flex min-h-0 flex-1">
+      <ApplicationRail active="editor" proposalId={proposal.id} showMobile={false} showLogout={false} />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <header className="z-20 flex min-h-16 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-editor-border-subtle bg-editor-panel px-4 py-2 shadow-editor-toolbar sm:h-16 sm:flex-nowrap sm:py-0 lg:px-5">
+        <div className="flex min-w-0 w-full items-center gap-3 sm:w-auto">
+          <div className="grid size-11 shrink-0 place-items-center rounded-editor-md bg-editor-brand text-editor-accent" role="img" aria-label="Melanated Safaris Proposal Studio">
+            <Sparkle className="size-5" aria-hidden="true" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -1569,13 +1566,13 @@ export default function ProposalEditorShell({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 overflow-x-auto pb-0.5 sm:ml-auto sm:w-auto sm:overflow-visible sm:pb-0">
           {designError ? (
             <EditorStatusBadge
               tone="danger"
               live
               className="hidden lg:inline-flex"
-              icon={<CircleAlert className="size-3.5" />}
+              icon={<WarningCircle className="size-3.5" />}
             >
               <span id="document-design-error" title={designError}>Design change failed</span>
             </EditorStatusBadge>
@@ -1587,7 +1584,7 @@ export default function ProposalEditorShell({
             icon={saveState === "saving"
               ? <span className="block size-3.5 animate-spin rounded-full border-2 border-editor-disabled-text border-t-editor-success" />
               : saveState === "error"
-                ? <CircleAlert className="size-3.5" />
+                ? <WarningCircle className="size-3.5" />
                 : <Check className="size-3.5" />}
           >
             {SAVE_COPY[saveState]}
@@ -1601,7 +1598,7 @@ export default function ProposalEditorShell({
             }}
             aria-label="Review proposal readiness"
           >
-            <ClipboardCheck className="size-4" aria-hidden="true" />
+            <ClipboardText className="size-4" aria-hidden="true" />
             <span className="hidden xl:inline">Review</span>
           </EditorButton>
           <EditorButton
@@ -1614,18 +1611,8 @@ export default function ProposalEditorShell({
             }}
             aria-label="Open activity and comments"
           >
-            <MessageSquare className="size-4" aria-hidden="true" />
+            <ChatCircle className="size-4" aria-hidden="true" />
             <span className="hidden xl:inline">Activity</span>
-          </EditorButton>
-          <EditorButton
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
-            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {theme === "dark" ? <Sun className="size-4" aria-hidden="true" /> : <Moon className="size-4" aria-hidden="true" />}
           </EditorButton>
           <SaveAsTemplateButton proposalId={proposal.id} />
           <SendProposalButton proposalId={proposal.id} disabled={saveState === "dirty" || saveState === "saving" || saveState === "error"} />
@@ -1665,9 +1652,9 @@ export default function ProposalEditorShell({
                 size="icon"
                 onClick={() => setPagesOpen(true)}
                 aria-label="Open page navigator"
-                className="rounded-lg lg:hidden"
+                className="rounded-editor-md lg:hidden"
               >
-                <Layers3 className="size-5" aria-hidden="true" />
+                <Stack className="size-5" aria-hidden="true" />
               </EditorButton>
               <EditorButton
                 type="button"
@@ -1680,9 +1667,9 @@ export default function ProposalEditorShell({
                 }}
                 aria-label="Open contextual catalog"
                 title="Catalog"
-                className="rounded-lg 2xl:hidden"
+                className="rounded-editor-md 2xl:hidden"
               >
-                <LibraryBig className="size-5" aria-hidden="true" />
+                <Books className="size-5" aria-hidden="true" />
               </EditorButton>
               <EditorButton
                 type="button"
@@ -1696,9 +1683,9 @@ export default function ProposalEditorShell({
                 }}
                 aria-label="Open document structure"
                 title="Document structure"
-                className="rounded-lg"
+                className="rounded-editor-md"
               >
-                <ListTree className="size-5" aria-hidden="true" />
+                <TreeStructure className="size-5" aria-hidden="true" />
               </EditorButton>
               <EditorButton
                 type="button"
@@ -1706,9 +1693,9 @@ export default function ProposalEditorShell({
                 onClick={() => moveSelection(-1)}
                 disabled={effectiveSelectedIndex === 0}
                 aria-label="Previous page"
-                className="rounded-lg disabled:opacity-35"
+                className="rounded-editor-md disabled:opacity-35"
               >
-                <ChevronLeft className="size-5" aria-hidden="true" />
+                <CaretLeft className="size-5" aria-hidden="true" />
               </EditorButton>
               <EditorButton
                 type="button"
@@ -1716,9 +1703,9 @@ export default function ProposalEditorShell({
                 onClick={() => moveSelection(1)}
                 disabled={effectiveSelectedIndex === pageMeta.length - 1}
                 aria-label="Next page"
-                className="rounded-lg disabled:opacity-35"
+                className="rounded-editor-md disabled:opacity-35"
               >
-                <ChevronRight className="size-5" aria-hidden="true" />
+                <CaretRight className="size-5" aria-hidden="true" />
               </EditorButton>
               <div className="ml-1 hidden min-w-0 text-sm xl:block">
                 <span className="font-semibold text-editor-text">{selectedPage.title}</span>
@@ -1734,7 +1721,7 @@ export default function ProposalEditorShell({
                 aria-label="Fit pages to available width"
                 title="Fit width"
               >
-                <Maximize2 className="size-4" aria-hidden="true" />
+                <ArrowsOut className="size-4" aria-hidden="true" />
               </EditorButton>
               <EditorButton
                 type="button"
@@ -1743,7 +1730,7 @@ export default function ProposalEditorShell({
                 aria-label="Open page properties"
                 className="xl:hidden"
               >
-                <Settings2 className="size-5" aria-hidden="true" />
+                <Gear className="size-5" aria-hidden="true" />
               </EditorButton>
             </div>
           </div>
@@ -1807,10 +1794,26 @@ export default function ProposalEditorShell({
           {draggingItem && ghostPosition ? createPortal(
             <div
               data-catalog-drag-ghost=""
-              className="pointer-events-none fixed z-50 flex items-center gap-2 rounded-lg border border-editor-border-strong bg-editor-panel px-3 py-2 text-xs font-semibold text-editor-text shadow-2xl"
+              className="pointer-events-none fixed z-50 flex items-center gap-2 rounded-editor-md border border-editor-border-strong bg-editor-panel py-2 pl-2 pr-3 text-xs font-semibold text-editor-text shadow-2xl"
               style={{ left: ghostPosition.x + 14, top: ghostPosition.y + 14 }}
             >
-              {draggingItem.kind === "hotel" ? <Building2 className="size-3.5 text-editor-brand" aria-hidden="true" /> : draggingItem.kind === "excursion" ? <Compass className="size-3.5 text-editor-brand" aria-hidden="true" /> : <FileText className="size-3.5 text-editor-brand" aria-hidden="true" />}
+              <span className="relative grid size-7 shrink-0 place-items-center rounded-full bg-editor-inset text-editor-brand">
+                {draggingItem.kind === "template" ? (
+                  (() => {
+                    const Icon = SECTION_TYPE_ICONS[draggingItem.sectionType] ?? DEFAULT_TEMPLATE_ICON;
+                    return <Icon className="size-3.5" aria-hidden="true" />;
+                  })()
+                ) : draggingItem.kind === "hotel" ? (
+                  <Buildings className="size-3.5" aria-hidden="true" />
+                ) : draggingItem.kind === "excursion" ? (
+                  <Compass className="size-3.5" aria-hidden="true" />
+                ) : (
+                  <FileText className="size-3.5" aria-hidden="true" />
+                )}
+                <span className="absolute -right-1.5 -top-1.5 grid size-4 place-items-center rounded-full bg-editor-brand text-white">
+                  <Plus className="size-3" aria-hidden="true" />
+                </span>
+              </span>
               {draggingItem.label}
             </div>,
             document.body
@@ -1923,12 +1926,14 @@ export default function ProposalEditorShell({
         {saveState !== "loaded" ? (
           <EditorStatusBadge
             tone={SAVE_TONE[saveState]}
-            icon={saveState === "error" ? <CircleAlert className="size-3.5" /> : <Check className="size-3.5" />}
+            icon={saveState === "error" ? <WarningCircle className="size-3.5" /> : <Check className="size-3.5" />}
           >
             {SAVE_COPY[saveState]}
           </EditorStatusBadge>
         ) : null}
       </footer>
+      </div>
+      </div>
 
       {pagesOpen ? (
         <EditorDrawer
@@ -2050,5 +2055,6 @@ export default function ProposalEditorShell({
         </EditorDrawer>
       ) : null}
     </main>
+    </IconContext.Provider>
   );
 }

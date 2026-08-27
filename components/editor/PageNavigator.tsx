@@ -1,6 +1,6 @@
 "use client";
 
-import { GripVertical, Layers3, Search } from "lucide-react";
+import { DotsSixVertical, Stack, MagnifyingGlass } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useMemo, useRef, useState } from "react";
@@ -136,7 +136,7 @@ export default function PageNavigator({
   return (
     <div className="flex h-full min-h-0 flex-col bg-editor-panel-muted">
       <EditorPanelHeader
-        icon={<Layers3 className="size-4" />}
+        icon={<Stack className="size-4" />}
         label="Pages"
         count={pageMeta.length}
         onClose={onClose}
@@ -144,8 +144,8 @@ export default function PageNavigator({
       />
 
       <div className="p-3">
-        <label className="flex h-11 items-center gap-2 rounded-lg border border-editor-border bg-editor-raised px-3 text-editor-text-muted focus-within:border-editor-border-strong focus-within:ring-2 focus-within:ring-editor-border-strong/20">
-          <Search className="size-4" aria-hidden="true" />
+        <label className="flex h-11 items-center gap-2 rounded-editor-md border border-editor-border bg-editor-raised px-3 text-editor-text-muted focus-within:border-editor-border-strong focus-within:ring-2 focus-within:ring-editor-border-strong/20">
+          <MagnifyingGlass className="size-4" aria-hidden="true" />
           <span className="sr-only">Search proposal pages</span>
           <input
             value={filter}
@@ -189,7 +189,7 @@ export default function PageNavigator({
               dragHandle={
                 showHandle ? (
                   <span {...getHandleProps(runIndex)}>
-                    <GripVertical className="size-4" />
+                    <DotsSixVertical className="size-4" />
                   </span>
                 ) : undefined
               }
@@ -205,7 +205,7 @@ export default function PageNavigator({
             compact
             title="No matching pages"
             description="Try a page number, title, or section name."
-            icon={<Search className="size-5" />}
+            icon={<MagnifyingGlass className="size-5" />}
           />
         ) : null}
       </nav>

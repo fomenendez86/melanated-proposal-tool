@@ -11,6 +11,7 @@
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-brand-heading, var(--font-sans));
   --font-serif: var(--font-heading);
+  --font-editor: var(--font-source-serif), var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,10 +49,13 @@
   --color-editor-danger: var(--editor-danger);
   --color-editor-danger-surface: var(--editor-danger-surface);
   --color-editor-danger-border: var(--editor-danger-border);
-  --shadow-editor-page: 0 18px 55px rgb(32 42 38 / 22%);
-  --shadow-editor-card: 0 5px 18px rgb(29 52 44 / 9%);
-  --shadow-editor-toolbar: 0 1px 0 rgb(23 35 31 / 4%);
+  --shadow-editor-page: 0 12px 32px color-mix(in srgb, #2d2b2b 22%, transparent);
+  --shadow-editor-card: 0 3px 10px color-mix(in srgb, #2d2b2b 16%, transparent);
+  --shadow-editor-toolbar: 0 1px 2px color-mix(in srgb, #2d2b2b 14%, transparent);
   --ease-editor: cubic-bezier(0.2, 0, 0, 1);
+  --radius-editor-sm: 1px;
+  --radius-editor-md: 2px;
+  --radius-editor-lg: 4px;
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -115,74 +119,43 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-  --editor-canvas: #e9e8e3;
-  --editor-shell: #edece7;
-  --editor-panel: #fbfbf8;
-  --editor-panel-muted: #f8f8f5;
+  /*
+   * Broadsheet — sourced from the imported design system's tokens
+   * (styles.css: --color-bg/-surface/-text/-accent/-accent-2/-divider and
+   * their 100-900 neutral/accent/accent-2 ramps). Light-ground only by the
+   * source system's own stated identity ("this system shows no dark
+   * surfaces") — see docs/EDITOR_DESIGN_SYSTEM.md for the full mapping and
+   * why dark mode was removed rather than carried forward.
+   */
+  --editor-canvas: #d7d3d3;
+  --editor-shell: #eae9e9;
+  --editor-panel: #f3f2f2;
+  --editor-panel-muted: #eae7e7;
   --editor-raised: #ffffff;
-  --editor-toolbar: #f4f4f0;
-  --editor-inset: #edf1ee;
-  --editor-overlay: rgb(16 37 30 / 45%);
-  --editor-text-strong: #17231f;
-  --editor-text: #2d4439;
-  --editor-text-muted: #607168;
-  --editor-text-subtle: #66766d;
-  --editor-brand: #173b32;
-  --editor-brand-hover: #204d41;
-  --editor-accent: #f6c85f;
-  --editor-border-subtle: #e0e4e1;
-  --editor-border: #cbd3ce;
-  --editor-border-strong: #789084;
-  --editor-focus: #a67512;
-  --editor-disabled: #cad2ce;
-  --editor-disabled-text: #68776f;
-  --editor-success: #356d54;
-  --editor-success-surface: #f1f6f2;
-  --editor-warning: #735a20;
-  --editor-warning-surface: #fff9e9;
-  --editor-warning-border: #ead7a6;
-  --editor-danger: #8d342e;
-  --editor-danger-surface: #fff3f1;
-  --editor-danger-border: #e0aaa5;
-}
-
-/*
- * Dark mode for the editor chrome only — scoped to `.proposal-studio`
- * (the Proposal Studio shell root) via `data-theme="dark"`, toggled by
- * ProposalEditorShell.tsx and persisted to localStorage. This never
- * touches document rendering: ProposalRenderer.tsx and the proposal
- * blocks read only `--design-*` vars, never `--editor-*`.
- */
-.proposal-studio[data-theme="dark"] {
-  --editor-canvas: #14181a;
-  --editor-shell: #1a1f1d;
-  --editor-panel: #202624;
-  --editor-panel-muted: #262d2a;
-  --editor-raised: #2b332f;
-  --editor-toolbar: #1e2422;
-  --editor-inset: #1b2320;
-  --editor-overlay: rgb(0 0 0 / 60%);
-  --editor-text-strong: #f2f4f1;
-  --editor-text: #d7ddd8;
-  --editor-text-muted: #9fada4;
-  --editor-text-subtle: #7d8b82;
-  --editor-brand: #2f6b57;
-  --editor-brand-hover: #3a8069;
-  --editor-accent: #f6c85f;
-  --editor-border-subtle: #2c3330;
-  --editor-border: #3a423d;
-  --editor-border-strong: #56635b;
-  --editor-focus: #f6c85f;
-  --editor-disabled: #333a36;
-  --editor-disabled-text: #6b7770;
-  --editor-success: #6fcf9e;
-  --editor-success-surface: #16231c;
-  --editor-warning: #e8c874;
-  --editor-warning-surface: #2a2416;
-  --editor-warning-border: #4a4022;
-  --editor-danger: #f2867e;
-  --editor-danger-surface: #2b1a18;
-  --editor-danger-border: #4a2b27;
+  --editor-toolbar: #f8f4f4;
+  --editor-inset: #eae7e7;
+  --editor-overlay: rgb(32 30 29 / 50%);
+  --editor-text-strong: #201e1d;
+  --editor-text: #444141;
+  --editor-text-muted: #605d5d;
+  --editor-text-subtle: #7d7979;
+  --editor-brand: #0088b0;
+  --editor-brand-hover: #006786;
+  --editor-accent: #d6006c;
+  --editor-border-subtle: rgb(32 30 29 / 8%);
+  --editor-border: rgb(32 30 29 / 16%);
+  --editor-border-strong: rgb(32 30 29 / 36%);
+  --editor-focus: #0088b0;
+  --editor-disabled: #d7d3d3;
+  --editor-disabled-text: #7d7979;
+  --editor-success: #27805f;
+  --editor-success-surface: #eef8f4;
+  --editor-warning: #8a641c;
+  --editor-warning-surface: #fff8e8;
+  --editor-warning-border: #e8d397;
+  --editor-danger: #a83d36;
+  --editor-danger-surface: #fff2f1;
+  --editor-danger-border: #e4aaa5;
 }
 
 .dark {
@@ -297,9 +270,23 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-editor-shell text-foreground;
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer components {
+  .app-page {
+    @apply mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 sm:p-6 lg:p-8;
+  }
+
+  .app-page-toolbar {
+    @apply flex flex-wrap items-center gap-2 rounded-xl border border-editor-border-subtle bg-editor-panel p-2 shadow-editor-toolbar;
+  }
+
+  .app-card {
+    @apply border border-editor-border-subtle bg-editor-raised shadow-editor-card transition duration-200 hover:-translate-y-0.5 hover:border-editor-border-strong hover:shadow-lg;
   }
 }

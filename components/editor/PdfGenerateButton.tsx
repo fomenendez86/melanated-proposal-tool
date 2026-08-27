@@ -1,6 +1,11 @@
 "use client";
 
-import { CircleAlert, Download, LoaderCircle, RotateCw } from "lucide-react";
+import {
+  WarningCircle,
+  DownloadSimple,
+  SpinnerGap,
+  ArrowClockwise,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 
 import { EditorButton } from "./EditorUi";
@@ -47,12 +52,12 @@ export default function PdfGenerateButton({ proposalId, disabled }: { proposalId
       aria-label={error || "Generate and download PDF"}
       title={error || (disabled ? "Save the proposal before generating" : "Generate PDF")}
     >
-      {state === "generating" ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
-        : state === "error" ? <CircleAlert className="size-4" aria-hidden="true" />
-          : state === "success" ? <Download className="size-4" aria-hidden="true" />
-            : <Download className="size-4" aria-hidden="true" />}
+      {state === "generating" ? <SpinnerGap className="size-4 animate-spin" aria-hidden="true" />
+        : state === "error" ? <WarningCircle className="size-4" aria-hidden="true" />
+          : state === "success" ? <DownloadSimple className="size-4" aria-hidden="true" />
+            : <DownloadSimple className="size-4" aria-hidden="true" />}
       <span className="hidden xl:inline">
-        {state === "generating" ? "Generating…" : state === "error" ? <><RotateCw className="mr-1 inline size-3.5" /> Retry PDF</> : state === "success" ? "Downloaded" : "Generate PDF"}
+        {state === "generating" ? "Generating…" : state === "error" ? <><ArrowClockwise className="mr-1 inline size-3.5" /> Retry PDF</> : state === "success" ? "Downloaded" : "Generate PDF"}
       </span>
     </EditorButton>
   );

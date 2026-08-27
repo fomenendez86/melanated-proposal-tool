@@ -1,4 +1,6 @@
-import { ImagePlus, X } from "lucide-react";
+"use client";
+
+import { ImageSquare, X } from "@phosphor-icons/react";
 import { forwardRef } from "react";
 import type { ButtonHTMLAttributes, ChangeEvent, ReactNode } from "react";
 
@@ -19,7 +21,7 @@ export function editorButtonStyles({
   size?: EditorButtonSize;
 } = {}) {
   return cn(
-    "inline-flex shrink-0 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition disabled:cursor-not-allowed disabled:bg-editor-disabled disabled:text-editor-disabled-text",
+    "inline-flex shrink-0 items-center justify-center gap-2 rounded-editor-md text-sm font-semibold transition disabled:cursor-not-allowed disabled:bg-editor-disabled disabled:text-editor-disabled-text",
     editorFocusRing,
     variant === "primary" && "bg-editor-brand text-white hover:bg-editor-brand-hover",
     variant === "secondary" &&
@@ -95,7 +97,7 @@ export function EditorNotice({
   return (
     <section
       className={cn(
-        "rounded-xl border p-4 text-sm",
+        "rounded-editor-lg border p-4 text-sm",
         tone === "info" && "border-editor-border-subtle bg-editor-raised text-editor-text-muted",
         tone === "warning" && "border-editor-warning-border bg-editor-warning-surface text-editor-warning",
         tone === "danger" && "border-editor-danger-border bg-editor-danger-surface text-editor-danger",
@@ -129,7 +131,7 @@ export function EditorField({
 }) {
   const describedBy = error ? `error-${id}` : field.helpText ? `help-${id}` : undefined;
   const controlClass = cn(
-    "mt-1.5 w-full rounded-lg border bg-editor-raised px-3 py-2.5 text-sm text-editor-text-strong outline-none transition placeholder:text-editor-text-subtle focus:border-editor-border-strong focus:ring-2 focus:ring-editor-border-strong/20",
+    "mt-1.5 w-full rounded-editor-md border bg-editor-raised px-3 py-2.5 text-sm text-editor-text-strong outline-none transition placeholder:text-editor-text-subtle focus:border-editor-border-strong focus:ring-2 focus:ring-editor-border-strong/20",
     error ? "border-editor-danger" : "border-editor-border"
   );
   const commonProps = {
@@ -152,12 +154,12 @@ export function EditorField({
         {field.label}{field.required ? <span className="text-editor-danger"> *</span> : null}
       </label>
       {field.isImage ? (
-        <div className="mt-1.5 flex h-20 items-center justify-center overflow-hidden rounded-lg border border-editor-border bg-editor-inset">
+        <div className="mt-1.5 flex h-20 items-center justify-center overflow-hidden rounded-editor-md border border-editor-border bg-editor-inset">
           {value ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={value} alt="" className="h-full w-full object-cover" />
           ) : (
-            <ImagePlus className="size-5 text-editor-text-subtle" aria-hidden="true" />
+            <ImageSquare className="size-5 text-editor-text-subtle" aria-hidden="true" />
           )}
         </div>
       ) : null}
@@ -212,7 +214,7 @@ export function EditorSegmentedControl<T extends string>({
   return (
     <div
       className={cn(
-        "inline-flex items-center rounded-xl border border-editor-border bg-editor-raised p-0.5 shadow-sm",
+        "inline-flex items-center rounded-editor-md border border-editor-border bg-editor-raised p-0.5 shadow-sm",
         className
       )}
       role="group"
@@ -227,7 +229,7 @@ export function EditorSegmentedControl<T extends string>({
             onClick={() => onChange(option.value)}
             aria-pressed={active}
             className={cn(
-              "h-11 rounded-lg px-3 text-xs font-semibold transition",
+              "h-11 rounded-editor-sm px-3 text-xs font-semibold transition",
               editorFocusRing,
               active ? "bg-editor-brand text-white" : "text-editor-text-muted hover:bg-editor-inset"
             )}
@@ -310,7 +312,7 @@ export function EditorPageCard({
         aria-current={active ? "page" : undefined}
         onClick={onSelect}
         className={cn(
-          "flex min-h-20 w-full items-start gap-3 rounded-xl border border-l-[3px] p-2.5 text-left transition",
+          "flex min-h-20 w-full items-start gap-3 rounded-editor-lg border border-l-[3px] p-2.5 text-left transition",
           editorFocusRing,
           dragging
             ? "border-dashed border-editor-brand opacity-60"
@@ -329,7 +331,7 @@ export function EditorPageCard({
         ) : null}
         <div
           className={cn(
-            "relative w-12 shrink-0 overflow-hidden rounded border bg-editor-raised",
+            "relative w-12 shrink-0 overflow-hidden rounded-editor-sm border bg-editor-raised",
             active ? "border-editor-border-strong" : "border-editor-border"
           )}
           style={{ height: thumbnailHeight ?? 62 }}
@@ -374,7 +376,7 @@ export function EditorEmptyState({
   compact?: boolean;
 }) {
   return (
-    <div className={cn("text-center", compact ? "px-3 py-8" : "rounded-xl border border-editor-border-subtle bg-editor-raised p-6")}>
+    <div className={cn("text-center", compact ? "px-3 py-8" : "rounded-editor-lg border border-editor-border-subtle bg-editor-raised p-6")}>
       {icon ? <div className="mx-auto mb-3 grid size-10 place-items-center rounded-full bg-editor-inset text-editor-text-muted" aria-hidden="true">{icon}</div> : null}
       <h3 className="text-sm font-semibold text-editor-text">{title}</h3>
       <p className="mt-1 text-sm leading-5 text-editor-text-muted">{description}</p>

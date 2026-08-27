@@ -1,6 +1,6 @@
 "use client";
 
-import { FilePlus2, X } from "lucide-react";
+import { FilePlus, X } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -10,7 +10,7 @@ import type { ClientOption } from "@/lib/db/getClientOptions";
 import type { ItineraryPickerRow } from "@/lib/db/getItineraryList";
 import type { DocumentDesignDescriptor } from "@/lib/designs/types";
 
-const inputClass = `h-11 w-full rounded-lg border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`;
+const inputClass = `h-11 w-full rounded-editor-md border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`;
 
 export default function CreateProposalDialog({
   clients,
@@ -128,16 +128,16 @@ export default function CreateProposalDialog({
   return (
     <>
       <EditorButton ref={triggerRef} type="button" variant="primary" onClick={() => setOpen(true)}>
-        <FilePlus2 className="size-4" aria-hidden="true" />
+        <FilePlus className="size-4" aria-hidden="true" />
         New proposal
       </EditorButton>
       {open ? (
         <div ref={dialogRef} className="fixed inset-0 z-[70] grid place-items-center bg-editor-overlay p-4" role="dialog" aria-modal="true" aria-labelledby="create-proposal-title">
-          <div className="w-full max-w-md rounded-2xl border border-editor-border bg-editor-panel p-5 shadow-2xl">
+          <div className="w-full max-w-md rounded-editor-lg border border-editor-border bg-editor-panel p-5 shadow-2xl">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2 text-editor-brand">
-                  <FilePlus2 className="size-4" aria-hidden="true" />
+                  <FilePlus className="size-4" aria-hidden="true" />
                   <h2 id="create-proposal-title" className="text-lg font-semibold">New proposal</h2>
                 </div>
                 <p className="mt-1 text-sm leading-5 text-editor-text-muted">Start from a blank document or duplicate an existing proposal.</p>

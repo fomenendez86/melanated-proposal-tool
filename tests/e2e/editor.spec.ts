@@ -527,6 +527,51 @@ test("dragging a hotel from the docked catalog inserts it at the drop gap and pe
   await expect(page.getByRole("button", { name: `Drag ${hotelName} to a position in the document` })).toHaveCount(0);
 });
 
+test("dragging a block card from the Catalog panel's Blocks tab inserts it at the drop gap and persists", { tag: "@desktop-only" }, async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+
+  await page.goto("/proposals/1/editor", { waitUntil: "domcontentloaded" });
+  await expect(page.locator(PAGE_CARD_TITLE_SELECTOR).first()).toBeVisible();
+  const initialTitles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+
+  const initialCards = await draggableCardRects(page);
+  const firstRunIndex = initialCards.findIndex((card) => card.hasHandle);
+  expect(firstRunIndex).toBeGreaterThanOrEqual(0);
+
+  await page.getByRole("group", { name: "Catalog content type" }).getByRole("button", { name: "Blocks" }).click();
+
+  const handle = page.getByRole("button", { name: "Drag Thank-you page to a position in the document" });
+  await expect(handle).toBeVisible();
+  const handleBox = await handle.boundingBox();
+  const gap = page.getByRole("button", { name: "Insert a section at the start" });
+  await gap.scrollIntoViewIfNeeded();
+  const gapBox = await gap.boundingBox();
+  if (!handleBox || !gapBox) throw new Error("drag handle or drop gap not found");
+
+  await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+  await page.mouse.down();
+  await expect(page.locator("[data-catalog-drag-ghost]")).toBeVisible();
+  await page.mouse.move(gapBox.x + gapBox.width / 2, gapBox.y + gapBox.height / 2, { steps: 15 });
+  await expect(gap).toHaveClass(/bg-editor-brand/);
+  await page.mouse.up();
+
+  await expect(async () => {
+    const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+    expect(titles.length).toBe(initialTitles.length + 1);
+  }).toPass({ timeout: 8000 });
+
+  const titlesAfterInsert = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+  expect(titlesAfterInsert[firstRunIndex]).toBe("Thank You");
+  expect(titlesAfterInsert[firstRunIndex + 1]).toBe(initialTitles[firstRunIndex]);
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.locator(PAGE_CARD_TITLE_SELECTOR).first()).toBeVisible();
+  await expect(async () => {
+    const titles = await page.locator(PAGE_CARD_TITLE_SELECTOR).allInnerTexts();
+    expect(titles).toEqual(titlesAfterInsert);
+  }).toPass({ timeout: 5000 });
+});
+
 test("below the 2xl breakpoint the catalog stays a modal, and Escape cancels a canvas drop without changes", { tag: "@desktop-only" }, async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
 

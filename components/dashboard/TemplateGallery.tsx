@@ -1,7 +1,13 @@
 "use client";
 
-import { Archive, ArchiveRestore, ArrowLeft, LibraryBig, PencilLine, RefreshCw, X } from "lucide-react";
-import Link from "next/link";
+import {
+  Archive,
+  ArrowUUpLeft,
+  Books,
+  PencilLine,
+  ArrowsClockwise,
+  X,
+} from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -11,10 +17,11 @@ import {
   restoreTemplateAction,
   updateTemplateFromProposalAction,
 } from "@/app/proposals/templateActions";
+import AppShell from "@/components/app/AppShell";
 import { EditorButton, EditorEmptyState, EditorNotice, EditorStatusBadge, editorFocusRing } from "@/components/editor/EditorUi";
 import type { TemplateListRow } from "@/lib/db/getTemplateList";
 
-const inputClass = `h-11 w-full rounded-lg border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`;
+const inputClass = `h-11 w-full rounded-editor-md border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`;
 
 function ManageTemplateDialog({
   template,
@@ -107,7 +114,7 @@ function ManageTemplateDialog({
 
   return (
     <div ref={dialogRef} className="fixed inset-0 z-[70] grid place-items-center bg-editor-overlay p-4" role="dialog" aria-modal="true" aria-labelledby="manage-template-title">
-      <div className="w-full max-w-md rounded-2xl border border-editor-border bg-editor-panel p-5 shadow-2xl">
+      <div className="w-full max-w-md rounded-editor-lg border border-editor-border bg-editor-panel p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2 text-editor-brand">
             <PencilLine className="size-4" aria-hidden="true" />
@@ -143,7 +150,7 @@ function ManageTemplateDialog({
               ))}
             </select>
             <EditorButton type="button" variant="secondary" className="mt-2 w-full" disabled={savingRefresh} onClick={() => void submitRefresh()}>
-              <RefreshCw className="size-4" aria-hidden="true" />
+              <ArrowsClockwise className="size-4" aria-hidden="true" />
               {savingRefresh ? "Refreshing…" : "Refresh from proposal"}
             </EditorButton>
           </div>
@@ -182,36 +189,32 @@ export default function TemplateGallery({
   }
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col gap-5 px-6 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <Link href="/proposals" prefetch={false} className="inline-flex items-center gap-1.5 text-sm font-semibold text-editor-text-muted hover:text-editor-brand">
-            <ArrowLeft className="size-4" aria-hidden="true" />
-            Proposals
-          </Link>
-          <h1 className="mt-2 text-2xl font-semibold text-editor-text-strong">Templates</h1>
-          <p className="mt-1 text-sm text-editor-text-muted">{templates.length} template{templates.length === 1 ? "" : "s"} · saved from the editor</p>
-        </div>
-      </div>
+    <AppShell
+      active="templates"
+      title="Templates"
+      subtitle={`${templates.length} template${templates.length === 1 ? "" : "s"} · saved from the editor`}
+      backHref="/proposals"
+    >
+      <div className="app-page">
 
       {error ? <p className="text-sm font-semibold text-editor-danger">{error}</p> : null}
 
       {templates.length === 0 ? (
         <EditorEmptyState
-          icon={<LibraryBig className="size-5" aria-hidden="true" />}
+          icon={<Books className="size-5" aria-hidden="true" />}
           title="No templates yet"
           description={'Open a proposal in the editor and use "Save as template" to create one.'}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {templates.map((template) => (
-            <div key={template.id} className="flex flex-col overflow-hidden rounded-xl border border-editor-border-subtle bg-editor-panel shadow-editor-card transition hover:border-editor-border-strong">
+            <div key={template.id} className="app-card flex flex-col overflow-hidden rounded-editor-lg">
               <div className="relative flex aspect-[3/4] items-center justify-center overflow-hidden bg-gradient-to-br from-editor-brand to-editor-brand-hover">
                 {template.thumbnailUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={template.thumbnailUrl} alt="" className="size-full object-cover" />
                 ) : (
-                  <LibraryBig className="size-8 text-white/80" aria-hidden="true" />
+                  <Books className="size-8 text-white/80" aria-hidden="true" />
                 )}
               </div>
               <div className="flex flex-1 flex-col gap-2 p-4">
@@ -228,7 +231,7 @@ export default function TemplateGallery({
                   </EditorButton>
                   {template.status === "archived" ? (
                     <EditorButton type="button" variant="ghost" size="icon" aria-label={`Restore ${template.name}`} disabled={pendingId === template.id} onClick={() => void runAction(template.id, () => restoreTemplateAction(template.id))}>
-                      <ArchiveRestore className="size-4" aria-hidden="true" />
+                      <ArrowUUpLeft className="size-4" aria-hidden="true" />
                     </EditorButton>
                   ) : (
                     <EditorButton type="button" variant="ghost" size="icon" aria-label={`Archive ${template.name}`} disabled={pendingId === template.id} onClick={() => void runAction(template.id, () => archiveTemplateAction(template.id))}>
@@ -245,6 +248,7 @@ export default function TemplateGallery({
       {managing ? (
         <ManageTemplateDialog template={managing} sourceProposals={sourceProposals} onClose={() => setManagingId(null)} />
       ) : null}
-    </div>
+      </div>
+    </AppShell>
   );
 }
