@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { createProposal } from "@/app/proposals/actions";
 import AdminButton from "@/components/admin/ui/AdminButton";
 import AdminSegmentedControl from "@/components/admin/ui/AdminSegmentedControl";
-import { EditorNotice } from "@/components/editor/EditorUi";
+import { AdminNotice } from "@/components/admin/ui/AdminUi";
 import type { ClientOption } from "@/lib/db/getClientOptions";
 import type { ItineraryPickerRow } from "@/lib/db/getItineraryList";
 import type { DocumentDesignDescriptor } from "@/lib/designs/types";
@@ -130,7 +130,7 @@ export default function CreateProposalDialog({
 
   return (
     <>
-      <AdminButton ref={triggerRef} type="button" size="sm" startIcon={<FilePlus className="size-4" aria-hidden="true" />} onClick={() => setOpen(true)}>
+      <AdminButton ref={triggerRef} type="button" variant="primary" size="sm" startIcon={<FilePlus className="size-4" aria-hidden="true" />} onClick={() => setOpen(true)}>
         New proposal
       </AdminButton>
       {open ? (
@@ -273,8 +273,8 @@ export default function CreateProposalDialog({
                 ) : null}
               </div>
 
-              {error ? <EditorNotice tone="danger" className="px-3 py-2 text-xs">{error}</EditorNotice> : null}
-              <AdminButton type="button" className="w-full" disabled={loading} onClick={() => void submit()}>
+              {error ? <AdminNotice tone="danger" className="px-3 py-2 text-theme-xs">{error}</AdminNotice> : null}
+              <AdminButton type="button" variant="primary" className="w-full" disabled={loading} onClick={() => void submit()}>
                 {loading ? "Creating…" : "Create proposal"}
               </AdminButton>
             </div>

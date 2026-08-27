@@ -1,7 +1,8 @@
 import { desc } from "drizzle-orm";
 
 import AppShell from "@/components/admin/AdminShell";
-import { EditorButton, EditorEmptyState } from "@/components/editor/EditorUi";
+import AdminButton from "@/components/admin/ui/AdminButton";
+import { AdminEmptyState } from "@/components/admin/ui/AdminUi";
 import { db } from "@/lib/db/client";
 import { proposalNotifications } from "@/lib/db/schema";
 
@@ -18,25 +19,25 @@ export default async function NotificationsPage() {
       backHref="/proposals"
       headerActions={(
         <form action={markAllNotificationsRead}>
-          <EditorButton type="submit" variant="secondary">Mark all read</EditorButton>
+          <AdminButton type="submit" variant="secondary">Mark all read</AdminButton>
         </form>
       )}
     >
       <div className="app-page max-w-4xl">
         {rows.length === 0 ? (
-          <EditorEmptyState title="You’re all caught up" description="Proposal updates and client activity will appear here." />
+          <AdminEmptyState title="You’re all caught up" description="Proposal updates and client activity will appear here." />
         ) : (
-          <div className="overflow-hidden rounded-editor-lg border border-editor-border-subtle bg-editor-raised shadow-editor-card">
+          <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-theme-sm">
             {rows.map((row) => (
               <article
                 key={row.id}
-                className={`relative border-b border-editor-border-subtle p-4 last:border-b-0 sm:p-5 ${row.readAt ? "" : "bg-editor-brand/10"}`}
+                className={`relative border-b border-gray-200 p-4 last:border-b-0 sm:p-5 ${row.readAt ? "" : "bg-brand-500/10"}`}
               >
-                {!row.readAt ? <span className="absolute left-2 top-6 size-1.5 rounded-full bg-editor-brand" aria-label="Unread" /> : null}
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-editor-text-muted">{row.type.replace("_", " ")}</p>
-                <h2 className="mt-1 text-sm font-semibold text-editor-text-strong">{row.title}</h2>
-                <p className="mt-1 text-sm leading-5 text-editor-text-muted">{row.body}</p>
-                <p className="mt-2 text-xs text-editor-text-subtle">{row.createdAt.toLocaleString()}</p>
+                {!row.readAt ? <span className="absolute left-2 top-6 size-1.5 rounded-full bg-brand-500" aria-label="Unread" /> : null}
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-500">{row.type.replace("_", " ")}</p>
+                <h2 className="mt-1 text-sm font-semibold text-gray-800">{row.title}</h2>
+                <p className="mt-1 text-sm leading-5 text-gray-500">{row.body}</p>
+                <p className="mt-2 text-xs text-gray-400">{row.createdAt.toLocaleString()}</p>
               </article>
             ))}
           </div>

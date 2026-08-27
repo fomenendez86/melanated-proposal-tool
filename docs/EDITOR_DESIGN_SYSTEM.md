@@ -27,8 +27,23 @@ the editor. It is not an accident and it is not a migration in progress: do not
 suit one surface. `EditorButton`, `EditorStatusBadge` and friends belong to the
 editor; `components/admin/ui/*` belongs to the admin area. When the admin area
 needs something the editor already has, copy it into `components/admin/ui/`
-rather than adding a variant to the editor's kit — that is why
-`AdminSegmentedControl` exists alongside `EditorSegmentedControl`.
+rather than adding a variant to the editor's kit.
+
+The two kits therefore **mirror each other's prop APIs on purpose** — same
+names, same shapes, different tokens — so moving a surface between them is an
+import swap rather than a rewrite:
+
+| Editor kit | Admin kit |
+| --- | --- |
+| `editorFocusRing` | `adminFocusRing` |
+| `editorButtonStyles` / `EditorButton` | `adminButtonStyles` / `AdminButton` |
+| `EditorNotice` | `AdminNotice` |
+| `EditorStatusBadge` | `AdminStatusBadge` (plus an `info` tone) |
+| `EditorEmptyState` | `AdminEmptyState` |
+| `EditorSegmentedControl` | `AdminSegmentedControl` |
+
+`AdminButton`'s default variant is `secondary`, like the editor's — pass
+`variant="primary"` for the one call to action per surface.
 
 ## Broadsheet
 

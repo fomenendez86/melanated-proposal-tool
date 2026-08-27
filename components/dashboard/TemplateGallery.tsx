@@ -18,10 +18,11 @@ import {
   updateTemplateFromProposalAction,
 } from "@/app/proposals/templateActions";
 import AppShell from "@/components/admin/AdminShell";
-import { EditorButton, EditorEmptyState, EditorNotice, EditorStatusBadge, editorFocusRing } from "@/components/editor/EditorUi";
+import AdminButton from "@/components/admin/ui/AdminButton";
+import { AdminEmptyState, AdminNotice, AdminStatusBadge, adminFocusRing } from "@/components/admin/ui/AdminUi";
 import type { TemplateListRow } from "@/lib/db/getTemplateList";
 
-const inputClass = `h-11 w-full rounded-editor-md border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`;
+const inputClass = `h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm ${adminFocusRing}`;
 
 function ManageTemplateDialog({
   template,
@@ -113,34 +114,34 @@ function ManageTemplateDialog({
   }
 
   return (
-    <div ref={dialogRef} className="fixed inset-0 z-[70] grid place-items-center bg-editor-overlay p-4" role="dialog" aria-modal="true" aria-labelledby="manage-template-title">
-      <div className="w-full max-w-md rounded-editor-lg border border-editor-border bg-editor-panel p-5 shadow-2xl">
+    <div ref={dialogRef} className="fixed inset-0 z-[70] grid place-items-center bg-gray-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="manage-template-title">
+      <div className="w-full max-w-md rounded-2xl border border-gray-300 bg-white p-5 shadow-2xl">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2 text-editor-brand">
+          <div className="flex items-center gap-2 text-brand-500">
             <PencilLine className="size-4" aria-hidden="true" />
             <h2 id="manage-template-title" className="text-lg font-semibold">Manage template</h2>
           </div>
-          <EditorButton type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Close manage template dialog">
+          <AdminButton type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Close manage template dialog">
             <X className="size-5" aria-hidden="true" />
-          </EditorButton>
+          </AdminButton>
         </div>
 
         <div className="mt-5 space-y-4">
-          <label className="block text-xs font-semibold text-editor-text">
+          <label className="block text-xs font-semibold text-gray-700">
             Name
             <input aria-label="Template name" className={`mt-1.5 ${inputClass}`} value={name} onChange={(event) => setName(event.target.value)} maxLength={120} />
           </label>
-          <label className="block text-xs font-semibold text-editor-text">
+          <label className="block text-xs font-semibold text-gray-700">
             Description
             <textarea aria-label="Template description" className={`mt-1.5 ${inputClass} h-20 resize-none py-2`} value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} />
           </label>
-          <EditorButton type="button" variant="primary" className="w-full" disabled={savingRename} onClick={() => void submitRename()}>
+          <AdminButton type="button" variant="primary" className="w-full" disabled={savingRename} onClick={() => void submitRename()}>
             {savingRename ? "Saving…" : "Save name & description"}
-          </EditorButton>
+          </AdminButton>
 
-          <div className="border-t border-editor-border-subtle pt-4">
-            <span className="text-xs font-semibold text-editor-text">Refresh content from a proposal</span>
-            <p className="mt-1 text-xs leading-5 text-editor-text-muted">
+          <div className="border-t border-gray-200 pt-4">
+            <span className="text-xs font-semibold text-gray-700">Refresh content from a proposal</span>
+            <p className="mt-1 text-xs leading-5 text-gray-500">
               Replaces this template&apos;s content with a fresh copy from the proposal below. Proposals already created from this template are not affected.
             </p>
             <select aria-label="Source proposal" className={`mt-2 ${inputClass}`} value={sourceProposalId} onChange={(event) => setSourceProposalId(Number(event.target.value))}>
@@ -149,13 +150,13 @@ function ManageTemplateDialog({
                 <option key={proposal.id} value={proposal.id}>{proposal.title}</option>
               ))}
             </select>
-            <EditorButton type="button" variant="secondary" className="mt-2 w-full" disabled={savingRefresh} onClick={() => void submitRefresh()}>
+            <AdminButton type="button" variant="secondary" className="mt-2 w-full" disabled={savingRefresh} onClick={() => void submitRefresh()}>
               <ArrowsClockwise className="size-4" aria-hidden="true" />
               {savingRefresh ? "Refreshing…" : "Refresh from proposal"}
-            </EditorButton>
+            </AdminButton>
           </div>
 
-          {error ? <EditorNotice tone="danger" className="px-3 py-2 text-xs">{error}</EditorNotice> : null}
+          {error ? <AdminNotice tone="danger" className="px-3 py-2 text-xs">{error}</AdminNotice> : null}
         </div>
       </div>
     </div>
@@ -197,10 +198,10 @@ export default function TemplateGallery({
     >
       <div className="app-page">
 
-      {error ? <p className="text-sm font-semibold text-editor-danger">{error}</p> : null}
+      {error ? <p className="text-sm font-semibold text-error-600">{error}</p> : null}
 
       {templates.length === 0 ? (
-        <EditorEmptyState
+        <AdminEmptyState
           icon={<Books className="size-5" aria-hidden="true" />}
           title="No templates yet"
           description={'Open a proposal in the editor and use "Save as template" to create one.'}
@@ -209,34 +210,34 @@ export default function TemplateGallery({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {templates.map((template) => (
             <div key={template.id} className="app-card flex flex-col">
-              <div className="relative flex aspect-[3/4] items-center justify-center overflow-hidden bg-gradient-to-br from-editor-brand to-editor-brand-hover">
+              <div className="relative flex aspect-[3/4] items-center justify-center overflow-hidden bg-brand-50 text-brand-500">
                 {template.thumbnailUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={template.thumbnailUrl} alt="" className="size-full object-cover" />
                 ) : (
-                  <Books className="size-8 text-white/80" aria-hidden="true" />
+                  <Books className="size-8" aria-hidden="true" />
                 )}
               </div>
               <div className="flex flex-1 flex-col gap-2 p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <h2 className="text-sm font-semibold text-editor-text-strong">{template.name}</h2>
-                  <EditorStatusBadge tone={template.status === "archived" ? "neutral" : "success"} className="capitalize">{template.status}</EditorStatusBadge>
+                  <h2 className="text-sm font-semibold text-gray-800">{template.name}</h2>
+                  <AdminStatusBadge tone={template.status === "archived" ? "neutral" : "success"} className="capitalize">{template.status}</AdminStatusBadge>
                 </div>
-                {template.description ? <p className="line-clamp-2 text-xs text-editor-text-muted">{template.description}</p> : null}
-                <p className="text-xs text-editor-text-subtle">{template.designName}</p>
+                {template.description ? <p className="line-clamp-2 text-xs text-gray-500">{template.description}</p> : null}
+                <p className="text-xs text-gray-400">{template.designName}</p>
                 <div className="mt-auto flex items-center gap-1.5 pt-2">
-                  <EditorButton type="button" variant="secondary" size="sm" aria-label={`Manage ${template.name}`} onClick={() => setManagingId(template.id)}>
+                  <AdminButton type="button" variant="secondary" size="sm" aria-label={`Manage ${template.name}`} onClick={() => setManagingId(template.id)}>
                     <PencilLine className="size-4" aria-hidden="true" />
                     Manage
-                  </EditorButton>
+                  </AdminButton>
                   {template.status === "archived" ? (
-                    <EditorButton type="button" variant="ghost" size="icon" aria-label={`Restore ${template.name}`} disabled={pendingId === template.id} onClick={() => void runAction(template.id, () => restoreTemplateAction(template.id))}>
+                    <AdminButton type="button" variant="ghost" size="icon" aria-label={`Restore ${template.name}`} disabled={pendingId === template.id} onClick={() => void runAction(template.id, () => restoreTemplateAction(template.id))}>
                       <ArrowUUpLeft className="size-4" aria-hidden="true" />
-                    </EditorButton>
+                    </AdminButton>
                   ) : (
-                    <EditorButton type="button" variant="ghost" size="icon" aria-label={`Archive ${template.name}`} disabled={pendingId === template.id} onClick={() => void runAction(template.id, () => archiveTemplateAction(template.id))}>
+                    <AdminButton type="button" variant="ghost" size="icon" aria-label={`Archive ${template.name}`} disabled={pendingId === template.id} onClick={() => void runAction(template.id, () => archiveTemplateAction(template.id))}>
                       <Archive className="size-4" aria-hidden="true" />
-                    </EditorButton>
+                    </AdminButton>
                   )}
                 </div>
               </div>

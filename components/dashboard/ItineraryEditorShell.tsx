@@ -34,7 +34,9 @@ import {
 import AppShell from "@/components/admin/AdminShell";
 import { archiveItinerary, restoreItinerary } from "@/app/proposals/itineraries/actions";
 import ItineraryEditor from "@/components/editor/ItineraryEditor";
-import { EditorButton, EditorEmptyState, EditorNotice, EditorSegmentedControl, editorFocusRing } from "@/components/editor/EditorUi";
+import AdminButton from "@/components/admin/ui/AdminButton";
+import AdminSegmentedControl from "@/components/admin/ui/AdminSegmentedControl";
+import { AdminEmptyState, AdminNotice, adminFocusRing } from "@/components/admin/ui/AdminUi";
 import { serializeItineraryEditorDays } from "@/lib/editor/itineraryEditorCodec";
 import type { EditorSaveState } from "@/lib/editor/proposalEditorTypes";
 import type { ItineraryData } from "@/lib/db/getItineraryData";
@@ -42,7 +44,7 @@ import type { ItineraryCatalogPickerData } from "@/lib/db/getItineraryCatalogPic
 import type { ClientOption } from "@/lib/db/getClientOptions";
 import type { DocumentDesignDescriptor } from "@/lib/designs/types";
 
-const inputClass = `h-10 w-full rounded-editor-md border border-editor-border bg-editor-raised px-3 text-sm ${editorFocusRing}`;
+const inputClass = `h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm ${adminFocusRing}`;
 
 const SAVE_COPY: Record<EditorSaveState, string> = {
   loaded: "Loaded",
@@ -55,12 +57,12 @@ const SAVE_COPY: Record<EditorSaveState, string> = {
 function MoveButtons({ disabled, onUp, onDown, atTop, atBottom }: { disabled: boolean; onUp: () => void; onDown: () => void; atTop: boolean; atBottom: boolean }) {
   return (
     <>
-      <EditorButton type="button" variant="ghost" size="icon" aria-label="Move up" disabled={disabled || atTop} onClick={onUp}>
+      <AdminButton type="button" variant="ghost" size="icon" aria-label="Move up" disabled={disabled || atTop} onClick={onUp}>
         <ArrowUp className="size-3.5" aria-hidden="true" />
-      </EditorButton>
-      <EditorButton type="button" variant="ghost" size="icon" aria-label="Move down" disabled={disabled || atBottom} onClick={onDown}>
+      </AdminButton>
+      <AdminButton type="button" variant="ghost" size="icon" aria-label="Move down" disabled={disabled || atBottom} onClick={onDown}>
         <ArrowDown className="size-3.5" aria-hidden="true" />
-      </EditorButton>
+      </AdminButton>
     </>
   );
 }
@@ -115,16 +117,16 @@ function GenerateProposalDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-[70] grid place-items-center bg-editor-overlay p-4" role="dialog" aria-modal="true" aria-labelledby="generate-proposal-title">
-      <div className="w-full max-w-md rounded-editor-lg border border-editor-border bg-editor-panel p-5 shadow-2xl">
-        <h2 id="generate-proposal-title" className="text-lg font-semibold text-editor-text-strong">Generate proposal</h2>
-        <p className="mt-1 text-sm text-editor-text-muted">Creates a real proposal from this itinerary that you can personalize, download, or send.</p>
+    <div className="fixed inset-0 z-[70] grid place-items-center bg-gray-900/50 p-4" role="dialog" aria-modal="true" aria-labelledby="generate-proposal-title">
+      <div className="w-full max-w-md rounded-2xl border border-gray-300 bg-white p-5 shadow-2xl">
+        <h2 id="generate-proposal-title" className="text-lg font-semibold text-gray-800">Generate proposal</h2>
+        <p className="mt-1 text-sm text-gray-500">Creates a real proposal from this itinerary that you can personalize, download, or send.</p>
 
         <div className="mt-5 space-y-4">
           <div>
-            <span className="text-xs font-semibold text-editor-text">Client</span>
+            <span className="text-xs font-semibold text-gray-700">Client</span>
             <div className="mt-1.5">
-              <EditorSegmentedControl label="Client source" value={clientMode} onChange={setClientMode} options={[{ value: "existing", label: "Existing" }, { value: "new", label: "New" }]} />
+              <AdminSegmentedControl label="Client source" value={clientMode} onChange={setClientMode} options={[{ value: "existing", label: "Existing" }, { value: "new", label: "New" }]} />
             </div>
             {clientMode === "existing" ? (
               <select aria-label="Existing client" className={`mt-2 ${inputClass}`} value={existingClientId} onChange={(event) => setExistingClientId(Number(event.target.value))}>
@@ -139,12 +141,12 @@ function GenerateProposalDialog({
             )}
           </div>
 
-          <label className="block text-xs font-semibold text-editor-text">
+          <label className="block text-xs font-semibold text-gray-700">
             Trip name
             <input aria-label="Trip name" className={`mt-1.5 ${inputClass}`} value={tripName} onChange={(event) => setTripName(event.target.value)} />
           </label>
 
-          <label className="block text-xs font-semibold text-editor-text">
+          <label className="block text-xs font-semibold text-gray-700">
             Document design
             <select aria-label="Document design" className={`mt-1.5 ${inputClass}`} value={designChoice} onChange={(event) => setDesignChoice(event.target.value)}>
               {designs.map((design) => (
@@ -156,7 +158,7 @@ function GenerateProposalDialog({
           </label>
 
           {itinerary.tiers.length > 0 ? (
-            <label className="block text-xs font-semibold text-editor-text">
+            <label className="block text-xs font-semibold text-gray-700">
               Tier
               <select aria-label="Tier" className={`mt-1.5 ${inputClass}`} value={tierId ?? ""} onChange={(event) => setTierId(Number(event.target.value))}>
                 {itinerary.tiers.map((tier) => <option key={tier.id} value={tier.id}>{tier.name}</option>)}
@@ -164,12 +166,12 @@ function GenerateProposalDialog({
             </label>
           ) : null}
 
-          {error ? <EditorNotice tone="danger" className="px-3 py-2 text-xs">{error}</EditorNotice> : null}
+          {error ? <AdminNotice tone="danger" className="px-3 py-2 text-xs">{error}</AdminNotice> : null}
           <div className="flex gap-2">
-            <EditorButton type="button" variant="secondary" className="flex-1" onClick={onClose}>Cancel</EditorButton>
-            <EditorButton type="button" variant="primary" className="flex-1" disabled={loading} onClick={() => void submit()}>
+            <AdminButton type="button" variant="secondary" className="flex-1" onClick={onClose}>Cancel</AdminButton>
+            <AdminButton type="button" variant="primary" className="flex-1" disabled={loading} onClick={() => void submit()}>
               {loading ? "Generating…" : "Generate proposal"}
-            </EditorButton>
+            </AdminButton>
           </div>
         </div>
       </div>
@@ -222,25 +224,25 @@ function HotelsPanel({ itinerary, catalog, activeTierId, onChange }: { itinerary
   }
 
   return (
-    <section className="space-y-3 rounded-editor-lg border border-editor-border-subtle bg-editor-raised p-4">
-      <h3 className="text-sm font-semibold text-editor-text-strong">Hotels</h3>
+    <section className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
+      <h3 className="text-sm font-semibold text-gray-800">Hotels</h3>
       {visible.length === 0 ? (
-        <p className="text-xs text-editor-text-muted">No hotels yet for this scope — the client won&apos;t see an accommodations section unless you add one.</p>
+        <p className="text-xs text-gray-500">No hotels yet for this scope — the client won&apos;t see an accommodations section unless you add one.</p>
       ) : (
         <ul className="space-y-2">
           {visible.map((row, index) => {
             const hotel = catalog.hotels.find((h) => h.id === row.hotelId);
             return (
-              <li key={row.id} className="flex items-center justify-between gap-2 rounded-editor-md border border-editor-border-subtle bg-editor-panel px-3 py-2 text-sm">
+              <li key={row.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-editor-text-strong">{hotel?.name ?? `Hotel #${row.hotelId}`}</p>
-                  <p className="truncate text-xs text-editor-text-muted">{row.roomCategory} · {row.mealPlan} · {row.nights} night{row.nights === 1 ? "" : "s"} · {row.tierId === null ? "Shared" : "This tier"}</p>
+                  <p className="truncate font-medium text-gray-800">{hotel?.name ?? `Hotel #${row.hotelId}`}</p>
+                  <p className="truncate text-xs text-gray-500">{row.roomCategory} · {row.mealPlan} · {row.nights} night{row.nights === 1 ? "" : "s"} · {row.tierId === null ? "Shared" : "This tier"}</p>
                 </div>
                 <div className="flex items-center">
                   <MoveButtons disabled={pending} atTop={index === 0} atBottom={index === visible.length - 1} onUp={() => void move(row.id, -1)} onDown={() => void move(row.id, 1)} />
-                  <EditorButton type="button" variant="ghost" size="icon" aria-label="Remove hotel" disabled={pending} onClick={() => void remove(row.id)}>
+                  <AdminButton type="button" variant="ghost" size="icon" aria-label="Remove hotel" disabled={pending} onClick={() => void remove(row.id)}>
                     <Trash className="size-4" aria-hidden="true" />
-                  </EditorButton>
+                  </AdminButton>
                 </div>
               </li>
             );
@@ -254,16 +256,16 @@ function HotelsPanel({ itinerary, catalog, activeTierId, onChange }: { itinerary
           {catalog.hotels.map((hotel) => <option key={hotel.id} value={hotel.id}>{hotel.name} — {hotel.cityName}</option>)}
         </select>
         {activeTierId ? (
-          <EditorSegmentedControl label="Applies to" value={scope} onChange={setScope} options={[{ value: "shared", label: "All tiers" }, { value: "tier", label: "This tier only" }]} />
+          <AdminSegmentedControl label="Applies to" value={scope} onChange={setScope} options={[{ value: "shared", label: "All tiers" }, { value: "tier", label: "This tier only" }]} />
         ) : null}
         <input className={inputClass} placeholder="Room category" value={roomCategory} onChange={(event) => setRoomCategory(event.target.value)} />
         <input className={inputClass} placeholder="Meal plan" value={mealPlan} onChange={(event) => setMealPlan(event.target.value)} />
         <input type="number" min={1} className={inputClass} placeholder="Nights" value={nights} onChange={(event) => setNights(Number(event.target.value))} />
       </div>
-      {error ? <EditorNotice tone="danger" className="px-3 py-2 text-xs">{error}</EditorNotice> : null}
-      <EditorButton type="button" variant="secondary" size="sm" disabled={pending} onClick={() => void add()}>
+      {error ? <AdminNotice tone="danger" className="px-3 py-2 text-xs">{error}</AdminNotice> : null}
+      <AdminButton type="button" variant="secondary" size="sm" disabled={pending} onClick={() => void add()}>
         <Plus className="size-3.5" aria-hidden="true" /> Add hotel
-      </EditorButton>
+      </AdminButton>
     </section>
   );
 }
@@ -314,26 +316,26 @@ function FlightsPanel({ itinerary, activeTierId, onChange }: { itinerary: Itiner
   }
 
   return (
-    <section className="space-y-3 rounded-editor-lg border border-editor-border-subtle bg-editor-raised p-4">
-      <div className="flex items-center gap-2 text-editor-text-strong">
+    <section className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
+      <div className="flex items-center gap-2 text-gray-800">
         <Airplane className="size-4" aria-hidden="true" />
         <h3 className="text-sm font-semibold">Flights</h3>
       </div>
       {visible.length === 0 ? (
-        <p className="text-xs text-editor-text-muted">No flights yet — optional, leave empty if the client books their own.</p>
+        <p className="text-xs text-gray-500">No flights yet — optional, leave empty if the client books their own.</p>
       ) : (
         <ul className="space-y-2">
           {visible.map((row, index) => (
-            <li key={row.id} className="flex items-center justify-between gap-2 rounded-editor-md border border-editor-border-subtle bg-editor-panel px-3 py-2 text-sm">
+            <li key={row.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
               <div className="min-w-0">
-                <p className="truncate font-medium text-editor-text-strong">{[row.carrier, row.flightNumber].filter(Boolean).join(" ") || "Flight"}</p>
-                <p className="truncate text-xs text-editor-text-muted">{[row.originAirport, row.destinationAirport].filter(Boolean).join(" → ")} · {row.tierId === null ? "Shared" : "This tier"}</p>
+                <p className="truncate font-medium text-gray-800">{[row.carrier, row.flightNumber].filter(Boolean).join(" ") || "Flight"}</p>
+                <p className="truncate text-xs text-gray-500">{[row.originAirport, row.destinationAirport].filter(Boolean).join(" → ")} · {row.tierId === null ? "Shared" : "This tier"}</p>
               </div>
               <div className="flex items-center">
                 <MoveButtons disabled={pending} atTop={index === 0} atBottom={index === visible.length - 1} onUp={() => void move(row.id, -1)} onDown={() => void move(row.id, 1)} />
-                <EditorButton type="button" variant="ghost" size="icon" aria-label="Remove flight" disabled={pending} onClick={() => void remove(row.id)}>
+                <AdminButton type="button" variant="ghost" size="icon" aria-label="Remove flight" disabled={pending} onClick={() => void remove(row.id)}>
                   <Trash className="size-4" aria-hidden="true" />
-                </EditorButton>
+                </AdminButton>
               </div>
             </li>
           ))}
@@ -345,13 +347,13 @@ function FlightsPanel({ itinerary, activeTierId, onChange }: { itinerary: Itiner
         <input className={inputClass} placeholder="Origin airport" value={originAirport} onChange={(event) => setOriginAirport(event.target.value)} />
         <input className={inputClass} placeholder="Destination airport" value={destinationAirport} onChange={(event) => setDestinationAirport(event.target.value)} />
         {activeTierId ? (
-          <EditorSegmentedControl label="Applies to" value={scope} onChange={setScope} options={[{ value: "shared", label: "All tiers" }, { value: "tier", label: "This tier only" }]} className="sm:col-span-2" />
+          <AdminSegmentedControl label="Applies to" value={scope} onChange={setScope} options={[{ value: "shared", label: "All tiers" }, { value: "tier", label: "This tier only" }]} className="sm:col-span-2" />
         ) : null}
       </div>
-      {error ? <EditorNotice tone="danger" className="px-3 py-2 text-xs">{error}</EditorNotice> : null}
-      <EditorButton type="button" variant="secondary" size="sm" disabled={pending} onClick={() => void add()}>
+      {error ? <AdminNotice tone="danger" className="px-3 py-2 text-xs">{error}</AdminNotice> : null}
+      <AdminButton type="button" variant="secondary" size="sm" disabled={pending} onClick={() => void add()}>
         <Plus className="size-3.5" aria-hidden="true" /> Add flight
-      </EditorButton>
+      </AdminButton>
     </section>
   );
 }
@@ -402,26 +404,26 @@ function TransportPanel({ itinerary, activeTierId, onChange }: { itinerary: Itin
   }
 
   return (
-    <section className="space-y-3 rounded-editor-lg border border-editor-border-subtle bg-editor-raised p-4">
-      <div className="flex items-center gap-2 text-editor-text-strong">
+    <section className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
+      <div className="flex items-center gap-2 text-gray-800">
         <Bus className="size-4" aria-hidden="true" />
         <h3 className="text-sm font-semibold">Ground transportation</h3>
       </div>
       {visible.length === 0 ? (
-        <p className="text-xs text-editor-text-muted">No transportation legs yet — optional.</p>
+        <p className="text-xs text-gray-500">No transportation legs yet — optional.</p>
       ) : (
         <ul className="space-y-2">
           {visible.map((row, index) => (
-            <li key={row.id} className="flex items-center justify-between gap-2 rounded-editor-md border border-editor-border-subtle bg-editor-panel px-3 py-2 text-sm">
+            <li key={row.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
               <div className="min-w-0">
-                <p className="truncate font-medium text-editor-text-strong">{row.mode || row.description || "Transportation"}</p>
-                <p className="truncate text-xs text-editor-text-muted">{[row.pickupLocation, row.dropoffLocation].filter(Boolean).join(" → ")} · {row.tierId === null ? "Shared" : "This tier"}</p>
+                <p className="truncate font-medium text-gray-800">{row.mode || row.description || "Transportation"}</p>
+                <p className="truncate text-xs text-gray-500">{[row.pickupLocation, row.dropoffLocation].filter(Boolean).join(" → ")} · {row.tierId === null ? "Shared" : "This tier"}</p>
               </div>
               <div className="flex items-center">
                 <MoveButtons disabled={pending} atTop={index === 0} atBottom={index === visible.length - 1} onUp={() => void move(row.id, -1)} onDown={() => void move(row.id, 1)} />
-                <EditorButton type="button" variant="ghost" size="icon" aria-label="Remove transportation" disabled={pending} onClick={() => void remove(row.id)}>
+                <AdminButton type="button" variant="ghost" size="icon" aria-label="Remove transportation" disabled={pending} onClick={() => void remove(row.id)}>
                   <Trash className="size-4" aria-hidden="true" />
-                </EditorButton>
+                </AdminButton>
               </div>
             </li>
           ))}
@@ -433,13 +435,13 @@ function TransportPanel({ itinerary, activeTierId, onChange }: { itinerary: Itin
         <input className={inputClass} placeholder="Pickup" value={pickupLocation} onChange={(event) => setPickupLocation(event.target.value)} />
         <input className={inputClass} placeholder="Drop-off" value={dropoffLocation} onChange={(event) => setDropoffLocation(event.target.value)} />
         {activeTierId ? (
-          <EditorSegmentedControl label="Applies to" value={scope} onChange={setScope} options={[{ value: "shared", label: "All tiers" }, { value: "tier", label: "This tier only" }]} className="sm:col-span-2" />
+          <AdminSegmentedControl label="Applies to" value={scope} onChange={setScope} options={[{ value: "shared", label: "All tiers" }, { value: "tier", label: "This tier only" }]} className="sm:col-span-2" />
         ) : null}
       </div>
-      {error ? <EditorNotice tone="danger" className="px-3 py-2 text-xs">{error}</EditorNotice> : null}
-      <EditorButton type="button" variant="secondary" size="sm" disabled={pending} onClick={() => void add()}>
+      {error ? <AdminNotice tone="danger" className="px-3 py-2 text-xs">{error}</AdminNotice> : null}
+      <AdminButton type="button" variant="secondary" size="sm" disabled={pending} onClick={() => void add()}>
         <Plus className="size-3.5" aria-hidden="true" /> Add transportation
-      </EditorButton>
+      </AdminButton>
     </section>
   );
 }
@@ -488,30 +490,30 @@ function ExcursionsPanel({ itinerary, catalog, activeTierId, onChange }: { itine
   }
 
   return (
-    <section className="space-y-3 rounded-editor-lg border border-editor-border-subtle bg-editor-raised p-4">
-      <div className="flex items-center gap-2 text-editor-text-strong">
+    <section className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
+      <div className="flex items-center gap-2 text-gray-800">
         <Ticket className="size-4" aria-hidden="true" />
         <h3 className="text-sm font-semibold">Excursions</h3>
       </div>
       {visible.length === 0 ? (
-        <p className="text-xs text-editor-text-muted">No excursions yet — optional.</p>
+        <p className="text-xs text-gray-500">No excursions yet — optional.</p>
       ) : (
         <ul className="space-y-2">
           {visible.map((row, index) => {
             const excursion = catalog.excursions.find((e) => e.id === row.excursionId);
             return (
-              <li key={row.id} className="flex items-center justify-between gap-2 rounded-editor-md border border-editor-border-subtle bg-editor-panel px-3 py-2 text-sm">
+              <li key={row.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-editor-text-strong">{excursion?.title ?? `Excursion #${row.excursionId}`}</p>
-                  <p className="truncate text-xs text-editor-text-muted">
+                  <p className="truncate font-medium text-gray-800">{excursion?.title ?? `Excursion #${row.excursionId}`}</p>
+                  <p className="truncate text-xs text-gray-500">
                     {row.priceOverride != null ? `$${row.priceOverride}` : "Catalog price"} · {row.tierId === null ? "Shared" : "This tier"}
                   </p>
                 </div>
                 <div className="flex items-center">
                   <MoveButtons disabled={pending} atTop={index === 0} atBottom={index === visible.length - 1} onUp={() => void move(row.id, -1)} onDown={() => void move(row.id, 1)} />
-                  <EditorButton type="button" variant="ghost" size="icon" aria-label="Remove excursion" disabled={pending} onClick={() => void remove(row.id)}>
+                  <AdminButton type="button" variant="ghost" size="icon" aria-label="Remove excursion" disabled={pending} onClick={() => void remove(row.id)}>
                     <Trash className="size-4" aria-hidden="true" />
-                  </EditorButton>
+                  </AdminButton>
                 </div>
               </li>
             );
@@ -525,13 +527,13 @@ function ExcursionsPanel({ itinerary, catalog, activeTierId, onChange }: { itine
         </select>
         <input type="number" min={0} step="0.01" className={inputClass} placeholder="Price override (optional)" value={priceOverride} onChange={(event) => setPriceOverride(event.target.value)} />
         {activeTierId ? (
-          <EditorSegmentedControl label="Applies to" value={scope} onChange={setScope} options={[{ value: "shared", label: "All tiers" }, { value: "tier", label: "This tier only" }]} className="sm:col-span-2" />
+          <AdminSegmentedControl label="Applies to" value={scope} onChange={setScope} options={[{ value: "shared", label: "All tiers" }, { value: "tier", label: "This tier only" }]} className="sm:col-span-2" />
         ) : null}
       </div>
-      {error ? <EditorNotice tone="danger" className="px-3 py-2 text-xs">{error}</EditorNotice> : null}
-      <EditorButton type="button" variant="secondary" size="sm" disabled={pending} onClick={() => void add()}>
+      {error ? <AdminNotice tone="danger" className="px-3 py-2 text-xs">{error}</AdminNotice> : null}
+      <AdminButton type="button" variant="secondary" size="sm" disabled={pending} onClick={() => void add()}>
         <Plus className="size-3.5" aria-hidden="true" /> Add excursion
-      </EditorButton>
+      </AdminButton>
     </section>
   );
 }
@@ -607,46 +609,46 @@ export default function ItineraryEditorShell({
       headerActions={(
         <>
           {itinerary.archived ? (
-            <EditorButton type="button" variant="secondary" onClick={() => void archiveOrRestore(false)}>Restore</EditorButton>
+            <AdminButton type="button" variant="secondary" onClick={() => void archiveOrRestore(false)}>Restore</AdminButton>
           ) : (
-            <EditorButton type="button" variant="secondary" onClick={() => void archiveOrRestore(true)}>Archive</EditorButton>
+            <AdminButton type="button" variant="secondary" onClick={() => void archiveOrRestore(true)}>Archive</AdminButton>
           )}
-          <EditorButton type="button" variant="primary" onClick={() => setGenerating(true)}>
+          <AdminButton type="button" variant="primary" onClick={() => setGenerating(true)}>
             Generate proposal
-          </EditorButton>
+          </AdminButton>
         </>
       )}
     >
       <div className="app-page max-w-5xl">
 
-      {error ? <EditorNotice tone="danger" className="px-3 py-2 text-xs">{error}</EditorNotice> : null}
+      {error ? <AdminNotice tone="danger" className="px-3 py-2 text-xs">{error}</AdminNotice> : null}
 
       <section className="space-y-2">
-        <span className="text-xs font-semibold text-editor-text">Tiers</span>
+        <span className="text-xs font-semibold text-gray-700">Tiers</span>
         <div className="flex flex-wrap items-center gap-1.5">
-          <EditorButton type="button" variant={activeTierId === null ? "primary" : "secondary"} size="sm" onClick={() => setActiveTierId(null)}>
+          <AdminButton type="button" variant={activeTierId === null ? "primary" : "secondary"} size="sm" onClick={() => setActiveTierId(null)}>
             {itinerary.tiers.length === 0 ? "All content" : "Shared (all tiers)"}
-          </EditorButton>
+          </AdminButton>
           {itinerary.tiers.map((tier) => (
             <div key={tier.id} className="flex items-center">
-              <EditorButton type="button" variant={activeTierId === tier.id ? "primary" : "secondary"} size="sm" onClick={() => setActiveTierId(tier.id)}>
+              <AdminButton type="button" variant={activeTierId === tier.id ? "primary" : "secondary"} size="sm" onClick={() => setActiveTierId(tier.id)}>
                 {tier.name}
-              </EditorButton>
-              <EditorButton type="button" variant="ghost" size="icon" aria-label={`Delete ${tier.name} tier`} onClick={() => void removeTier(tier.id)}>
+              </AdminButton>
+              <AdminButton type="button" variant="ghost" size="icon" aria-label={`Delete ${tier.name} tier`} onClick={() => void removeTier(tier.id)}>
                 <Trash className="size-3.5" aria-hidden="true" />
-              </EditorButton>
+              </AdminButton>
             </div>
           ))}
         </div>
         <div className="flex items-center gap-2">
           <input className={`${inputClass} max-w-xs`} placeholder="New tier name (e.g. Premium)" value={newTierName} onChange={(event) => setNewTierName(event.target.value)} />
-          <EditorButton type="button" variant="secondary" size="sm" disabled={addingTier} onClick={() => void addTier()}>
+          <AdminButton type="button" variant="secondary" size="sm" disabled={addingTier} onClick={() => void addTier()}>
             <Plus className="size-3.5" aria-hidden="true" /> Add tier
-          </EditorButton>
+          </AdminButton>
         </div>
       </section>
 
-      <section className="rounded-editor-lg border border-editor-border-subtle bg-editor-panel p-4">
+      <section className="rounded-2xl border border-gray-200 bg-white p-4">
         <ItineraryEditor
           initialText={serializeItineraryEditorDays(
             itinerary.days.map((day) => ({
@@ -670,7 +672,7 @@ export default function ItineraryEditorShell({
       <TransportPanel itinerary={itinerary} activeTierId={activeTierId} onChange={refresh} />
 
       {itinerary.days.length === 0 && itinerary.hotels.length === 0 ? (
-        <EditorEmptyState icon={<MapPinArea className="size-5" aria-hidden="true" />} title="Start with a day" description='Use "Add day" above to build the day-by-day plan.' />
+        <AdminEmptyState icon={<MapPinArea className="size-5" aria-hidden="true" />} title="Start with a day" description='Use "Add day" above to build the day-by-day plan.' />
       ) : null}
 
       {generating ? <GenerateProposalDialog itinerary={itinerary} clients={clients} designs={designs} onClose={() => setGenerating(false)} /> : null}

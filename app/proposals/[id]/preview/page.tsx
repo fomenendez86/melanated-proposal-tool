@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 
 import AppShell from "@/components/admin/AdminShell";
-import { editorButtonStyles } from "@/components/editor/EditorUi";
+import { adminButtonStyles } from "@/components/admin/ui/AdminUi";
 import ProposalRenderer from "@/components/ProposalRenderer";
 import { getProposalData } from "@/lib/db/getProposalData";
 import { getProposalDesignContext } from "@/lib/db/getProposalDesignContext";
@@ -32,12 +32,12 @@ export default async function ProposalPreviewPage({ params }: ProposalPreviewPag
       subtitle={`${summary.proposalNumber} · Client preview`}
       backHref={`/proposals/${proposalId}/editor`}
       headerActions={(
-        <Link href={`/proposals/${proposalId}/editor`} prefetch={false} className={editorButtonStyles({ variant: "primary" })}>
+        <Link href={`/proposals/${proposalId}/editor`} prefetch={false} className={adminButtonStyles({ variant: "primary" })}>
           Back to editor
         </Link>
       )}
     >
-      <div className="flex min-h-full flex-col items-center gap-6 bg-editor-canvas p-4 sm:p-8 print:bg-white print:p-0">
+      <div className="flex min-h-full flex-col items-center gap-6 bg-gray-100 p-4 sm:p-8 print:bg-white print:p-0">
         <ProposalRenderer data={data} design={designContext.active} />
       </div>
     </AppShell>

@@ -21,8 +21,8 @@ import { useMemo, useState, type ReactNode } from "react";
 
 import { archiveProposal, deleteProposal, duplicateProposalFromDashboard, markProposalLost, reopenProposal, restoreProposal } from "@/app/proposals/actions";
 import AppShell from "@/components/admin/AdminShell";
-import AdminBadge, { type AdminBadgeColor } from "@/components/admin/ui/Badge";
 import AdminButton from "@/components/admin/ui/AdminButton";
+import { AdminStatusBadge, type AdminBadgeTone } from "@/components/admin/ui/AdminUi";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/admin/ui/Table";
 import type { TemplateListRow } from "@/lib/db/getTemplateList";
 import type { ItineraryPickerRow } from "@/lib/db/getItineraryList";
@@ -44,14 +44,14 @@ const STATUS_OPTIONS: { value: ProposalStatus | "all"; label: string }[] = [
   { value: "archived", label: "Archived" },
 ];
 
-const STATUS_TONE: Record<ProposalStatus, AdminBadgeColor> = {
-  draft: "light",
+const STATUS_TONE: Record<ProposalStatus, AdminBadgeTone> = {
+  draft: "neutral",
   sent: "info",
   viewed: "warning",
   approved: "success",
   won: "success",
-  lost: "error",
-  archived: "light",
+  lost: "danger",
+  archived: "neutral",
 };
 
 const OPEN_STATUSES: ProposalStatus[] = ["draft", "sent", "viewed", "approved"];
@@ -210,7 +210,7 @@ export default function ProposalDashboard({
             label="Won"
             value={String(wonCount)}
             icon={<Trophy className="size-6" aria-hidden="true" />}
-            badge={wonCount > 0 ? <AdminBadge color="success" size="sm">Closed</AdminBadge> : undefined}
+            badge={wonCount > 0 ? <AdminStatusBadge tone="success">Closed</AdminStatusBadge> : undefined}
           />
         </div>
 
@@ -283,7 +283,7 @@ export default function ProposalDashboard({
                       </TableCell>
                       <TableCell className="whitespace-nowrap">{row.clientName}</TableCell>
                       <TableCell>
-                        <AdminBadge color={STATUS_TONE[row.status]} size="sm">{row.status}</AdminBadge>
+                        <AdminStatusBadge tone={STATUS_TONE[row.status]} className="capitalize">{row.status}</AdminStatusBadge>
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums text-gray-800">{row.value}</TableCell>
                       <TableCell className="whitespace-nowrap">{new Date(row.lastActivityAt).toLocaleDateString()}</TableCell>

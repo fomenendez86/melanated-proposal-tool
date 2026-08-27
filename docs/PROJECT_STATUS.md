@@ -51,12 +51,28 @@ Qué se integró y cómo:
   que el control del editor para no pintar la píldora activa con el acento del
   editor dentro del diálogo del admin.
 
-**Pendiente conocido de este cambio:** dentro de Templates, Itineraries y
-Notifications los contenedores ya usan los tokens del admin (`.app-page`,
-`.app-page-toolbar`, `.app-card` se restilaron), pero los controles internos
-—`EditorButton`, `EditorStatusBadge`, `EditorNotice`— siguen siendo del kit del
-editor y se ven como tales. Portarlos es el siguiente paso; no se hizo en este
-pase para no tocar componentes que el editor comparte.
+**Templates, Itineraries, Notifications y el preview también portados
+(mismo día, segundo pase).** El kit del admin se completó en
+`components/admin/ui/AdminUi.tsx` —`adminFocusRing`, `adminButtonStyles`,
+`AdminNotice`, `AdminStatusBadge`, `AdminEmptyState`— con **las mismas APIs de
+props que el kit del editor**, a propósito: las dos superficies necesitan las
+mismas formas, y espejarlas hizo que el swap fuera mecánico (imports + rename +
+un mapa de tokens `--editor-*` → tokens del admin, aplicado del más largo al más
+corto para que `--editor-text-strong` nunca cayera en la regla de
+`--editor-text`). Siguen siendo archivos separados porque el kit del editor es
+de Broadsheet y no se restila para servir a otra superficie.
+
+Dos detalles del pase:
+
+- El default de variante de `AdminButton` pasó de `primary` a `secondary` para
+  espejar al del editor; los dos call sites que dependían del default viejo
+  ahora lo dicen explícito.
+- Había dos componentes de badge (`Badge.tsx` del template y
+  `AdminStatusBadge`). Se unificaron en uno: `AdminStatusBadge` ganó el tono
+  `info` que el pipeline usa y `Badge.tsx` se borró.
+
+Ya no queda ninguna clase `--editor-*` ni ningún componente del kit del editor
+en las cinco superficies del admin (verificado con grep, no de memoria).
 
 Verificación: `tsc --noEmit` y `eslint` limpios, 45/45 E2E, y recorrido visual
 con capturas de dashboard, plantillas, notificaciones y el diálogo de creación.
