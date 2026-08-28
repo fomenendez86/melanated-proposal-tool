@@ -3,6 +3,15 @@ import { check, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-or
 
 import type { DocumentDesignDescriptor } from "@/lib/designs/types";
 import type { ProposalData } from "@/lib/types";
+import type {
+  ExcursionBookingField,
+  ExcursionBookingQuestion,
+  ExcursionExtra,
+  ExcursionPlace,
+  ExcursionPricingCategory,
+  ExcursionRate,
+  ExcursionStartTime,
+} from "@/lib/activity-provider/types";
 
 const id = { id: integer("id").primaryKey({ autoIncrement: true }) };
 
@@ -132,6 +141,7 @@ export const excursions = sqliteTable(
     title: text("title").notNull(),
     description: text("description").notNull(),
     basePrice: real("base_price").notNull(),
+    currency: text("currency").notNull().default("USD"),
     priceUnit: text("price_unit").notNull().$type<"per_person" | "per_group" | "per_vehicle">(),
     priceNote: text("price_note"),
   },
@@ -149,8 +159,58 @@ export const excursionImages = sqliteTable("excursion_images", {
     .notNull()
     .references(() => excursions.id, { onDelete: "cascade" }),
   url: text("url").notNull(),
+  altText: text("alt_text"),
+  providerPhotoId: text("provider_photo_id"),
   sortOrder: integer("sort_order").notNull().default(0),
 });
+
+export const excursionProviderData = sqliteTable(
+  "excursion_provider_data",
+  {
+    ...id,
+    excursionId: integer("excursion_id")
+      .notNull()
+      .references(() => excursions.id, { onDelete: "cascade" }),
+    providerProductId: text("provider_product_id").notNull(),
+    providerProductCode: text("provider_product_code"),
+    slug: text("slug"),
+    active: integer("active", { mode: "boolean" }).notNull().default(true),
+    providerModifiedAt: text("provider_modified_at"),
+    syncedAt: integer("synced_at", { mode: "timestamp" }).notNull(),
+    excerpt: text("excerpt"),
+    durationText: text("duration_text"),
+    durationMinutes: integer("duration_minutes"),
+    bookingType: text("booking_type").$type<"PASS" | "DATE" | "DATE_AND_TIME">(),
+    capacityType: text("capacity_type").$type<"FREE_SALE" | "LIMITED" | "ON_REQUEST">(),
+    meetingType: text("meeting_type").$type<"MEET_ON_LOCATION" | "PICK_UP" | "MEET_ON_LOCATION_OR_PICK_UP">(),
+    minAge: integer("min_age"),
+    difficultyLevel: text("difficulty_level"),
+    privateActivity: integer("private_activity", { mode: "boolean" }).notNull().default(false),
+    pickupAvailable: integer("pickup_available", { mode: "boolean" }).notNull().default(false),
+    customPickupAllowed: integer("custom_pickup_allowed", { mode: "boolean" }).notNull().default(false),
+    dropoffAvailable: integer("dropoff_available", { mode: "boolean" }).notNull().default(false),
+    customDropoffAllowed: integer("custom_dropoff_allowed", { mode: "boolean" }).notNull().default(false),
+    bookingCutoffMinutes: integer("booking_cutoff_minutes"),
+    requestDeadlineMinutes: integer("request_deadline_minutes"),
+    requirements: text("requirements"),
+    attention: text("attention"),
+    included: text("included"),
+    excluded: text("excluded"),
+    mainContactFields: text("main_contact_fields", { mode: "json" }).notNull().$type<ExcursionBookingField[]>(),
+    passengerFields: text("passenger_fields", { mode: "json" }).notNull().$type<ExcursionBookingField[]>(),
+    bookingQuestions: text("booking_questions", { mode: "json" }).notNull().$type<ExcursionBookingQuestion[]>(),
+    pricingCategories: text("pricing_categories", { mode: "json" }).notNull().$type<ExcursionPricingCategory[]>(),
+    rates: text("rates", { mode: "json" }).notNull().$type<ExcursionRate[]>(),
+    pickupPlaces: text("pickup_places", { mode: "json" }).notNull().$type<ExcursionPlace[]>(),
+    dropoffPlaces: text("dropoff_places", { mode: "json" }).notNull().$type<ExcursionPlace[]>(),
+    startTimes: text("start_times", { mode: "json" }).notNull().$type<ExcursionStartTime[]>(),
+    extras: text("extras", { mode: "json" }).notNull().$type<ExcursionExtra[]>(),
+  },
+  (table) => [
+    uniqueIndex("excursion_provider_data_excursion_unique").on(table.excursionId),
+    uniqueIndex("excursion_provider_data_product_unique").on(table.providerProductId),
+  ]
+);
 
 export const weatherProfiles = sqliteTable("weather_profiles", {
   ...id,

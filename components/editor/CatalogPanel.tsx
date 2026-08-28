@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowsClockwise,
   Buildings,
   Check,
   Compass,
@@ -21,7 +22,9 @@ import {
   updateCatalogExcursionDefault,
   updateCatalogHotelDefault,
 } from "@/app/proposals/[id]/editor/catalogActions";
-import type { ProposalCatalogData } from "@/lib/catalog/types";
+import { syncExcursionCatalog } from "@/app/proposals/[id]/editor/providerActions";
+import { bookingRequirementLabels, excursionFeatureLabels } from "@/lib/activity-provider/presentation";
+import type { CatalogExcursionItem, ProposalCatalogData } from "@/lib/catalog/types";
 import type { ProposalDesignContext, ProposalSectionType } from "@/lib/designs/types";
 import type { ContentLibraryData, LibraryImageItem } from "@/lib/library/types";
 
@@ -41,6 +44,124 @@ type CatalogMode = "hotels" | "excursions" | "library" | "blocks";
 
 const controlClass = `h-11 w-full rounded-editor-md border border-editor-border bg-editor-raised px-3 text-sm text-editor-text outline-none transition placeholder:text-editor-text-subtle focus:border-editor-border-strong focus:ring-2 focus:ring-editor-border-strong/20 ${editorFocusRing}`;
 const textAreaClass = `${controlClass} h-auto py-2.5`;
+
+function formatCatalogPrice(amount: number, currency: string) {
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(amount);
+  } catch {
+    return `${currency} ${amount.toLocaleString()}`;
+  }
+}
+
+function formatSyncedAt(value: string | null) {
+  if (!value) return "Never synchronized";
+  return new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+}
+
+function ProviderExcursionDetails({ item }: { item: CatalogExcursionItem }) {
+  const details = item.provider;
+  if (!details) return null;
+  const features = excursionFeatureLabels(details);
+  const requirements = bookingRequirementLabels(details);
+
+  return (
+    <>
+      {features.length ? (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {features.map((feature) => (
+            <span key={feature} className="rounded-full bg-editor-inset px-2 py-1 text-[10px] font-semibold text-editor-text-muted">
+              {feature}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <details className="mt-3 rounded-editor-md border border-editor-border-subtle bg-editor-inset px-3 py-2 text-xs text-editor-text-muted">
+        <summary className="cursor-pointer font-semibold text-editor-text">Product and booking details</summary>
+        <div className="mt-3 space-y-3">
+          {details.rates.length ? (
+            <section>
+              <h4 className="font-semibold text-editor-text">Rates</h4>
+              <ul className="mt-1 list-disc space-y-1 pl-4">
+                {details.rates.map((rate) => (
+                  <li key={rate.id}>
+                    {rate.title}
+                    {rate.minPerBooking != null || rate.maxPerBooking != null
+                      ? ` (${rate.minPerBooking ?? 1}–${rate.maxPerBooking ?? "unlimited"} per booking)`
+                      : ""}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          {details.pricingCategories.length ? (
+            <section>
+              <h4 className="font-semibold text-editor-text">Participant categories</h4>
+              <p className="mt-1">
+                {details.pricingCategories.map((category) => {
+                  const ages = category.minAge != null || category.maxAge != null
+                    ? ` (${category.minAge ?? 0}–${category.maxAge ?? "+"})`
+                    : "";
+                  return `${category.title}${ages}`;
+                }).join(" · ")}
+              </p>
+            </section>
+          ) : null}
+          {details.startTimes.length ? (
+            <section>
+              <h4 className="font-semibold text-editor-text">Published departure times</h4>
+              <p className="mt-1">{details.startTimes.map((time) => time.label).join(" · ")}</p>
+            </section>
+          ) : null}
+          <section>
+            <h4 className="font-semibold text-editor-text">Information requested at booking</h4>
+            {requirements.length ? (
+              <ul className="mt-1 list-disc space-y-1 pl-4">
+                {requirements.map((requirement) => <li key={requirement}>{requirement}</li>)}
+              </ul>
+            ) : <p className="mt-1">No additional customer fields are published for this product.</p>}
+            <p className="mt-1.5 text-[10px]">* Required by the connected inventory provider.</p>
+          </section>
+          {details.bookingQuestions.some((question) => question.help || question.options.length) ? (
+            <section>
+              <h4 className="font-semibold text-editor-text">Question guidance</h4>
+              <ul className="mt-1 space-y-1.5">
+                {details.bookingQuestions.filter((question) => question.help || question.options.length).map((question) => (
+                  <li key={question.id}>
+                    <span className="font-medium text-editor-text">{question.label}:</span>{" "}
+                    {question.help || question.options.map((option) => option.label).join(", ")}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+          {details.pickupAvailable || details.dropoffAvailable ? (
+            <section>
+              <h4 className="font-semibold text-editor-text">Meeting and transport</h4>
+              <p className="mt-1">
+                {details.pickupAvailable
+                  ? `${details.pickupPlaces.length} pickup place${details.pickupPlaces.length === 1 ? "" : "s"}${details.customPickupAllowed ? ", custom pickup allowed" : ""}`
+                  : "Meet on location"}
+                {details.dropoffAvailable
+                  ? ` · ${details.dropoffPlaces.length} drop-off place${details.dropoffPlaces.length === 1 ? "" : "s"}${details.customDropoffAllowed ? ", custom drop-off allowed" : ""}`
+                  : ""}
+              </p>
+            </section>
+          ) : null}
+          {details.extras.length ? (
+            <section>
+              <h4 className="font-semibold text-editor-text">Extras</h4>
+              <p className="mt-1">{details.extras.map((extra) => `${extra.title}${extra.included ? " (included)" : extra.free ? " (free)" : ""}`).join(" · ")}</p>
+            </section>
+          ) : null}
+          {details.included ? <section><h4 className="font-semibold text-editor-text">Included</h4><p className="mt-1 whitespace-pre-line">{details.included}</p></section> : null}
+          {details.excluded ? <section><h4 className="font-semibold text-editor-text">Not included</h4><p className="mt-1 whitespace-pre-line">{details.excluded}</p></section> : null}
+          {details.requirements ? <section><h4 className="font-semibold text-editor-text">Requirements</h4><p className="mt-1 whitespace-pre-line">{details.requirements}</p></section> : null}
+          {details.attention ? <section><h4 className="font-semibold text-editor-text">Important information</h4><p className="mt-1 whitespace-pre-line">{details.attention}</p></section> : null}
+        </div>
+      </details>
+    </>
+  );
+}
 
 export default function CatalogPanel({
   proposalId,
@@ -70,6 +191,7 @@ export default function CatalogPanel({
   const [destinationId, setDestinationId] = useState(0);
   const [cityId, setCityId] = useState(0);
   const [pendingKey, setPendingKey] = useState("");
+  const [syncNotice, setSyncNotice] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
   const [selectedHotels, setSelectedHotels] = useState(() => new Set(catalog.hotels.filter((item) => item.selected).map((item) => item.id)));
   const [selectedExcursions, setSelectedExcursions] = useState(() => new Set(catalog.excursions.filter((item) => item.selected).map((item) => item.id)));
   const [formError, setFormError] = useState("");
@@ -121,6 +243,23 @@ export default function CatalogPanel({
     }
     if (mode === "hotels") setSelectedHotels((current) => new Set(current).add(itemId));
     else setSelectedExcursions((current) => new Set(current).add(itemId));
+    router.refresh();
+  }
+
+  async function synchronizeExcursions() {
+    setPendingKey("sync");
+    setFormError("");
+    setSyncNotice(null);
+    const result = await syncExcursionCatalog(proposalId);
+    setPendingKey("");
+    if (!result.ok) {
+      setSyncNotice({ tone: "danger", message: result.formError ?? "The activity catalog could not be synchronized." });
+      return;
+    }
+    setSyncNotice({
+      tone: "success",
+      message: `${result.total} active products checked: ${result.created} created, ${result.matched} matched, ${result.updated} updated, ${result.deactivated} deactivated${result.failed ? `, ${result.failed} failed` : ""}.`,
+    });
     router.refresh();
   }
 
@@ -240,6 +379,25 @@ export default function CatalogPanel({
             onDragStart={onDragStart}
           />
         ) : <>
+        {mode === "excursions" ? (
+          <EditorNotice tone={catalog.excursionSync.configured ? "info" : "warning"} className="mb-3 px-3 py-3 text-xs">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold text-current">Connected activity inventory</p>
+                <p className="mt-1">
+                  {catalog.excursionSync.configured
+                    ? `${catalog.excursionSync.activeProducts} active products · ${formatSyncedAt(catalog.excursionSync.lastSyncedAt)}`
+                    : "Provider credentials are not configured on this server."}
+                </p>
+              </div>
+              <EditorButton type="button" variant="secondary" size="sm" disabled={!catalog.excursionSync.configured || pendingKey === "sync"} onClick={() => void synchronizeExcursions()}>
+                <ArrowsClockwise className={`size-4 ${pendingKey === "sync" ? "animate-spin" : ""}`} aria-hidden="true" />
+                {pendingKey === "sync" ? "Syncing…" : "Sync now"}
+              </EditorButton>
+            </div>
+          </EditorNotice>
+        ) : null}
+        {syncNotice ? <EditorNotice tone={syncNotice.tone} className="mb-3 px-3 py-2 text-xs">{syncNotice.message}</EditorNotice> : null}
         {formError ? <EditorNotice tone="danger" className="mb-3 px-3 py-2 text-xs">{formError}</EditorNotice> : null}
 
         {creating ? (
@@ -297,9 +455,12 @@ export default function CatalogPanel({
                     <div className="min-w-0 flex-1"><h3 className="text-sm font-semibold text-editor-text">{label}</h3><p className="mt-1 flex items-center gap-1 text-[11px] text-editor-text-muted"><MapPin className="size-3" /> {item.cityName} · {item.destinationName}</p></div>
                   </div>
                   <p className="mt-2 line-clamp-3 text-xs leading-4 text-editor-text-muted">{item.description}</p>
-                  {!isHotel ? <p className="mt-2 text-xs font-semibold text-editor-text">${item.basePrice.toLocaleString()} · {item.priceUnit.replaceAll("_", " ")}</p> : null}
+                  {!isHotel ? <p className="mt-2 text-xs font-semibold text-editor-text">{formatCatalogPrice(item.basePrice, item.currency)} · {item.priceUnit.replaceAll("_", " ")}</p> : null}
+                  {!isHotel ? <ProviderExcursionDetails item={item} /> : null}
                   <EditorButton type="button" variant={selected ? "secondary" : "primary"} size="sm" className="mt-3 w-full" disabled={selected || pendingKey === `${mode}-${item.id}`} onClick={() => void addItem(item.id)}>{selected ? <><Check className="size-4" /> Added to proposal</> : pendingKey === `${mode}-${item.id}` ? "Adding…" : "Add to proposal"}</EditorButton>
-                  <EditorButton type="button" variant="ghost" size="sm" className="mt-1 w-full" onClick={() => startEditing(item)}>Update catalog default</EditorButton>
+                  {isHotel || !item.provider ? <EditorButton type="button" variant="ghost" size="sm" className="mt-1 w-full" onClick={() => startEditing(item)}>Update catalog default</EditorButton> : (
+                    <p className="mt-2 text-center text-[10px] font-semibold uppercase tracking-wide text-editor-text-subtle">Managed by connected inventory</p>
+                  )}
                   {selected ? <p className="mt-1.5 text-center text-[11px] leading-4 text-editor-text-muted">Use this page&apos;s Properties panel for proposal-only edits.</p> : null}
                 </div>
               </article>

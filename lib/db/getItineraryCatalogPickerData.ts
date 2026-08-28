@@ -1,7 +1,7 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, isNull, or } from "drizzle-orm";
 
 import { db } from "./client";
-import { cities, excursions, hotels } from "./schema";
+import { cities, excursionProviderData, excursions, hotels } from "./schema";
 
 export interface CatalogHotelOption {
   id: number;
@@ -15,6 +15,9 @@ export interface CatalogExcursionOption {
   id: number;
   title: string;
   cityName: string;
+  basePrice: number;
+  currency: string;
+  durationText: string | null;
 }
 
 export interface ItineraryCatalogPickerData {
@@ -33,9 +36,18 @@ export async function getItineraryCatalogPickerData(): Promise<ItineraryCatalogP
       .innerJoin(cities, eq(cities.id, hotels.cityId))
       .orderBy(asc(hotels.name)),
     db
-      .select({ id: excursions.id, title: excursions.title, cityName: cities.name })
+      .select({
+        id: excursions.id,
+        title: excursions.title,
+        cityName: cities.name,
+        basePrice: excursions.basePrice,
+        currency: excursions.currency,
+        durationText: excursionProviderData.durationText,
+      })
       .from(excursions)
       .innerJoin(cities, eq(cities.id, excursions.cityId))
+      .leftJoin(excursionProviderData, eq(excursionProviderData.excursionId, excursions.id))
+      .where(or(isNull(excursionProviderData.id), eq(excursionProviderData.active, true)))
       .orderBy(asc(excursions.title)),
   ]);
 

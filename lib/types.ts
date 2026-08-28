@@ -22,6 +22,8 @@ export interface ExcursionItem {
   price: string;
   priceNote?: string;
   imageUrl: string;
+  features?: string[];
+  bookingRequirements?: string[];
 }
 
 export interface ExcursionListData {

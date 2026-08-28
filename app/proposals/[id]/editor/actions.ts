@@ -217,6 +217,8 @@ function parseExcursionSnapshot(text: string): ExcursionItem[] | null {
       priceNote: priceNote ? priceNote : undefined,
       imageUrl: current.imageUrl.trim(),
       description: current.description.trim(),
+      features: current.features?.filter(Boolean),
+      bookingRequirements: current.bookingRequirements?.filter(Boolean),
     };
     if (!item.title || !item.price || !item.description || !isValidImageUrl(item.imageUrl)) return false;
     items.push(item);
@@ -241,6 +243,12 @@ function parseExcursionSnapshot(text: string): ExcursionItem[] | null {
       current.readingDescription = false;
     } else if (line.startsWith("Note:")) {
       current.priceNote = line.slice(5).trim();
+      current.readingDescription = false;
+    } else if (line.startsWith("Features:")) {
+      current.features = line.slice(9).split("|").map((value) => value.trim()).filter(Boolean);
+      current.readingDescription = false;
+    } else if (line.startsWith("Booking:")) {
+      current.bookingRequirements = line.slice(8).split("|").map((value) => value.trim()).filter(Boolean);
       current.readingDescription = false;
     } else if (line.startsWith("Image:")) {
       current.imageUrl = line.slice(6).trim();

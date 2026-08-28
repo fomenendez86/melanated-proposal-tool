@@ -8,6 +8,7 @@ import {
   countries,
   destinations,
   excursionImages,
+  excursionProviderData,
   excursions,
   hotelImages,
   hotels,
@@ -16,7 +17,7 @@ import {
 } from "./schema";
 
 export async function getProposalCatalogData(proposalId: number): Promise<ProposalCatalogData> {
-  const [locationRows, hotelRows, excursionRows, hotelImageRows, excursionImageRows, selectedHotels, selectedExcursions] =
+  const [locationRows, hotelRows, excursionRows, hotelImageRows, excursionImageRows, providerRows, selectedHotels, selectedExcursions] =
     await Promise.all([
       db
         .select({
@@ -56,6 +57,7 @@ export async function getProposalCatalogData(proposalId: number): Promise<Propos
           title: excursions.title,
           description: excursions.description,
           basePrice: excursions.basePrice,
+          currency: excursions.currency,
           priceUnit: excursions.priceUnit,
           priceNote: excursions.priceNote,
           cityId: cities.id,
@@ -72,12 +74,18 @@ export async function getProposalCatalogData(proposalId: number): Promise<Propos
         .orderBy(asc(excursions.title)),
       db.select().from(hotelImages).orderBy(asc(hotelImages.sortOrder)),
       db.select().from(excursionImages).orderBy(asc(excursionImages.sortOrder)),
+      db.select().from(excursionProviderData),
       db.select({ hotelId: proposalHotels.hotelId }).from(proposalHotels).where(eq(proposalHotels.proposalId, proposalId)),
       db.select({ excursionId: proposalExcursions.excursionId }).from(proposalExcursions).where(eq(proposalExcursions.proposalId, proposalId)),
     ]);
 
   const selectedHotelIds = new Set(selectedHotels.map((row) => row.hotelId));
   const selectedExcursionIds = new Set(selectedExcursions.map((row) => row.excursionId));
+  const providerByExcursionId = new Map(providerRows.map((row) => [row.excursionId, row]));
+  const activeProviderRows = providerRows.filter((row) => row.active);
+  const lastSyncedAt = providerRows.reduce<Date | null>((latest, row) => (
+    !latest || row.syncedAt > latest ? row.syncedAt : latest
+  ), null);
 
   return {
     locations: locationRows,
@@ -86,10 +94,57 @@ export async function getProposalCatalogData(proposalId: number): Promise<Propos
       previewImageUrl: hotelImageRows.find((image) => image.hotelId === hotel.id)?.url ?? null,
       selected: selectedHotelIds.has(hotel.id),
     })),
-    excursions: excursionRows.map((excursion) => ({
-      ...excursion,
-      previewImageUrl: excursionImageRows.find((image) => image.excursionId === excursion.id)?.url ?? null,
-      selected: selectedExcursionIds.has(excursion.id),
-    })),
+    excursions: excursionRows.flatMap((excursion) => {
+      const provider = providerByExcursionId.get(excursion.id);
+      if (provider && !provider.active) return [];
+      return [{
+        ...excursion,
+        previewImageUrl: excursionImageRows.find((image) => image.excursionId === excursion.id)?.url ?? null,
+        selected: selectedExcursionIds.has(excursion.id),
+        provider: provider ? {
+          productId: provider.providerProductId,
+          active: provider.active,
+          syncedAt: provider.syncedAt.toISOString(),
+          excerpt: provider.excerpt,
+          durationText: provider.durationText,
+          durationMinutes: provider.durationMinutes,
+          bookingType: provider.bookingType,
+          capacityType: provider.capacityType,
+          meetingType: provider.meetingType,
+          minAge: provider.minAge,
+          difficultyLevel: provider.difficultyLevel,
+          privateActivity: provider.privateActivity,
+          pickupAvailable: provider.pickupAvailable,
+          customPickupAllowed: provider.customPickupAllowed,
+          dropoffAvailable: provider.dropoffAvailable,
+          customDropoffAllowed: provider.customDropoffAllowed,
+          bookingCutoffMinutes: provider.bookingCutoffMinutes,
+          requestDeadlineMinutes: provider.requestDeadlineMinutes,
+          requirements: provider.requirements,
+          attention: provider.attention,
+          included: provider.included,
+          excluded: provider.excluded,
+          mainContactFields: provider.mainContactFields,
+          passengerFields: provider.passengerFields,
+          bookingQuestions: provider.bookingQuestions,
+          pricingCategories: provider.pricingCategories,
+          rates: provider.rates,
+          pickupPlaces: provider.pickupPlaces,
+          dropoffPlaces: provider.dropoffPlaces,
+          startTimes: provider.startTimes,
+          extras: provider.extras,
+        } : null,
+      }];
+    }),
+    excursionSync: {
+      configured: [
+        "ACTIVITY_PROVIDER_BASE_URL",
+        "ACTIVITY_PROVIDER_ACCESS_KEY",
+        "ACTIVITY_PROVIDER_SECRET_KEY",
+        "ACTIVITY_PROVIDER_HEADER_PREFIX",
+      ].every((key) => Boolean(process.env[key]?.trim())),
+      activeProducts: activeProviderRows.length,
+      lastSyncedAt: lastSyncedAt?.toISOString() ?? null,
+    },
   };
 }

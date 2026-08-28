@@ -27,6 +27,22 @@ export default function ExcursionListBlock({ data }: ExcursionListBlockProps) {
                 <p className="mt-2 text-sm text-neutral-700">
                   {item.description}
                 </p>
+                {item.features?.length ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {item.features.map((feature) => (
+                      <span key={feature} className="border border-[var(--design-primary,#1c202b)]/20 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide">
+                        {feature}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {item.bookingRequirements?.length ? (
+                  <p className="mt-2 text-[10px] leading-4 text-neutral-600">
+                    <span className="font-semibold text-[var(--design-primary,#1c202b)]">Booking details:</span>{" "}
+                    {item.bookingRequirements.slice(0, 3).join(" · ")}
+                    {item.bookingRequirements.length > 3 ? ` · +${item.bookingRequirements.length - 3} more` : ""}
+                  </p>
+                ) : null}
               </div>
               <div className="self-end flex max-w-[110px] flex-col items-center text-center">
                 {item.priceNote && (

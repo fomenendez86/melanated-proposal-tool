@@ -93,7 +93,9 @@ const EXCURSION_IMAGE_HEIGHT = 140;
 function estimateExcursionItemHeight(item: ExcursionItem): number {
   const titleLines = estimateLines(item.title, 40);
   const descriptionLines = estimateLines(item.description, 45);
-  const textColumnHeight = titleLines * LINE_HEIGHT + 8 + descriptionLines * LINE_HEIGHT;
+  const featureHeight = item.features?.length ? Math.ceil(item.features.length / 3) * 20 + 8 : 0;
+  const bookingHeight = item.bookingRequirements?.length ? 40 : 0;
+  const textColumnHeight = titleLines * LINE_HEIGHT + 8 + descriptionLines * LINE_HEIGHT + featureHeight + bookingHeight;
   return Math.max(textColumnHeight, EXCURSION_IMAGE_HEIGHT);
 }
 

@@ -46,6 +46,14 @@ import type { DocumentDesignDescriptor } from "@/lib/designs/types";
 
 const inputClass = `h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm ${adminFocusRing}`;
 
+function formatExcursionPrice(amount: number, currency: string) {
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(amount);
+  } catch {
+    return `${currency} ${amount.toLocaleString()}`;
+  }
+}
+
 const SAVE_COPY: Record<EditorSaveState, string> = {
   loaded: "Loaded",
   dirty: "Unsaved changes",
@@ -506,7 +514,10 @@ function ExcursionsPanel({ itinerary, catalog, activeTierId, onChange }: { itine
                 <div className="min-w-0">
                   <p className="truncate font-medium text-gray-800">{excursion?.title ?? `Excursion #${row.excursionId}`}</p>
                   <p className="truncate text-xs text-gray-500">
-                    {row.priceOverride != null ? `$${row.priceOverride}` : "Catalog price"} · {row.tierId === null ? "Shared" : "This tier"}
+                    {excursion
+                      ? formatExcursionPrice(row.priceOverride ?? excursion.basePrice, excursion.currency)
+                      : row.priceOverride != null ? String(row.priceOverride) : "Catalog price"}
+                    {excursion?.durationText ? ` · ${excursion.durationText}` : ""} · {row.tierId === null ? "Shared" : "This tier"}
                   </p>
                 </div>
                 <div className="flex items-center">
@@ -523,7 +534,7 @@ function ExcursionsPanel({ itinerary, catalog, activeTierId, onChange }: { itine
       <div className="grid gap-2 sm:grid-cols-2">
         <select aria-label="Excursion" className={inputClass} value={excursionId} onChange={(event) => setExcursionId(Number(event.target.value))}>
           {catalog.excursions.length === 0 ? <option value={0}>No excursions in catalog</option> : null}
-          {catalog.excursions.map((excursion) => <option key={excursion.id} value={excursion.id}>{excursion.title} — {excursion.cityName}</option>)}
+          {catalog.excursions.map((excursion) => <option key={excursion.id} value={excursion.id}>{excursion.title} — {excursion.cityName} · {formatExcursionPrice(excursion.basePrice, excursion.currency)}{excursion.durationText ? ` · ${excursion.durationText}` : ""}</option>)}
         </select>
         <input type="number" min={0} step="0.01" className={inputClass} placeholder="Price override (optional)" value={priceOverride} onChange={(event) => setPriceOverride(event.target.value)} />
         {activeTierId ? (

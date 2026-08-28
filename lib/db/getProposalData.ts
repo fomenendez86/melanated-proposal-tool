@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 
 import {
   paginateDayItinerary,
@@ -26,6 +26,7 @@ import {
   type ProposalVariableContext,
 } from "@/lib/variables/catalog";
 import { calculatePricing, formatMinorMoney } from "@/lib/pricing/calculate";
+import { bookingRequirementLabels, excursionFeatureLabels } from "@/lib/activity-provider/presentation";
 
 import { db } from "./client";
 import {
@@ -37,6 +38,7 @@ import {
   companyFounders,
   destinations,
   excursionImages,
+  excursionProviderData,
   excursions,
   hotelImages,
   hotels,
@@ -181,8 +183,8 @@ async function buildDayEntries(days: (typeof proposalDays.$inferSelect)[]): Prom
   return result;
 }
 
-function formatPriceAmount(basePrice: number): string {
-  return `$${basePrice.toLocaleString("en-US")}`;
+function formatPriceAmount(basePrice: number, currency = "USD"): string {
+  return formatMoney(basePrice, currency);
 }
 
 export function formatMoney(amount: number, currency: string): string {
@@ -400,12 +402,15 @@ export async function getProposalDataSnapshot(proposalId: number): Promise<Propo
               title: excursions.title,
               description: excursions.description,
               basePrice: excursions.basePrice,
+              currency: excursions.currency,
               priceNote: excursions.priceNote,
               excursionId: excursions.id,
+              provider: excursionProviderData,
             })
             .from(proposalExcursions)
             .innerJoin(excursions, eq(proposalExcursions.excursionId, excursions.id))
-            .where(eq(excursions.cityId, row.refId))
+            .leftJoin(excursionProviderData, eq(excursionProviderData.excursionId, excursions.id))
+            .where(and(eq(proposalExcursions.proposalId, proposalId), eq(excursions.cityId, row.refId)))
             .orderBy(asc(proposalExcursions.sortOrder));
 
           for (const item of rows) {
@@ -418,9 +423,11 @@ export async function getProposalDataSnapshot(proposalId: number): Promise<Propo
             items.push({
               title: item.title,
               description: item.description,
-              price: formatPriceAmount(item.priceOverride ?? item.basePrice),
+              price: formatPriceAmount(item.priceOverride ?? item.basePrice, item.currency),
               priceNote: item.priceNote ?? undefined,
               imageUrl: image?.url ?? "",
+              features: excursionFeatureLabels(item.provider),
+              bookingRequirements: bookingRequirementLabels(item.provider),
             });
           }
         }
